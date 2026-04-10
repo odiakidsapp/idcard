@@ -138,8 +138,11 @@
             <div class="form-group" style="flex:1"><label>DOB</label><input type="date" id="editDob"></div>
             <div class="form-group" style="flex:1"><label>Blood</label>
                 <select id="editBlood">
-                    <option value="">-</option><option value="A+">A+</option><option value="B+">B+</option>
-                    <option value="O+">O+</option><option value="AB+">AB+</option>
+                    <option value="">-</option>
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
                 </select>
             </div>
         </div>
@@ -351,7 +354,7 @@ function renderTable(){
     currentSchoolStudents.forEach((s, i) => {
         const tr = document.createElement('tr');
         
-        // --- FIX BELOW: Added '|| s.phone' to the mobile column ---
+        // --- Added '|| s.phone' to the mobile column ---
         tr.innerHTML = `<td><input type="checkbox" class="sel" value="${s.id}"></td><td>${i+1}</td>
         <td><img class="thumb" src="${s.photoBase64 || ''}"></td>
         <td>${s.name}</td><td>${s.class}</td><td>${s.roll}</td><td>${s.dob}</td><td>${s.bloodGroup||''}</td>
@@ -468,17 +471,19 @@ async function drawCard(s) {
     if(window.assets.mode === 'auto') {
         const sm = schoolsMap[s.schoolName];
         
+        // --- CHANGED: Calculate horizontal center of the header block and set alignment to center ---
+        const centerHeadX = SCHOOL_NAME_POS.x + (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) / 2;
         ctx.fillStyle = '#FFFFFF'; 
-        ctx.textAlign = 'left'; 
+        ctx.textAlign = 'center'; 
         
-        // School Name Auto Fit
+        // School Name Auto Fit (drawn centered)
         const MAX_W = SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x;
         let fs = 45; 
         ctx.font = `bold ${fs}px OdiaFont`;
         while (ctx.measureText(s.schoolName).width > MAX_W && fs > 10) { fs--; ctx.font = `bold ${fs}px OdiaFont`; }
-        ctx.fillText(s.schoolName, SCHOOL_NAME_POS.x, SCHOOL_NAME_POS.y);
+        ctx.fillText(s.schoolName, centerHeadX, SCHOOL_NAME_POS.y);
         
-        // Address
+        // Address (drawn centered)
         ctx.font = '30px OdiaFont'; 
         let addr = [];
         if(sm.block) addr.push(sm.block);
@@ -486,7 +491,7 @@ async function drawCard(s) {
         let addrTxt = addr.join(', ');
         if(sm.pin) addrTxt += ' - ' + toOdiaDigits(sm.pin);
         
-        ctx.fillText(addrTxt, ADDR_POS.x, ADDR_POS.y);
+        ctx.fillText(addrTxt, centerHeadX, ADDR_POS.y);
 
         // Signature
         if(sm && sm.signature) {
@@ -533,7 +538,10 @@ async function drawCard(s) {
     let dob = s.dob || ''; try{ const [y,m,d] = dob.split('-'); if(y&&m&&d) dob = `${d}/${m}/${y}`; } catch(e){}
     
     ctx.fillText(s.name||'', tx, Math.round((505+38)*scale));
-    ctx.fillText(s.class||'', tx, Math.round((575+38)*scale));
+    
+    // --- CHANGED: Apply toOdiaDigits so the class prints in Odia ---
+    ctx.fillText(toOdiaDigits(s.class||''), tx, Math.round((575+38)*scale));
+    
     ctx.fillText(toOdiaDigits(dob), tx, Math.round((647+38)*scale));
     ctx.fillText(toOdiaDigits(s.roll), tx, Math.round((718+38)*scale));
     const phNum = s.mobile || s.phone || '';
