@@ -1,10 +1,11 @@
 {
-  "name": "Student Data Entry",
+  "name": "Student Data App",
   "short_name": "StudentData",
-  "description": "An app to enter student data and export it for ID cards.",
-  "start_url": "index.html",
+  "description": "Offline Student Data Entry",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#f4f7f6",
   "theme_color": "#0056b3",
   "icons": [
     {
