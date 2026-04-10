@@ -53,7 +53,10 @@
                     <input type="text" id="newBlock" placeholder="Block">
                     <input type="text" id="newDistrict" placeholder="District">
                 </div>
-                <input type="number" id="newPin" placeholder="Pin Code">
+                <div class="row-inputs">
+                    <input type="number" id="newPin" placeholder="Pin Code">
+                    <input type="number" id="newUdise" placeholder="UDISE Number">
+                </div>
                 
                 <label>HM Signature (Photo)</label>
                 <input type="file" id="hmSignInput" accept="image/*">
@@ -140,7 +143,10 @@
                 <input type="text" id="editSchoolBlock" placeholder="Block">
                 <input type="text" id="editSchoolDistrict" placeholder="District">
             </div>
-            <input type="number" id="editSchoolPin" placeholder="Pin Code">
+            <div class="row-inputs">
+                <input type="number" id="editSchoolPin" placeholder="Pin Code">
+                <input type="number" id="editSchoolUdise" placeholder="UDISE Number">
+            </div>
             
             <label>Update Signature (Optional)</label>
             <input type="file" id="editSchoolSignInput" accept="image/*">
@@ -253,6 +259,7 @@
             const block = document.getElementById('newBlock').value.trim();
             const district = document.getElementById('newDistrict').value.trim();
             const pin = document.getElementById('newPin').value.trim();
+            const udise = document.getElementById('newUdise').value.trim();
             const signFile = document.getElementById('hmSignInput').files[0];
 
             if(!name) return alert("Enter School Name");
@@ -270,6 +277,7 @@
                 block: block,
                 district: district,
                 pin: pin,
+                udise: udise,
                 hmSignature: signBase64,
                 createdAt: Date.now()
             };
@@ -307,6 +315,7 @@
             document.getElementById('editSchoolBlock').value = currentSchoolData.block || '';
             document.getElementById('editSchoolDistrict').value = currentSchoolData.district || '';
             document.getElementById('editSchoolPin').value = currentSchoolData.pin || '';
+            document.getElementById('editSchoolUdise').value = currentSchoolData.udise || '';
             document.getElementById('editSchoolSignInput').value = ''; 
             document.getElementById('editSchoolModal').style.display = 'flex';
         }
@@ -317,6 +326,7 @@
             const newBlock = document.getElementById('editSchoolBlock').value.trim();
             const newDistrict = document.getElementById('editSchoolDistrict').value.trim();
             const newPin = document.getElementById('editSchoolPin').value.trim();
+            const newUdise = document.getElementById('editSchoolUdise').value.trim();
             const newSignFile = document.getElementById('editSchoolSignInput').files[0];
 
             if(!newName) return alert("Name cannot be empty");
@@ -328,6 +338,7 @@
             updatedSchool.block = newBlock;
             updatedSchool.district = newDistrict;
             updatedSchool.pin = newPin;
+            updatedSchool.udise = newUdise;
             
             if(newSignFile) {
                 updatedSchool.hmSignature = await blobToBase64(newSignFile);
@@ -351,6 +362,7 @@
                         s.block = updatedSchool.block;
                         s.district = updatedSchool.district;
                         s.pin = updatedSchool.pin;
+                        s.udise = updatedSchool.udise;
                         s.hmPhone = updatedSchool.phone;
                         cursor.update(s);
                         cursor.continue();
@@ -460,6 +472,11 @@
             if(currentSchoolData.pin) addrTxt += ' - ' + toOdiaDigits(currentSchoolData.pin);
             ctx.fillText(addrTxt, centerHeadX, 94);
 
+            if(currentSchoolData.udise) {
+                ctx.font = '26px OdiaFont'; 
+                ctx.fillText('UDISE- ' + toOdiaDigits(currentSchoolData.udise), centerHeadX, 130);
+            }
+
             // 3. Signature
             if(currentSchoolData.hmSignature) {
                 const signImg = new Image(); signImg.src = currentSchoolData.hmSignature;
@@ -553,6 +570,7 @@
                 block: currentSchoolData.block || '',
                 district: currentSchoolData.district || '',
                 pin: currentSchoolData.pin || '',
+                udise: currentSchoolData.udise || '',
                 hmPhone: currentSchoolData.phone || '',
                 name, class: cls, roll, dob, bloodGroup: blood,
                 mobile: phone,
