@@ -287,10 +287,12 @@ function loadData(){
                         name: d.schoolName, count: 0,
                         block: d.block || '', district: d.district || '',
                         pin: d.pin || '', phone: d.hmPhone || d.mobile || '',
-                        signature: d.hmSignature || ''
+                        signature: d.hmSignature || '',
+                        latestActivity: Number(d.id) || 0
                     };
                 }
                 schoolsMap[d.schoolName].count++;
+                schoolsMap[d.schoolName].latestActivity = Math.max(schoolsMap[d.schoolName].latestActivity, Number(d.id) || 0);
                 
                 // Prioritize finding valid metadata
                 const sm = schoolsMap[d.schoolName];
@@ -308,7 +310,8 @@ function loadData(){
 function renderDashboard(){
     const grid = document.getElementById('schoolGrid');
     grid.innerHTML = '';
-    const names = Object.keys(schoolsMap).sort();
+    // Sort by latest added/edited instead of alphabetically
+    const names = Object.keys(schoolsMap).sort((a, b) => schoolsMap[b].latestActivity - schoolsMap[a].latestActivity);
     if(names.length === 0){ grid.innerHTML = '<p>No schools found.</p>'; return; }
     
     names.forEach(name => {
@@ -452,8 +455,17 @@ function removeWhiteBg(img) {
     for(let i=0; i<d.length; i+=4) {
         const r = d[i], g = d[i+1], b = d[i+2];
         const bright = (r+g+b)/3;
-        if(bright > 150) { d[i+3] = 0; } 
-        else { d[i] = 0; d[i+1] = 0; d[i+2] = 0; }
+        
+        // Smoother background removal:
+        // Only pure white/light gray is fully removed.
+        if(bright > 210) { 
+            d[i+3] = 0; 
+        } 
+        // Soft blend for the edges to prevent harsh cutouts
+        else if(bright > 150) { 
+            d[i+3] = Math.max(0, 255 - (bright - 150) * 4); 
+        }
+        // Notice we NO LONGER force pixels to black. This preserves blue ink!
     }
     cx.putImageData(imgData, 0, 0);
     return c;
