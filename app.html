@@ -466,7 +466,7 @@
                 await new Promise(r => signImg.onload=r);
                 const cleanSign = removeWhiteBg(signImg);
                 const ratio = Math.min(180 / cleanSign.width, 60 / cleanSign.height);
-                ctx.drawImage(cleanSign, 434, 881, cleanSign.width * ratio, cleanSign.height * ratio);
+                ctx.drawImage(cleanSign, 434, 850, cleanSign.width * ratio, cleanSign.height * ratio);
             }
 
             // 4. Photo
@@ -503,13 +503,20 @@
             ctx.save();
             ctx.translate(CARD_W/2, CARD_H/2);
             ctx.rotate(-Math.PI / 4);
-            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-            ctx.font = 'bold 90px Arial';
+            ctx.font = 'bold 70px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('PREVIEW ONLY', 0, 0);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Drop shadow for readability
-            ctx.fillText('PREVIEW ONLY', 3, 3);
+            
+            // Draw repeating watermark grid covering the entire canvas
+            const diag = Math.sqrt(CARD_W*CARD_W + CARD_H*CARD_H);
+            for(let x = -diag; x <= diag; x += 350) {
+                for(let y = -diag; y <= diag; y += 150) {
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.25)';
+                    ctx.fillText('PREVIEW ONLY', x, y);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Drop shadow
+                    ctx.fillText('PREVIEW ONLY', x+2, y+2);
+                }
+            }
             ctx.restore();
 
             // Display
