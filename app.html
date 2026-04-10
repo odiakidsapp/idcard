@@ -410,7 +410,8 @@
             const imgData = cx.getImageData(0,0, c.width, c.height); const d = imgData.data;
             for(let i=0; i<d.length; i+=4) {
                 const bright = (d[i]+d[i+1]+d[i+2])/3;
-                if(bright > 150) d[i+3] = 0; else { d[i]=0; d[i+1]=0; d[i+2]=0; }
+                if(bright > 210) d[i+3] = 0; 
+                else if(bright > 150) d[i+3] = Math.max(0, 255 - (bright - 150) * 4);
             }
             cx.putImageData(imgData, 0, 0); return c;
         }
