@@ -56,6 +56,8 @@
     .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }
     .form-group input, .form-group select { width: 100%; }
     .modal-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    
+    .button-group { display: flex; gap: 8px; flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -63,18 +65,19 @@
 <div class="container">
 
   <div id="dashboardView">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h1>Admin Dashboard</h1>
-        <div>
-            <button class="btn btn-primary" onclick="loadData()">🔄 Refresh</button>
-            <button class="btn btn-warning" id="downloadRawBtn">💾 Backup</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap: wrap; gap: 10px;">
+        <h1 style="margin:0;">Admin Dashboard</h1>
+        <div class="button-group">
+            <button class="btn btn-success" id="quickSyncBtn" onclick="quickSync()" title="Fetches only recently added students">⚡ Quick Sync</button>
+            <button class="btn btn-primary" id="fullSyncBtn" onclick="fullResync()" title="Reads whole database (Uses Quota)">🔄 Full Refresh</button>
+            <button class="btn btn-warning" id="downloadRawBtn" title="Download Excel Data">💾 Backup</button>
         </div>
     </div>
     <div id="schoolGrid" class="school-grid"><p>Loading...</p></div>
   </div>
 
   <div id="detailView" class="hidden">
-    <button class="btn btn-secondary" onclick="showDashboard()" style="margin-bottom:15px;">← Back</button>
+    <button class="btn btn-secondary" onclick="showDashboard()" style="margin-bottom:15px;">← Back to Dashboard</button>
     
     <div class="detail-header">
         <div>
@@ -216,10 +219,11 @@ const blobToBase64 = blob => new Promise((resolve, reject) => {
     reader.onerror = reject;
 });
 
-/* ---------- STATE ---------- */
+/* ---------- STATE LOGIC (CACHED FOR QUOTA SAVING) ---------- */
 let db = null;
-let allStudents = [];
-let schoolsMap = {};
+// Load cached dashboard data from browser storage to save Firebase reads
+let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
+let lastSyncId = Number(localStorage.getItem('adminLastSyncId')) || 0;
 let currentSchoolStudents = [];
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual' }; 
 
@@ -268,51 +272,118 @@ try{
   };
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
-  loadData();
+  
+  // Start up with Smart Sync
+  initDashboard();
   loadAutoAssets();
 } catch(e){ console.error(e); alert('Firebase error: '+e.message); }
 
-/* ---------- DATA LOGIC ---------- */
-function loadData(){
-    const grid = document.getElementById('schoolGrid');
-    grid.innerHTML = '<p>Loading data...</p>';
+/* ---------- SMART DATA LOGIC ---------- */
+function initDashboard() {
+    renderDashboard(); // Show whatever is in cache instantly (0 quota cost)
+    quickSync();       // Ask firebase ONLY for new students
+}
+
+// Fetches ONLY new documents added since last check
+function quickSync() {
+    const btn = document.getElementById('quickSyncBtn');
+    if(btn) btn.textContent = "Syncing...";
+    
+    db.collection('students').where('id', '>', lastSyncId).get().then(qs => {
+        if(!qs.empty) {
+            qs.forEach(doc => {
+                const d = doc.data();
+                const sName = d.schoolName;
+                if(sName) {
+                    if(!schoolsMap[sName]) {
+                        schoolsMap[sName] = {
+                            name: sName, count: 0,
+                            block: d.block || '', district: d.district || '',
+                            pin: d.pin || '', phone: d.hmPhone || d.mobile || '',
+                            signature: d.hmSignature || '',
+                            latestActivity: Number(d.id) || 0
+                        };
+                    }
+                    schoolsMap[sName].count++;
+                    schoolsMap[sName].latestActivity = Math.max(schoolsMap[sName].latestActivity, Number(d.id) || 0);
+                    
+                    const sm = schoolsMap[sName];
+                    if(!sm.signature && d.hmSignature) sm.signature = d.hmSignature;
+                    if(!sm.block && d.block) sm.block = d.block;
+                    if(!sm.district && d.district) sm.district = d.district;
+                    if(!sm.pin && d.pin) sm.pin = d.pin;
+                    if(!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
+                }
+                lastSyncId = Math.max(lastSyncId, Number(d.id) || 0);
+            });
+            // Update cache
+            localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+            localStorage.setItem('adminLastSyncId', lastSyncId.toString());
+            renderDashboard();
+        }
+        if(btn) btn.innerHTML = "⚡ Quick Sync";
+    }).catch(err => {
+        console.error(err);
+        if(btn) btn.innerHTML = "⚡ Quick Sync";
+    });
+}
+
+// Force fetches entire database (Use Quota)
+function fullResync() {
+    if(!confirm('This will read the ENTIRE database and consume your free Firebase quota. Continue?')) return;
+    
+    const btn = document.getElementById('fullSyncBtn');
+    btn.textContent = "Fetching...";
+    document.getElementById('schoolGrid').innerHTML = '<p>Downloading all data from Firebase...</p>';
+    
     db.collection('students').get().then(qs => {
-        allStudents = []; schoolsMap = {};
+        schoolsMap = {};
+        lastSyncId = 0;
+        
         qs.forEach(doc => {
             const d = doc.data();
-            allStudents.push(d);
-            if(d.schoolName){
-                if(!schoolsMap[d.schoolName]) {
-                    schoolsMap[d.schoolName] = {
-                        name: d.schoolName, count: 0,
+            const sName = d.schoolName;
+            if(sName) {
+                if(!schoolsMap[sName]) {
+                    schoolsMap[sName] = {
+                        name: sName, count: 0,
                         block: d.block || '', district: d.district || '',
                         pin: d.pin || '', phone: d.hmPhone || d.mobile || '',
                         signature: d.hmSignature || '',
                         latestActivity: Number(d.id) || 0
                     };
                 }
-                schoolsMap[d.schoolName].count++;
-                schoolsMap[d.schoolName].latestActivity = Math.max(schoolsMap[d.schoolName].latestActivity, Number(d.id) || 0);
+                schoolsMap[sName].count++;
+                schoolsMap[sName].latestActivity = Math.max(schoolsMap[sName].latestActivity, Number(d.id) || 0);
                 
-                // Prioritize finding valid metadata
-                const sm = schoolsMap[d.schoolName];
+                const sm = schoolsMap[sName];
                 if(!sm.signature && d.hmSignature) sm.signature = d.hmSignature;
                 if(!sm.block && d.block) sm.block = d.block;
                 if(!sm.district && d.district) sm.district = d.district;
                 if(!sm.pin && d.pin) sm.pin = d.pin;
                 if(!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
             }
+            lastSyncId = Math.max(lastSyncId, Number(d.id) || 0);
         });
+        
+        localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        localStorage.setItem('adminLastSyncId', lastSyncId.toString());
         renderDashboard();
+        btn.innerHTML = "🔄 Full Refresh";
+    }).catch(err => {
+        alert("Error: " + err.message);
+        btn.innerHTML = "🔄 Full Refresh";
     });
 }
 
 function renderDashboard(){
     const grid = document.getElementById('schoolGrid');
     grid.innerHTML = '';
+    
     // Sort by latest added/edited instead of alphabetically
     const names = Object.keys(schoolsMap).sort((a, b) => schoolsMap[b].latestActivity - schoolsMap[a].latestActivity);
-    if(names.length === 0){ grid.innerHTML = '<p>No schools found.</p>'; return; }
+    
+    if(names.length === 0){ grid.innerHTML = '<p>No schools found. Try Quick Sync.</p>'; return; }
     
     names.forEach(name => {
         const s = schoolsMap[name];
@@ -340,14 +411,17 @@ function renderDashboard(){
 function showDashboard(){
     document.getElementById('detailView').classList.add('hidden');
     document.getElementById('dashboardView').classList.remove('hidden');
+    // Refresh dashboard visuals to reflect any edits/deletions made while in detail view
+    renderDashboard();
 }
 
+// Targeted fetching: ONLY fetch this school's data!
 function openSchoolDetail(name){
     let s = schoolsMap[name];
     if(!s) s = schoolsMap[Object.keys(schoolsMap).find(k => k === name)];
+    if(!s) return;
     
-    currentSchoolStudents = allStudents.filter(x => x.schoolName === name);
-    
+    // Setup Header UI immediately
     document.getElementById('viewSchoolName').textContent = s.name;
     document.getElementById('viewAddress').textContent = `${s.block}, ${s.district} - ${s.pin}`;
     document.getElementById('viewContact').textContent = `📞 ${s.phone}`;
@@ -356,9 +430,31 @@ function openSchoolDetail(name){
     if(s.signature) { sign.src = s.signature; sign.style.display='block'; } 
     else { sign.style.display='none'; }
     
-    renderTable();
+    // Show view and loading state
     document.getElementById('dashboardView').classList.add('hidden');
     document.getElementById('detailView').classList.remove('hidden');
+    document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading students from Firebase...</td></tr>';
+    
+    // 🔥 TARGETED QUERY (Only reads documents for THIS school)
+    db.collection('students').where('schoolName', '==', name).get().then(qs => {
+        currentSchoolStudents = [];
+        qs.forEach(doc => currentSchoolStudents.push(doc.data()));
+        
+        // Sort newest first
+        currentSchoolStudents.sort((a,b) => b.id - a.id);
+        
+        renderTable();
+        
+        // Self-Healing Cache Logic: If students were deleted elsewhere, correct our local map count
+        if(s.count !== currentSchoolStudents.length) {
+            schoolsMap[name].count = currentSchoolStudents.length;
+            if(schoolsMap[name].count === 0) delete schoolsMap[name];
+            localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        }
+    }).catch(e => {
+        document.getElementById('studentTable').querySelector('tbody').innerHTML = `<tr><td colspan="10" style="color:red;">Error: ${e.message}</td></tr>`;
+    });
+    
     updateSelection();
 }
 
@@ -366,6 +462,12 @@ function renderTable(){
     const tbody = document.querySelector('#studentTable tbody');
     tbody.innerHTML = '';
     document.getElementById('selectAll').checked = false;
+    
+    if(currentSchoolStudents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No students left in this school.</td></tr>';
+        return;
+    }
+    
     currentSchoolStudents.forEach((s, i) => {
         const tr = document.createElement('tr');
         
@@ -555,6 +657,28 @@ async function drawCard(s) {
     return await new Promise(r => canvas.toBlob(r, 'image/png'));
 }
 
+/* ---------- BACKUP ALL TO EXCEL ---------- */
+document.getElementById('downloadRawBtn').onclick = async () => {
+    const btn = document.getElementById('downloadRawBtn');
+    btn.disabled = true; btn.textContent = "Fetching DB...";
+    try {
+        // Must fetch all docs to create a global backup
+        const qs = await db.collection('students').get();
+        const data = [];
+        qs.forEach(doc => {
+            const d = doc.data();
+            delete d.photoBase64; // Stripping base64 to keep excel small
+            delete d.hmSignature;
+            data.push(d);
+        });
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Students");
+        XLSX.writeFile(wb, `ID_Cards_Database_Backup.xlsx`);
+    } catch(e) { alert("Export error: " + e.message); }
+    btn.disabled = false; btn.innerHTML = "💾 Backup";
+};
+
 /* ---------- GENERATE HANDLER ---------- */
 document.getElementById('generateBtn').onclick = async () => {
     const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
@@ -667,7 +791,20 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         await batch.commit();
         alert("School updated successfully!");
         document.getElementById('editSchoolModal').style.display='none';
-        loadData(); 
+        
+        // Update Local Cache
+        if(oldName !== newName) {
+             schoolsMap[newName] = schoolsMap[oldName];
+             schoolsMap[newName].name = newName;
+             delete schoolsMap[oldName];
+        }
+        Object.assign(schoolsMap[newName], {
+            phone: updates.hmPhone, block: updates.block, district: updates.district, pin: updates.pin
+        });
+        if(updates.hmSignature) schoolsMap[newName].signature = updates.hmSignature;
+        
+        localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        renderDashboard();
     } catch(e) { alert("Error updating school: " + e.message); } 
     finally { btn.disabled = false; btn.textContent = "Update All Records"; }
 };
@@ -687,8 +824,20 @@ function openEditModal(id){
 }
 
 function del(id){
-    if(!confirm('Delete?')) return;
-    db.collection('students').doc(id.toString()).delete().then(loadData);
+    if(!confirm('Delete this student?')) return;
+    db.collection('students').doc(id.toString()).delete().then(() => {
+        // Remove from local list without reloading entire DB
+        currentSchoolStudents = currentSchoolStudents.filter(x => x.id != id);
+        renderTable(); 
+        
+        // Auto-correct Dashboard count cache
+        const sName = document.getElementById('viewSchoolName').textContent;
+        if(schoolsMap[sName]) {
+             schoolsMap[sName].count = currentSchoolStudents.length;
+             if(schoolsMap[sName].count === 0) delete schoolsMap[sName];
+             localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        }
+    }).catch(e => alert(e.message));
 }
 
 document.getElementById('saveEditBtn').onclick = async () => {
@@ -720,7 +869,6 @@ document.getElementById('previewEditBtn').onclick = async () => {
     const id = document.getElementById('editId').value;
     const s = currentSchoolStudents.find(x => x.id == id);
     
-    // Create a temporary student object with the current form data
     const tempStudent = {
         ...s,
         name: document.getElementById('editName').value,
@@ -731,10 +879,8 @@ document.getElementById('previewEditBtn').onclick = async () => {
         mobile: document.getElementById('editPhone').value
     };
 
-    // Draw the card
     const blob = await drawCard(tempStudent);
 
-    // Overlay Watermark
     const cvs = document.createElement('canvas');
     cvs.width = CARD_W; cvs.height = CARD_H;
     const pctx = cvs.getContext('2d');
@@ -755,7 +901,6 @@ document.getElementById('previewEditBtn').onclick = async () => {
     pctx.fillText('PREVIEW ONLY', 3, 3);
     pctx.restore();
 
-    // Show
     document.getElementById('adminPreviewImg').src = cvs.toDataURL('image/png');
     document.getElementById('adminPreviewModal').style.display = 'flex';
     document.getElementById('previewEditBtn').textContent = "👁 Preview Changes";
