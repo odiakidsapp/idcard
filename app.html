@@ -13,10 +13,11 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
         input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         label { font-weight: 600; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; margin-bottom: 5px; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; margin-bottom: 5px; display: block; text-align: center; box-sizing: border-box; }
         .btn-primary { background: #0056b3; }
         .btn-success { background: #28a745; }
         .btn-danger { background: #dc3545; }
+        .btn-warning { background: #ffc107; color: #222; }
         .btn-outline { background: transparent; border: 1px solid #0056b3; color: #0056b3; }
         .student-item { display: flex; align-items: center; background: white; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee; }
         .serial-no { font-weight: bold; color: #0056b3; margin-right: 10px; min-width: 20px; }
@@ -26,7 +27,7 @@
         .action-icon { padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 14px; }
         .edit-icon { background: #e3f2fd; color: #0056b3; }
         .del-icon { background: #ffebeb; color: #dc3545; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
         .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
         #cameraVideo { flex: 1; width: 100%; object-fit: cover; }
         .cam-controls { padding: 20px; display: flex; justify-content: space-between; align-items: center; background: black; width: 100%; box-sizing: border-box; }
@@ -111,8 +112,11 @@
                     <img id="preview" src="" style="width:80px; height:80px; object-fit:cover; display:none; margin:10px auto; border-radius:8px; border:2px solid #ddd;">
                 </div>
 
-                <button class="btn btn-success" id="saveBtn" style="margin-top:15px;">Save Student</button>
-                <button class="btn btn-danger hidden" id="cancelEdit">Cancel Edit</button>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+
+                <button class="btn btn-warning" id="previewCardBtn" style="margin-bottom: 10px;">👁 Preview ID Card</button>
+                <button class="btn btn-success" id="saveBtn">Save Student</button>
+                <button class="btn btn-danger hidden" id="cancelEdit" style="margin-top: 5px;">Cancel Edit</button>
             </div>
 
             <h3>Student List</h3>
@@ -121,6 +125,7 @@
 
     </div>
 
+    <!-- Modals -->
     <div id="editSchoolModal" class="modal">
         <div class="modal-content">
             <h3>Edit School Details</h3>
@@ -149,13 +154,23 @@
         </div>
     </div>
 
-    <div id="cameraModal" class="modal" style="display: none; background: black;">
+    <div id="cameraModal" class="modal" style="background: black;">
         <video id="cameraVideo" autoplay playsinline></video>
         <canvas id="canvas" class="hidden"></canvas>
         <div class="cam-controls">
             <button onclick="closeCam()" style="background:none; border:none; color:white;">Cancel</button>
             <div class="shutter" id="snap"></div>
             <button style="background:none; border:none; color:white;">flip</button>
+        </div>
+    </div>
+
+    <!-- ID Card Preview Modal -->
+    <div id="cardPreviewModal" class="modal">
+        <div class="modal-content" style="text-align: center; background: #eef2f5;">
+            <h3 style="margin-top:0; color: #0b53a0;">Card Preview</h3>
+            <img id="renderedPreviewImg" src="" style="width:100%; max-width: 320px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); margin: 0 auto; display: block;">
+            <p style="font-size:12px; color:#666; margin-top:10px;">* This is a low-res preview to verify text and photo fitting.</p>
+            <button class="btn btn-outline" onclick="document.getElementById('cardPreviewModal').style.display='none'" style="margin-top: 15px;">Close Preview</button>
         </div>
     </div>
 
@@ -174,7 +189,8 @@
         const firestore = firebase.firestore();
 
         let db, currentSchool = null, currentSchoolData = null, students = [], currentPhotoBlob = null;
-        
+        window.assets = { template: null, fontLoaded: false };
+
         // DB INIT
         const req = indexedDB.open('SchoolDataApp', 5);
         req.onupgradeneeded = e => {
@@ -193,6 +209,21 @@
             reader.onload = () => resolve(reader.result);
             reader.onerror = reject;
         });
+
+        // PRELOAD ASSETS FOR PREVIEW
+        async function loadPreviewAssets() {
+            try {
+                const f = new FontFace('OdiaFont', await (await fetch('OdiaFont.ttf')).arrayBuffer());
+                await f.load(); document.fonts.add(f); window.assets.fontLoaded = true;
+            } catch(e) { console.log("OdiaFont.ttf not found for preview. Ensure it's uploaded."); }
+
+            try {
+                const img = new Image();
+                img.src = URL.createObjectURL(await (await fetch('background.png')).blob());
+                img.onload = () => window.assets.template = img;
+            } catch(e) { console.log("background.png not found for preview. Ensure it's uploaded."); }
+        }
+        loadPreviewAssets();
 
         // --- SCHOOL LOGIC ---
         document.getElementById('hmSignInput').onchange = (e) => {
@@ -369,6 +400,122 @@
             });
         }
 
+        // --- PREVIEW LOGIC ---
+        window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
+        function toOdiaDigits(str){ if (str===undefined||str===null) return ''; return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); }
+
+        function removeWhiteBg(img) {
+            const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+            const cx = c.getContext('2d'); cx.drawImage(img, 0, 0);
+            const imgData = cx.getImageData(0,0, c.width, c.height); const d = imgData.data;
+            for(let i=0; i<d.length; i+=4) {
+                const bright = (d[i]+d[i+1]+d[i+2])/3;
+                if(bright > 150) d[i+3] = 0; else { d[i]=0; d[i+1]=0; d[i+2]=0; }
+            }
+            cx.putImageData(imgData, 0, 0); return c;
+        }
+
+        document.getElementById('previewCardBtn').onclick = async () => {
+            if(!window.assets.template || !window.assets.fontLoaded) {
+                return alert("Template or Font not loaded yet. Make sure 'background.png' and 'OdiaFont.ttf' exist and you have internet connection for first time caching.");
+            }
+
+            const name = document.getElementById('sName').value.trim();
+            const cls = document.getElementById('sClass').value;
+            const roll = document.getElementById('sRoll').value.trim();
+            if(!name || !cls || !roll) return alert('Please enter at least Name, Class, and Roll No to preview.');
+
+            const id = document.getElementById('editId').value;
+            let base64 = null;
+            if(currentPhotoBlob) {
+                base64 = await blobToBase64(currentPhotoBlob);
+            } else if(id) {
+                base64 = students.find(x => x.id == id).photoBase64;
+            } else {
+                return alert("Please take or upload a photo first to see preview!");
+            }
+
+            // Dimensions exactly as in admin
+            const CARD_W = 638, CARD_H = 1012;
+            const cvs = document.createElement('canvas');
+            cvs.width = CARD_W; cvs.height = CARD_H;
+            const ctx = cvs.getContext('2d');
+
+            // 1. Draw Background
+            ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
+
+            // 2. Draw Header
+            const centerHeadX = 121 + (611 - 121) / 2;
+            ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
+            let fs = 45; ctx.font = `bold ${fs}px OdiaFont`;
+            while (ctx.measureText(currentSchoolData.name).width > 490 && fs > 10) { fs--; ctx.font = `bold ${fs}px OdiaFont`; }
+            ctx.fillText(currentSchoolData.name, centerHeadX, 55);
+            
+            ctx.font = '30px OdiaFont'; 
+            let addr = [];
+            if(currentSchoolData.block) addr.push(currentSchoolData.block);
+            if(currentSchoolData.district) addr.push(currentSchoolData.district);
+            let addrTxt = addr.join(', ');
+            if(currentSchoolData.pin) addrTxt += ' - ' + toOdiaDigits(currentSchoolData.pin);
+            ctx.fillText(addrTxt, centerHeadX, 94);
+
+            // 3. Signature
+            if(currentSchoolData.hmSignature) {
+                const signImg = new Image(); signImg.src = currentSchoolData.hmSignature;
+                await new Promise(r => signImg.onload=r);
+                const cleanSign = removeWhiteBg(signImg);
+                const ratio = Math.min(180 / cleanSign.width, 60 / cleanSign.height);
+                ctx.drawImage(cleanSign, 434, 881, cleanSign.width * ratio, cleanSign.height * ratio);
+            }
+
+            // 4. Photo
+            const photo = new Image(); photo.src = base64;
+            await new Promise(r => photo.onload=r);
+            const px = 222, py = 250, pw = 187, ph = 225, border = 3;
+            ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
+            // Basic crop to center (no AI in app.html to save memory)
+            const srcRatio = photo.width / photo.height; const destRatio = pw / ph;
+            let sx=0, sy=0, sw=photo.width, sh=photo.height;
+            if(srcRatio > destRatio) { sw = photo.height * destRatio; sx = (photo.width - sw)/2; } 
+            else { sh = photo.width / destRatio; sy = (photo.height - sh)/2; }
+            ctx.drawImage(photo, sx, sy, sw, sh, px, py, pw, ph);
+
+            // 5. Texts
+            ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.font = `38px OdiaFont`;
+            const tx = 227;
+            let dob = document.getElementById('sDob').value || '';
+            try { const [y,m,d] = dob.split('-'); if(y&&m&&d) dob = `${d}/${m}/${y}`; } catch(e){}
+            
+            ctx.fillText(name, tx, 543);
+            ctx.fillText(toOdiaDigits(cls), tx, 613);
+            ctx.fillText(toOdiaDigits(dob), tx, 685);
+            ctx.fillText(toOdiaDigits(roll), tx, 756);
+            ctx.fillText(toOdiaDigits(document.getElementById('sPhone').value), tx, 827);
+            
+            const blood = document.getElementById('sBlood').value;
+            if(blood){
+                ctx.fillStyle = 'white'; ctx.font = `23px OdiaFont`;
+                ctx.fillText(blood, 480, 383);
+            }
+
+            // 6. DRAW WATERMARK
+            ctx.save();
+            ctx.translate(CARD_W/2, CARD_H/2);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+            ctx.font = 'bold 90px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PREVIEW ONLY', 0, 0);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Drop shadow for readability
+            ctx.fillText('PREVIEW ONLY', 3, 3);
+            ctx.restore();
+
+            // Display
+            document.getElementById('renderedPreviewImg').src = cvs.toDataURL('image/png');
+            document.getElementById('cardPreviewModal').style.display = 'flex';
+        };
+
         // --- SAVE / EDIT ---
         document.getElementById('saveBtn').onclick = async () => {
             const id = document.getElementById('editId').value;
@@ -395,14 +542,10 @@
                 id: id ? Number(id) : Date.now(),
                 schoolName: currentSchool,
                 hmSignature: currentSchoolData.hmSignature || '',
-                
-                // --- CRITICAL FIX: EMBED SCHOOL DETAILS HERE ---
                 block: currentSchoolData.block || '',
                 district: currentSchoolData.district || '',
                 pin: currentSchoolData.pin || '',
                 hmPhone: currentSchoolData.phone || '',
-                // ---------------------------------------------
-
                 name, class: cls, roll, dob, bloodGroup: blood,
                 mobile: phone,
                 photoBase64: base64,
