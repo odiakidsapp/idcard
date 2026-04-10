@@ -172,7 +172,10 @@
             <div class="form-group" style="flex:1"><label>Block</label><input type="text" id="esBlock"></div>
             <div class="form-group" style="flex:1"><label>District</label><input type="text" id="esDistrict"></div>
         </div>
-        <div class="form-group"><label>Pin Code</label><input type="text" id="esPin"></div>
+        <div style="display:flex; gap:10px;">
+            <div class="form-group" style="flex:1"><label>Pin Code</label><input type="text" id="esPin"></div>
+            <div class="form-group" style="flex:1"><label>UDISE</label><input type="text" id="esUdise"></div>
+        </div>
         
         <div class="form-group">
             <label>Update HM Signature (Optional)</label>
@@ -318,7 +321,7 @@ function quickSync() {
                         schoolsMap[sName] = {
                             name: sName, count: 0,
                             block: d.block || '', district: d.district || '',
-                            pin: d.pin || '', phone: d.hmPhone || d.mobile || '',
+                            pin: d.pin || '', udise: d.udise || '', phone: d.hmPhone || d.mobile || '',
                             signature: d.hmSignature || '',
                             latestActivity: Number(d.id) || 0
                         };
@@ -331,6 +334,7 @@ function quickSync() {
                     if(!sm.block && d.block) sm.block = d.block;
                     if(!sm.district && d.district) sm.district = d.district;
                     if(!sm.pin && d.pin) sm.pin = d.pin;
+                    if(!sm.udise && d.udise) sm.udise = d.udise;
                     if(!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
                 }
                 lastSyncId = Math.max(lastSyncId, Number(d.id) || 0);
@@ -367,7 +371,7 @@ function fullResync() {
                     schoolsMap[sName] = {
                         name: sName, count: 0,
                         block: d.block || '', district: d.district || '',
-                        pin: d.pin || '', phone: d.hmPhone || d.mobile || '',
+                        pin: d.pin || '', udise: d.udise || '', phone: d.hmPhone || d.mobile || '',
                         signature: d.hmSignature || '',
                         latestActivity: Number(d.id) || 0
                     };
@@ -380,6 +384,7 @@ function fullResync() {
                 if(!sm.block && d.block) sm.block = d.block;
                 if(!sm.district && d.district) sm.district = d.district;
                 if(!sm.pin && d.pin) sm.pin = d.pin;
+                if(!sm.udise && d.udise) sm.udise = d.udise;
                 if(!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
             }
             lastSyncId = Math.max(lastSyncId, Number(d.id) || 0);
@@ -621,6 +626,12 @@ async function drawCard(s) {
         if(sm && sm.pin) addrTxt += ' - ' + toOdiaDigits(sm.pin);
         ctx.fillText(addrTxt, centerHeadX, ADDR_POS.y);
 
+        // UDISE is strictly printed ONLY in auto mode (skips if manual background is uploaded)
+        if(sm && sm.udise) {
+            ctx.font = '26px OdiaFont';
+            ctx.fillText('UDISE- ' + toOdiaDigits(sm.udise), centerHeadX, ADDR_POS.y + 36);
+        }
+
         if(sm && sm.signature) {
             const signImg = new Image(); signImg.src = sm.signature;
             await new Promise(r => signImg.onload=r);
@@ -779,6 +790,7 @@ function openSchoolEdit(name){
     document.getElementById('esBlock').value = s.block || '';
     document.getElementById('esDistrict').value = s.district || '';
     document.getElementById('esPin').value = s.pin || '';
+    document.getElementById('esUdise').value = s.udise || '';
     document.getElementById('esSignInput').value = ''; 
     
     document.getElementById('editSchoolModal').style.display = 'flex';
@@ -795,7 +807,8 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         hmPhone: document.getElementById('esPhone').value.trim(),
         block: document.getElementById('esBlock').value.trim(),
         district: document.getElementById('esDistrict').value.trim(),
-        pin: document.getElementById('esPin').value.trim()
+        pin: document.getElementById('esPin').value.trim(),
+        udise: document.getElementById('esUdise').value.trim()
     };
     
     const file = document.getElementById('esSignInput').files[0];
@@ -818,7 +831,7 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
              delete schoolsMap[oldName];
         }
         Object.assign(schoolsMap[newName], {
-            phone: updates.hmPhone, block: updates.block, district: updates.district, pin: updates.pin
+            phone: updates.hmPhone, block: updates.block, district: updates.district, pin: updates.pin, udise: updates.udise
         });
         if(updates.hmSignature) schoolsMap[newName].signature = updates.hmSignature;
         
