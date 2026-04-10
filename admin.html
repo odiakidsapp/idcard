@@ -147,9 +147,12 @@
             </div>
         </div>
         <div class="form-group"><label>Mobile</label><input type="text" id="editPhone"></div>
-        <div class="modal-btns">
-            <button class="btn btn-secondary" onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
-            <button class="btn btn-primary" id="saveEditBtn">Save Student</button>
+        <div class="modal-btns" style="justify-content: space-between;">
+            <button class="btn btn-warning" id="previewEditBtn">👁 Preview Changes</button>
+            <div style="display: flex; gap:10px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+                <button class="btn btn-primary" id="saveEditBtn">Save Student</button>
+            </div>
         </div>
     </div>
 </div>
@@ -179,6 +182,15 @@
             <button class="btn btn-secondary" onclick="document.getElementById('editSchoolModal').style.display='none'">Cancel</button>
             <button class="btn btn-success" id="saveSchoolBtn">Update All Records</button>
         </div>
+    </div>
+</div>
+
+<!-- Admin Preview Modal -->
+<div id="adminPreviewModal" class="modal">
+    <div class="modal-content" style="text-align: center; background: #eef2f5; z-index: 2500;">
+        <h3 style="margin-top:0; color: #0b53a0;">Edit Preview</h3>
+        <img id="adminPreviewImg" src="" style="width:100%; max-width: 320px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); margin: 0 auto; display: block;">
+        <button class="btn btn-secondary" onclick="document.getElementById('adminPreviewModal').style.display='none'" style="margin-top: 15px;">Close Preview</button>
     </div>
 </div>
 
@@ -354,7 +366,6 @@ function renderTable(){
     currentSchoolStudents.forEach((s, i) => {
         const tr = document.createElement('tr');
         
-        // --- Added '|| s.phone' to the mobile column ---
         tr.innerHTML = `<td><input type="checkbox" class="sel" value="${s.id}"></td><td>${i+1}</td>
         <td><img class="thumb" src="${s.photoBase64 || ''}"></td>
         <td>${s.name}</td><td>${s.class}</td><td>${s.roll}</td><td>${s.dob}</td><td>${s.bloodGroup||''}</td>
@@ -438,19 +449,11 @@ function removeWhiteBg(img) {
     cx.drawImage(img, 0, 0);
     const imgData = cx.getImageData(0,0, c.width, c.height);
     const d = imgData.data;
-    
-    // Improved Logic: Detect gray levels more aggressively (150+)
     for(let i=0; i<d.length; i+=4) {
         const r = d[i], g = d[i+1], b = d[i+2];
         const bright = (r+g+b)/3;
-        
-        // If bright enough, make transparent
-        if(bright > 150) {
-            d[i+3] = 0; 
-        } else {
-            // Else, make it pure black for better visibility
-            d[i] = 0; d[i+1] = 0; d[i+2] = 0;
-        }
+        if(bright > 150) { d[i+3] = 0; } 
+        else { d[i] = 0; d[i+1] = 0; d[i+2] = 0; }
     }
     cx.putImageData(imgData, 0, 0);
     return c;
@@ -467,50 +470,38 @@ async function drawCard(s) {
     // 1. Background
     ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
 
-    // 2. School Details (ONLY IF AUTO MODE)
+    // 2. School Details
     if(window.assets.mode === 'auto') {
         const sm = schoolsMap[s.schoolName];
-        
-        // --- CHANGED: Calculate horizontal center of the header block and set alignment to center ---
         const centerHeadX = SCHOOL_NAME_POS.x + (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) / 2;
-        ctx.fillStyle = '#FFFFFF'; 
-        ctx.textAlign = 'center'; 
+        ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
         
-        // School Name Auto Fit (drawn centered)
-        const MAX_W = SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x;
-        let fs = 45; 
-        ctx.font = `bold ${fs}px OdiaFont`;
-        while (ctx.measureText(s.schoolName).width > MAX_W && fs > 10) { fs--; ctx.font = `bold ${fs}px OdiaFont`; }
+        let fs = 45; ctx.font = `bold ${fs}px OdiaFont`;
+        while (ctx.measureText(s.schoolName).width > (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) && fs > 10) { fs--; ctx.font = `bold ${fs}px OdiaFont`; }
         ctx.fillText(s.schoolName, centerHeadX, SCHOOL_NAME_POS.y);
         
-        // Address (drawn centered)
         ctx.font = '30px OdiaFont'; 
         let addr = [];
-        if(sm.block) addr.push(sm.block);
-        if(sm.district) addr.push(sm.district);
+        if(sm && sm.block) addr.push(sm.block);
+        if(sm && sm.district) addr.push(sm.district);
         let addrTxt = addr.join(', ');
-        if(sm.pin) addrTxt += ' - ' + toOdiaDigits(sm.pin);
-        
+        if(sm && sm.pin) addrTxt += ' - ' + toOdiaDigits(sm.pin);
         ctx.fillText(addrTxt, centerHeadX, ADDR_POS.y);
 
-        // Signature
         if(sm && sm.signature) {
             const signImg = new Image(); signImg.src = sm.signature;
             await new Promise(r => signImg.onload=r);
             const cleanSign = removeWhiteBg(signImg);
             const ratio = Math.min(SIGN_POS.maxW / cleanSign.width, SIGN_POS.maxH / cleanSign.height);
-            const dw = cleanSign.width * ratio;
-            const dh = cleanSign.height * ratio;
-            ctx.drawImage(cleanSign, SIGN_POS.x, SIGN_POS.y, dw, dh);
+            ctx.drawImage(cleanSign, SIGN_POS.x, SIGN_POS.y, cleanSign.width * ratio, cleanSign.height * ratio);
         }
     }
 
     // 3. Photo & Text
     const tplW = window.assets.template.width || CARD_W;
     const scale = CARD_W / tplW;
-    const ORIG_PX = 222, ORIG_PY = 250, ORIG_PW = 187, ORIG_PH = 225;
-    const px = Math.round(ORIG_PX * scale), py = Math.round(ORIG_PY * scale);
-    const pw = Math.round(ORIG_PW * scale), ph = Math.round(ORIG_PH * scale);
+    const px = Math.round(222 * scale), py = Math.round(250 * scale);
+    const pw = Math.round(187 * scale), ph = Math.round(225 * scale);
     const border = Math.max(2, Math.round(3 * scale));
 
     ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
@@ -538,10 +529,7 @@ async function drawCard(s) {
     let dob = s.dob || ''; try{ const [y,m,d] = dob.split('-'); if(y&&m&&d) dob = `${d}/${m}/${y}`; } catch(e){}
     
     ctx.fillText(s.name||'', tx, Math.round((505+38)*scale));
-    
-    // --- CHANGED: Apply toOdiaDigits so the class prints in Odia ---
     ctx.fillText(toOdiaDigits(s.class||''), tx, Math.round((575+38)*scale));
-    
     ctx.fillText(toOdiaDigits(dob), tx, Math.round((647+38)*scale));
     ctx.fillText(toOdiaDigits(s.roll), tx, Math.round((718+38)*scale));
     const phNum = s.mobile || s.phone || '';
@@ -661,23 +649,15 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
     }
     
     try {
-        // Query ALL students with old school name
         const snap = await db.collection('students').where('schoolName', '==', oldName).get();
         const batch = db.batch();
-        
-        snap.docs.forEach(doc => {
-            batch.update(doc.ref, updates);
-        });
-        
+        snap.docs.forEach(doc => { batch.update(doc.ref, updates); });
         await batch.commit();
         alert("School updated successfully!");
         document.getElementById('editSchoolModal').style.display='none';
-        loadData(); // Reload to reflect changes
-    } catch(e) {
-        alert("Error updating school: " + e.message);
-    } finally {
-        btn.disabled = false; btn.textContent = "Update All Records";
-    }
+        loadData(); 
+    } catch(e) { alert("Error updating school: " + e.message); } 
+    finally { btn.disabled = false; btn.textContent = "Update All Records"; }
 };
 
 /* ---------- EDIT STUDENT ---------- */
@@ -717,6 +697,58 @@ document.getElementById('saveEditBtn').onclick = async () => {
         renderTable();
     } catch(e) { alert("Error: "+e.message); }
 };
+
+/* ---------- ADMIN PREVIEW FUNCTION ---------- */
+document.getElementById('previewEditBtn').onclick = async () => {
+    if(!window.assets.font || !window.assets.template) {
+        return alert("Please ensure 'OdiaFont' and 'Background PNG' are loaded first in the config panel.");
+    }
+    
+    document.getElementById('previewEditBtn').textContent = "Generating...";
+    const id = document.getElementById('editId').value;
+    const s = currentSchoolStudents.find(x => x.id == id);
+    
+    // Create a temporary student object with the current form data
+    const tempStudent = {
+        ...s,
+        name: document.getElementById('editName').value,
+        class: document.getElementById('editClass').value,
+        roll: document.getElementById('editRoll').value,
+        dob: document.getElementById('editDob').value,
+        bloodGroup: document.getElementById('editBlood').value,
+        mobile: document.getElementById('editPhone').value
+    };
+
+    // Draw the card
+    const blob = await drawCard(tempStudent);
+
+    // Overlay Watermark
+    const cvs = document.createElement('canvas');
+    cvs.width = CARD_W; cvs.height = CARD_H;
+    const pctx = cvs.getContext('2d');
+    
+    const img = new Image(); img.src = URL.createObjectURL(blob);
+    await new Promise(r => img.onload = r);
+    pctx.drawImage(img, 0, 0);
+    
+    pctx.save();
+    pctx.translate(CARD_W/2, CARD_H/2);
+    pctx.rotate(-Math.PI / 4);
+    pctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+    pctx.font = 'bold 90px Arial';
+    pctx.textAlign = 'center';
+    pctx.textBaseline = 'middle';
+    pctx.fillText('PREVIEW ONLY', 0, 0);
+    pctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    pctx.fillText('PREVIEW ONLY', 3, 3);
+    pctx.restore();
+
+    // Show
+    document.getElementById('adminPreviewImg').src = cvs.toDataURL('image/png');
+    document.getElementById('adminPreviewModal').style.display = 'flex';
+    document.getElementById('previewEditBtn').textContent = "👁 Preview Changes";
+};
+
 </script>
 </body>
 </html>
