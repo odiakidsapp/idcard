@@ -206,11 +206,30 @@ const A4_W = 3508, A4_H = 2480;
 
 const SCHOOL_NAME_POS = { x: 121, y: 55, maxX: 611 }; 
 const ADDR_POS = { x: 198, y: 94 };
-const SIGN_POS = { x: 434, y: 881, maxW: 180, maxH: 60 };
+const SIGN_POS = { x: 434, y: 850, maxW: 180, maxH: 60 };
 
 /* ---------- HELPERS ---------- */
 window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
 function toOdiaDigits(str){ if (str===undefined||str===null) return ''; return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); }
+
+function toOdiaClass(str) {
+    if (!str) return '';
+    let s = String(str).toLowerCase().trim();
+    if (s.includes('nursery') || s.includes('nursary') || s.includes('ଶିଶୁ ବାଟିକା')) return 'ଶିଶୁ ବାଟିକା';
+    if (s === '1' || s === 'class 1' || s === 'class-1') return 'ପ୍ରଥମ';
+    if (s === '2' || s === 'class 2' || s === 'class-2') return 'ଦ୍ଵିତୀୟ';
+    if (s === '3' || s === 'class 3' || s === 'class-3') return 'ତୃତୀୟ';
+    if (s === '4' || s === 'class 4' || s === 'class-4') return 'ଚତୁର୍ଥ';
+    if (s === '5' || s === 'class 5' || s === 'class-5') return 'ପଞ୍ଚମ';
+    if (s === '6' || s === 'class 6' || s === 'class-6') return 'ଷଷ୍ଠ';
+    if (s === '7' || s === 'class 7' || s === 'class-7') return 'ସପ୍ତମ';
+    if (s === '8' || s === 'class 8' || s === 'class-8') return 'ଅଷ୍ଟମ';
+    if (s === '9' || s === 'class 9' || s === 'class-9') return 'ନବମ';
+    if (s === '10' || s === 'class 10' || s === 'class-10') return 'ଦଶମ';
+    // ଯଦି ଅନ୍ୟ କିଛି ଥାଏ ତେବେ କେବଳ ସଂଖ୍ୟାକୁ ଓଡ଼ିଆ କରିଦେବ
+    return toOdiaDigits(str);
+}
+
 function escapeHtml(s){ return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); }
 const blobToBase64 = blob => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -643,7 +662,7 @@ async function drawCard(s) {
     let dob = s.dob || ''; try{ const [y,m,d] = dob.split('-'); if(y&&m&&d) dob = `${d}/${m}/${y}`; } catch(e){}
     
     ctx.fillText(s.name||'', tx, Math.round((505+38)*scale));
-    ctx.fillText(toOdiaDigits(s.class||''), tx, Math.round((575+38)*scale));
+    ctx.fillText(toOdiaClass(s.class||''), tx, Math.round((575+38)*scale));
     ctx.fillText(toOdiaDigits(dob), tx, Math.round((647+38)*scale));
     ctx.fillText(toOdiaDigits(s.roll), tx, Math.round((718+38)*scale));
     const phNum = s.mobile || s.phone || '';
@@ -892,13 +911,20 @@ document.getElementById('previewEditBtn').onclick = async () => {
     pctx.save();
     pctx.translate(CARD_W/2, CARD_H/2);
     pctx.rotate(-Math.PI / 4);
-    pctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-    pctx.font = 'bold 90px Arial';
+    pctx.font = 'bold 70px Arial';
     pctx.textAlign = 'center';
     pctx.textBaseline = 'middle';
-    pctx.fillText('PREVIEW ONLY', 0, 0);
-    pctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    pctx.fillText('PREVIEW ONLY', 3, 3);
+    
+    // Draw repeating watermark grid covering the entire canvas
+    const diag = Math.sqrt(CARD_W*CARD_W + CARD_H*CARD_H);
+    for(let x = -diag; x <= diag; x += 350) {
+        for(let y = -diag; y <= diag; y += 150) {
+            pctx.fillStyle = 'rgba(255, 0, 0, 0.25)';
+            pctx.fillText('PREVIEW ONLY', x, y);
+            pctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Drop shadow
+            pctx.fillText('PREVIEW ONLY', x+2, y+2);
+        }
+    }
     pctx.restore();
 
     document.getElementById('adminPreviewImg').src = cvs.toDataURL('image/png');
