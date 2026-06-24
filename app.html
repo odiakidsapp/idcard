@@ -35,9 +35,39 @@
         .hidden { display: none !important; }
         .preview-thumb { width: 100px; height: 60px; object-fit: contain; border: 1px dashed #ccc; display: none; margin-bottom: 10px; }
         .row-inputs { display: flex; gap: 10px; }
+
+        /* --- A4 PRINTING STYLES --- */
+        #printArea { display: none; }
+        
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            body { visibility: hidden; background: white; margin: 0; padding: 0; }
+            .container, .modal { display: none !important; }
+            
+            #printArea {
+                visibility: visible;
+                position: absolute;
+                left: 0; top: 0;
+                width: 190mm; /* A4 width (210mm) - margins (2 * 10mm) */
+                display: flex !important;
+                flex-wrap: wrap;
+                align-content: flex-start;
+                gap: 5mm; /* Space between cards */
+            }
+            .print-card {
+                width: 54mm; /* Standard ID card dimensions */
+                height: 85.6mm;
+                object-fit: contain;
+                border: 1px dashed #ccc; /* Cutting guides */
+                page-break-inside: avoid;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- A4 Printable Canvas Container -->
+    <div id="printArea"></div>
 
     <div class="container">
         
@@ -122,7 +152,11 @@
                 <button class="btn btn-danger hidden" id="cancelEdit" style="margin-top: 5px;">Cancel Edit</button>
             </div>
 
-            <h3>Student List</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Student List</h3>
+                <button id="printAllBtn" class="btn btn-warning" style="width: auto; padding: 8px 15px; font-size: 13px; margin:0;">🖨️ Print All Cards (A4)</button>
+            </div>
+            
             <div id="studentList"></div>
         </div>
 
@@ -177,6 +211,14 @@
             <img id="renderedPreviewImg" src="" style="width:100%; max-width: 320px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); margin: 0 auto; display: block;">
             <p style="font-size:12px; color:#666; margin-top:10px;">* This is a low-res preview to verify text and photo fitting.</p>
             <button class="btn btn-outline" onclick="document.getElementById('cardPreviewModal').style.display='none'" style="margin-top: 15px;">Close Preview</button>
+        </div>
+    </div>
+
+    <!-- Loading Modal for Generating Print -->
+    <div id="printLoadingModal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <h3 style="color: #0b53a0;">Generating A4 Layout...</h3>
+            <p>Please wait while high-quality cards are being rendered for printing.</p>
         </div>
     </div>
 
@@ -412,7 +454,7 @@
             });
         }
 
-        // --- PREVIEW LOGIC ---
+        // --- SHARED CANVAS RENDERING LOGIC ---
         window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
         function toOdiaDigits(str){ if (str===undefined||str===null) return ''; return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); }
 
@@ -428,27 +470,8 @@
             cx.putImageData(imgData, 0, 0); return c;
         }
 
-        document.getElementById('previewCardBtn').onclick = async () => {
-            if(!window.assets.template || !window.assets.fontLoaded) {
-                return alert("Template or Font not loaded yet. Make sure 'background.png' and 'OdiaFont.ttf' exist and you have internet connection for first time caching.");
-            }
-
-            const name = document.getElementById('sName').value.trim();
-            const cls = document.getElementById('sClass').value;
-            const roll = document.getElementById('sRoll').value.trim();
-            if(!name || !cls || !roll) return alert('Please enter at least Name, Class, and Roll No to preview.');
-
-            const id = document.getElementById('editId').value;
-            let base64 = null;
-            if(currentPhotoBlob) {
-                base64 = await blobToBase64(currentPhotoBlob);
-            } else if(id) {
-                base64 = students.find(x => x.id == id).photoBase64;
-            } else {
-                return alert("Please take or upload a photo first to see preview!");
-            }
-
-            // Dimensions exactly as in admin
+        // Extracted generic function for generating ID cards
+        async function generateCardDataURL(student, applyWatermark = false) {
             const CARD_W = 638, CARD_H = 1012;
             const cvs = document.createElement('canvas');
             cvs.width = CARD_W; cvs.height = CARD_H;
@@ -487,11 +510,10 @@
             }
 
             // 4. Photo
-            const photo = new Image(); photo.src = base64;
+            const photo = new Image(); photo.src = student.photoBase64;
             await new Promise(r => photo.onload=r);
             const px = 222, py = 250, pw = 187, ph = 225, border = 3;
             ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
-            // Basic crop to center (no AI in app.html to save memory)
             const srcRatio = photo.width / photo.height; const destRatio = pw / ph;
             let sx=0, sy=0, sw=photo.width, sh=photo.height;
             if(srcRatio > destRatio) { sw = photo.height * destRatio; sx = (photo.width - sw)/2; } 
@@ -501,44 +523,111 @@
             // 5. Texts
             ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.font = `38px OdiaFont`;
             const tx = 227;
-            let dob = document.getElementById('sDob').value || '';
+            let dob = student.dob || '';
             try { const [y,m,d] = dob.split('-'); if(y&&m&&d) dob = `${d}/${m}/${y}`; } catch(e){}
             
-            ctx.fillText(name, tx, 543);
-            ctx.fillText(toOdiaDigits(cls), tx, 613);
+            ctx.fillText(student.name, tx, 543);
+            ctx.fillText(toOdiaDigits(student.class), tx, 613);
             ctx.fillText(toOdiaDigits(dob), tx, 685);
-            ctx.fillText(toOdiaDigits(roll), tx, 756);
-            ctx.fillText(toOdiaDigits(document.getElementById('sPhone').value), tx, 827);
+            ctx.fillText(toOdiaDigits(student.roll), tx, 756);
+            ctx.fillText(toOdiaDigits(student.mobile), tx, 827);
             
-            const blood = document.getElementById('sBlood').value;
-            if(blood){
+            if(student.bloodGroup){
                 ctx.fillStyle = 'white'; ctx.font = `23px OdiaFont`;
-                ctx.fillText(blood, 480, 383);
+                ctx.fillText(student.bloodGroup, 480, 383);
             }
 
-            // 6. DRAW WATERMARK
-            ctx.save();
-            ctx.translate(CARD_W/2, CARD_H/2);
-            ctx.rotate(-Math.PI / 4);
-            ctx.font = 'bold 70px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            // Draw repeating watermark grid covering the entire canvas
-            const diag = Math.sqrt(CARD_W*CARD_W + CARD_H*CARD_H);
-            for(let x = -diag; x <= diag; x += 350) {
-                for(let y = -diag; y <= diag; y += 150) {
-                    ctx.fillStyle = 'rgba(255, 0, 0, 0.25)';
-                    ctx.fillText('PREVIEW ONLY', x, y);
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Drop shadow
-                    ctx.fillText('PREVIEW ONLY', x+2, y+2);
+            // 6. Watermark (Only for Preview)
+            if (applyWatermark) {
+                ctx.save();
+                ctx.translate(CARD_W/2, CARD_H/2);
+                ctx.rotate(-Math.PI / 4);
+                ctx.font = 'bold 70px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const diag = Math.sqrt(CARD_W*CARD_W + CARD_H*CARD_H);
+                for(let x = -diag; x <= diag; x += 350) {
+                    for(let y = -diag; y <= diag; y += 150) {
+                        ctx.fillStyle = 'rgba(255, 0, 0, 0.25)';
+                        ctx.fillText('PREVIEW ONLY', x, y);
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Drop shadow
+                        ctx.fillText('PREVIEW ONLY', x+2, y+2);
+                    }
+                }
+                ctx.restore();
+            }
+
+            return cvs.toDataURL('image/png');
+        }
+
+        // --- PREVIEW BUTTON HANDLER ---
+        document.getElementById('previewCardBtn').onclick = async () => {
+            if(!window.assets.template || !window.assets.fontLoaded) {
+                return alert("Template or Font not loaded yet. Make sure 'background.png' and 'OdiaFont.ttf' exist and you have internet connection for first time caching.");
+            }
+
+            const name = document.getElementById('sName').value.trim();
+            const cls = document.getElementById('sClass').value;
+            const roll = document.getElementById('sRoll').value.trim();
+            if(!name || !cls || !roll) return alert('Please enter at least Name, Class, and Roll No to preview.');
+
+            const id = document.getElementById('editId').value;
+            let base64 = null;
+            if(currentPhotoBlob) {
+                base64 = await blobToBase64(currentPhotoBlob);
+            } else if(id) {
+                base64 = students.find(x => x.id == id).photoBase64;
+            } else {
+                return alert("Please take or upload a photo first to see preview!");
+            }
+
+            const dummyStudent = {
+                name: name,
+                class: cls,
+                roll: roll,
+                dob: document.getElementById('sDob').value,
+                mobile: document.getElementById('sPhone').value,
+                bloodGroup: document.getElementById('sBlood').value,
+                photoBase64: base64
+            };
+
+            const dataUrl = await generateCardDataURL(dummyStudent, true); // True for watermark
+
+            document.getElementById('renderedPreviewImg').src = dataUrl;
+            document.getElementById('cardPreviewModal').style.display = 'flex';
+        };
+
+        // --- PRINT ALL A4 HANDLER ---
+        document.getElementById('printAllBtn').onclick = async () => {
+            if(!window.assets.template || !window.assets.fontLoaded) {
+                return alert("Template or Font not loaded yet. Make sure 'background.png' and 'OdiaFont.ttf' exist.");
+            }
+            if(students.length === 0) return alert("No students added yet.");
+
+            document.getElementById('printLoadingModal').style.display = 'flex';
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = ''; // Clear previous prints
+
+            // Generate canvases for all students
+            for(let i = 0; i < students.length; i++) {
+                try {
+                    const dataUrl = await generateCardDataURL(students[i], false); // False = NO watermark
+                    const img = document.createElement('img');
+                    img.src = dataUrl;
+                    img.className = 'print-card';
+                    printArea.appendChild(img);
+                } catch(e) {
+                    console.error("Error generating card for", students[i].name, e);
                 }
             }
-            ctx.restore();
 
-            // Display
-            document.getElementById('renderedPreviewImg').src = cvs.toDataURL('image/png');
-            document.getElementById('cardPreviewModal').style.display = 'flex';
+            document.getElementById('printLoadingModal').style.display = 'none';
+
+            // Brief timeout to allow DOM to inject images before invoking print API
+            setTimeout(() => {
+                window.print();
+            }, 500);
         };
 
         // --- SAVE / EDIT ---
