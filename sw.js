@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v7-udise-mandatory'; // Bumped to v7: UDISE now mandatory + 11-digit validation
+const CACHE_NAME = 'student-data-v9-sync-fix'; // Bumped to v9: fixed sync stuck for users with legacy oversized photos
 
 const urlsToCache = [
   './',

@@ -259,7 +259,15 @@
             });
         }
 
-        // PRELOAD ASSETS FOR PREVIEW
+        // 🚀 NEW: Re-compress an already-stored base64 photo (for legacy records saved before compression existed)
+        function recompressBase64(dataUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(compressImageToDataURL(img));
+                img.onerror = reject;
+                img.src = dataUrl;
+            });
+        }
         async function loadPreviewAssets() {
             try {
                 const f = new FontFace('OdiaFont', await (await fetch('OdiaFont.ttf')).arrayBuffer());
@@ -280,19 +288,45 @@
             if (document.visibilityState === 'visible') syncAllPending();
         });
 
-        function syncAllPending() {
+        async function syncAllPending() {
             if(!db || !navigator.onLine) return;
             const btn = document.getElementById('manualSyncBtn');
-            if(btn) btn.textContent = "Syncing...";
-            
+
             const tx = db.transaction(['students'], 'readonly');
-            tx.objectStore('students').getAll().onsuccess = e => {
+            tx.objectStore('students').getAll().onsuccess = async e => {
                 const unsynced = e.target.result.filter(s => !s.synced);
-                if(unsynced.length === 0 && btn) {
-                    btn.textContent = "✅ All Synced";
-                    setTimeout(() => btn.textContent = "🔄 Sync Pending", 2000);
+
+                if (unsynced.length === 0) {
+                    if (btn) {
+                        btn.textContent = "✅ All Synced";
+                        setTimeout(() => btn.textContent = "🔄 Sync Pending", 2000);
+                    }
+                    return;
                 }
-                unsynced.forEach(s => syncToFirebase(s));
+
+                // 🚀 NEW: Sync one at a time (not all in parallel) — large legacy photos were overwhelming
+                // weaker devices when fired simultaneously, which is why the button got stuck on "Synchronizing..."
+                let successCount = 0, failCount = 0;
+                for (let i = 0; i < unsynced.length; i++) {
+                    if (btn) btn.textContent = `Syncing ${i + 1}/${unsynced.length}...`;
+                    try {
+                        await syncToFirebase(unsynced[i]);
+                        successCount++;
+                    } catch (err) {
+                        failCount++;
+                        // keep going — one bad record should never block the rest of the queue
+                    }
+                }
+
+                if (btn) {
+                    if (failCount === 0) {
+                        btn.textContent = "✅ All Synced";
+                    } else {
+                        btn.textContent = `⚠️ ${successCount} synced, ${failCount} failed`;
+                        console.error(`${failCount} record(s) failed to sync. Check console errors above for details.`);
+                    }
+                    setTimeout(() => btn.textContent = "🔄 Sync Pending", 3000);
+                }
             };
         }
 
@@ -836,24 +870,42 @@
             }
         };
 
-        function syncToFirebase(student) {
-            firestore.collection('students').doc(String(student.id)).set(student)
-            .then(() => {
-                const tx = db.transaction(['students'], 'readwrite');
-                const store = tx.objectStore('students');
+        // Firestore's hard document size limit, with safety margin for the other text fields
+        const FIRESTORE_SAFE_LIMIT = 900 * 1024; // ~900KB
+
+        async function syncToFirebase(student) {
+            try {
+                // 🚀 NEW: Detect legacy oversized photos (captured before compression existed) and shrink them first
+                let payloadSize = new Blob([JSON.stringify(student)]).size;
+                if (payloadSize > FIRESTORE_SAFE_LIMIT && student.photoBase64) {
+                    console.log(`Student ${student.id} payload is ${(payloadSize/1024/1024).toFixed(2)}MB — recompressing legacy photo before sync...`);
+                    const shrunk = await recompressBase64(student.photoBase64);
+                    student.photoBase64 = shrunk;
+
+                    // Save the shrunk photo back to IndexedDB permanently — no data lost, just a smaller image
+                    await new Promise((resolve, reject) => {
+                        const tx = db.transaction(['students'], 'readwrite');
+                        tx.objectStore('students').put(student);
+                        tx.oncomplete = resolve;
+                        tx.onerror = reject;
+                    });
+                }
+
+                await firestore.collection('students').doc(String(student.id)).set(student);
+
                 student.synced = true;
-                store.put(student);
-                tx.oncomplete = () => {
-                    loadStudents();
-                    const btn = document.getElementById('manualSyncBtn');
-                    if (btn) btn.textContent = "🔄 Sync Pending";
-                };
-            })
-            .catch(err => {
-                console.log("Sync failed, will retry later");
-                const btn = document.getElementById('manualSyncBtn');
-                if (btn) btn.textContent = "🔄 Sync Pending";
-            });
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction(['students'], 'readwrite');
+                    tx.objectStore('students').put(student);
+                    tx.oncomplete = resolve;
+                    tx.onerror = reject;
+                });
+                loadStudents();
+            } catch (err) {
+                // 🚀 NEW: Real, visible error logging instead of silent swallow
+                console.error(`Sync failed for student ${student.id} (${student.name || 'unknown'}):`, err);
+                throw err; // let syncAllPending track this as a failure
+            }
         }
     </script>
 </body>
