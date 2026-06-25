@@ -45,6 +45,15 @@
         <div id="schoolSection" class="hidden">
             <h2 style="text-align:center; color:#0056b3;">School Registration</h2>
             
+            <div class="card" id="restoreCard" style="border: 2px dashed #0056b3;">
+                <label>Already added students before? Restore by UDISE</label>
+                <input type="text" id="restoreUdiseInput" placeholder="Enter UDISE Number (11 digits)" maxlength="11" inputmode="numeric">
+                <button class="btn btn-primary" id="restoreUdiseBtn">🔄 Check & Restore Previous Data</button>
+                <div id="restoreStatus" style="font-size:13px; margin-top:8px; display:none;"></div>
+            </div>
+
+            <div style="text-align:center; color:#999; font-size:13px; margin: 10px 0;">— OR —</div>
+
             <div class="card" id="addSchoolCard">
                 <label>School Details</label>
                 <input type="text" id="newSchoolName" placeholder="Enter School Name">
@@ -56,7 +65,7 @@
                 </div>
                 <div class="row-inputs">
                     <input type="number" id="newPin" placeholder="Pin Code">
-                    <input type="number" id="newUdise" placeholder="UDISE Number">
+                    <input type="text" id="newUdise" placeholder="UDISE Number (11 digits) *" maxlength="11" inputmode="numeric">
                 </div>
                 
                 <label>HM Signature (Photo)</label>
@@ -150,7 +159,7 @@
             </div>
             <div class="row-inputs">
                 <input type="number" id="editSchoolPin" placeholder="Pin Code">
-                <input type="number" id="editSchoolUdise" placeholder="UDISE Number">
+                <input type="text" id="editSchoolUdise" placeholder="UDISE Number (11 digits) *" maxlength="11" inputmode="numeric">
             </div>
             
             <label>Update Signature (Optional)</label>
@@ -309,6 +318,76 @@
             };
         }
 
+        document.getElementById('restoreUdiseBtn').onclick = async () => {
+            const udise = document.getElementById('restoreUdiseInput').value.trim();
+            const statusEl = document.getElementById('restoreStatus');
+            const btn = document.getElementById('restoreUdiseBtn');
+
+            if (!udise) return alert("Please enter the UDISE Number to restore.");
+            if (!/^\d{11}$/.test(udise)) return alert("UDISE Number must be exactly 11 digits. Please check and re-enter.");
+            if (!navigator.onLine) return alert("You need an internet connection to restore previous data.");
+
+            statusEl.style.display = 'block';
+            statusEl.style.color = '#0056b3';
+            statusEl.textContent = "Checking server for this UDISE...";
+            btn.disabled = true;
+
+            try {
+                const snapshot = await firestore.collection('students').where('udise', '==', udise).get();
+
+                if (snapshot.empty) {
+                    statusEl.style.color = '#dc3545';
+                    statusEl.textContent = "No records found for this UDISE. Double-check the number, or add the school as new below.";
+                    btn.disabled = false;
+                    return;
+                }
+
+                const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+                const first = docs[0].data;
+
+                // Rebuild the school record from the first matching student's embedded school fields
+                const schoolObj = {
+                    name: first.schoolName,
+                    phone: first.hmPhone || '',
+                    block: first.block || '',
+                    district: first.district || '',
+                    pin: first.pin || '',
+                    udise: first.udise || udise,
+                    hmSignature: first.hmSignature || '',
+                    createdAt: Date.now()
+                };
+
+                statusEl.textContent = `Found ${docs.length} student record(s). Restoring...`;
+
+                const tx = db.transaction(['schools', 'students'], 'readwrite');
+                tx.objectStore('schools').put(schoolObj);
+
+                const studentStore = tx.objectStore('students');
+                docs.forEach(({ id, data }) => {
+                    const student = { ...data, id: Number(id), synced: true };
+                    // serverTimestamp() values can't be stored directly in IndexedDB; drop it, it's not needed locally
+                    delete student.submittedAt;
+                    studentStore.put(student);
+                });
+
+                tx.oncomplete = () => {
+                    statusEl.style.color = '#28a745';
+                    statusEl.textContent = `✅ Restored ${docs.length} student(s) successfully!`;
+                    setTimeout(() => enterSchool(schoolObj), 800);
+                };
+                tx.onerror = () => {
+                    statusEl.style.color = '#dc3545';
+                    statusEl.textContent = "Something went wrong while saving locally. Please try again.";
+                    btn.disabled = false;
+                };
+            } catch (err) {
+                console.error(err);
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = "Could not reach the server. Check your connection and try again.";
+                btn.disabled = false;
+            }
+        };
+
         document.getElementById('addSchoolBtn').onclick = async () => {
             const name = document.getElementById('newSchoolName').value.trim();
             const phone = document.getElementById('newSchoolPhone').value.trim();
@@ -319,6 +398,10 @@
             const signFile = document.getElementById('hmSignInput').files[0];
 
             if(!name) return alert("Enter School Name");
+
+            // 🚀 NEW: UDISE is now mandatory and must be exactly 11 digits
+            if(!udise) return alert("UDISE Number is mandatory. Please enter the 11-digit UDISE code.");
+            if(!/^\d{11}$/.test(udise)) return alert("UDISE Number must be exactly 11 digits. Please check and re-enter.");
             
             // 🚀 NEW: Check for duplicate school name prevent overwrite trap
             const checkTx = db.transaction(['schools'], 'readonly');
@@ -403,6 +486,10 @@
             const newSignFile = document.getElementById('editSchoolSignInput').files[0];
 
             if(!newName) return alert("Name cannot be empty");
+
+            // 🚀 NEW: UDISE is mandatory and must be exactly 11 digits, even on edit
+            if(!newUdise) return alert("UDISE Number is mandatory. Please enter the 11-digit UDISE code.");
+            if(!/^\d{11}$/.test(newUdise)) return alert("UDISE Number must be exactly 11 digits. Please check and re-enter.");
 
             const oldName = currentSchoolData.name;
             const updatedSchool = { ...currentSchoolData };

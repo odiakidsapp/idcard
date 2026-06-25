@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v5-manifest-fix'; // Bumped to v5: fixed broken manifest.json (stray ``` was making it invalid JSON)
+const CACHE_NAME = 'student-data-v7-udise-mandatory'; // Bumped to v7: UDISE now mandatory + 11-digit validation
 
 const urlsToCache = [
   './',
