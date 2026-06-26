@@ -383,6 +383,45 @@
             };
         }
 
+        // Actually performs the restore for one specific school name's subset of docs
+        function performRestore(docs, schoolName, udise, statusEl) {
+            const first = docs[0].data;
+            const schoolObj = {
+                name: schoolName,
+                phone: first.hmPhone || '',
+                block: first.block || '',
+                district: first.district || '',
+                pin: first.pin || '',
+                udise: first.udise || udise,
+                hmSignature: first.hmSignature || '',
+                createdAt: Date.now()
+            };
+
+            statusEl.style.color = '#0056b3';
+            statusEl.textContent = `Restoring ${docs.length} student(s) for "${schoolName}"...`;
+
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
+            tx.objectStore('schools').put(schoolObj);
+
+            const studentStore = tx.objectStore('students');
+            docs.forEach(({ id, data }) => {
+                const student = { ...data, id: Number(id), synced: true };
+                delete student.submittedAt;
+                studentStore.put(student);
+            });
+
+            tx.oncomplete = () => {
+                statusEl.style.color = '#28a745';
+                statusEl.textContent = `✅ Restored ${docs.length} student(s) successfully!`;
+                setTimeout(() => enterSchool(schoolObj), 800);
+            };
+            tx.onerror = () => {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = "Something went wrong while saving locally. Please try again.";
+                document.getElementById('restoreUdiseBtn').disabled = false;
+            };
+        }
+
         document.getElementById('restoreUdiseBtn').onclick = async () => {
             const udise = document.getElementById('restoreUdiseInput').value.trim();
             const statusEl = document.getElementById('restoreStatus');
@@ -408,43 +447,42 @@
                 }
 
                 const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
-                const first = docs[0].data;
 
-                // Rebuild the school record from the first matching student's embedded school fields
-                const schoolObj = {
-                    name: first.schoolName,
-                    phone: first.hmPhone || '',
-                    block: first.block || '',
-                    district: first.district || '',
-                    pin: first.pin || '',
-                    udise: first.udise || udise,
-                    hmSignature: first.hmSignature || '',
-                    createdAt: Date.now()
-                };
-
-                statusEl.textContent = `Found ${docs.length} student record(s). Restoring...`;
-
-                const tx = db.transaction(['schools', 'students'], 'readwrite');
-                tx.objectStore('schools').put(schoolObj);
-
-                const studentStore = tx.objectStore('students');
-                docs.forEach(({ id, data }) => {
-                    const student = { ...data, id: Number(id), synced: true };
-                    // serverTimestamp() values can't be stored directly in IndexedDB; drop it, it's not needed locally
-                    delete student.submittedAt;
-                    studentStore.put(student);
+                // 🚀 NEW: Group by the actual schoolName field — if this UDISE has more than one
+                // distinct school name attached to it (typo by a different teacher, mismatched entry, etc),
+                // don't silently merge them into one — ask which school to restore.
+                const groups = {};
+                docs.forEach(d => {
+                    const name = d.data.schoolName || '(Unnamed School)';
+                    if (!groups[name]) groups[name] = [];
+                    groups[name].push(d);
                 });
+                const distinctNames = Object.keys(groups);
 
-                tx.oncomplete = () => {
-                    statusEl.style.color = '#28a745';
-                    statusEl.textContent = `✅ Restored ${docs.length} student(s) successfully!`;
-                    setTimeout(() => enterSchool(schoolObj), 800);
-                };
-                tx.onerror = () => {
-                    statusEl.style.color = '#dc3545';
-                    statusEl.textContent = "Something went wrong while saving locally. Please try again.";
-                    btn.disabled = false;
-                };
+                if (distinctNames.length === 1) {
+                    performRestore(docs, distinctNames[0], udise, statusEl);
+                    return;
+                }
+
+                // Multiple different school names share this UDISE — show a picker instead of guessing
+                statusEl.style.color = '#dc3545';
+                statusEl.innerHTML = `⚠️ This UDISE has <b>${distinctNames.length} different school names</b> saved against it (likely a typo by someone). Please choose the correct one:`;
+
+                const pickerDiv = document.createElement('div');
+                pickerDiv.style.marginTop = '10px';
+                distinctNames.forEach(name => {
+                    const optBtn = document.createElement('button');
+                    optBtn.className = 'btn';
+                    optBtn.style.cssText = 'display:block; width:100%; margin-bottom:8px; background:#0056b3; color:white; text-align:left; padding:12px;';
+                    optBtn.innerHTML = `<b>${name}</b> &nbsp; <span style="opacity:0.8; font-size:12px;">(${groups[name].length} student${groups[name].length > 1 ? 's' : ''})</span>`;
+                    optBtn.onclick = () => {
+                        pickerDiv.remove();
+                        performRestore(groups[name], name, udise, statusEl);
+                    };
+                    pickerDiv.appendChild(optBtn);
+                });
+                statusEl.appendChild(pickerDiv);
+                btn.disabled = false;
             } catch (err) {
                 console.error(err);
                 statusEl.style.color = '#dc3545';

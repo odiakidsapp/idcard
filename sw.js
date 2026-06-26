@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v12-tighter-compression'; // Bumped to v12: smaller photo compression target (220px/50% quality) for faster sync + less Firestore usage
+const CACHE_NAME = 'student-data-v13-udise-disambiguation'; // Bumped to v13: ask which school to restore when one UDISE has multiple different school names
 
 const urlsToCache = [
   './',
