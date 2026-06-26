@@ -225,7 +225,14 @@
             db = e.target.result;
             loadSchools();
             // 🚀 NEW: Auto-sync any pending students as soon as the app/db is ready (covers page reload)
-            if (navigator.onLine) syncAllPending();
+            if (navigator.onLine) {
+                syncAllPending();
+                const pending = localStorage.getItem('pendingSchoolRename');
+                if (pending) {
+                    const { oldName, updates } = JSON.parse(pending);
+                    pushSchoolRenameToFirestore(oldName, updates);
+                }
+            }
         };
 
         const blobToBase64 = blob => new Promise((resolve, reject) => {
@@ -292,42 +299,63 @@
             if(!db || !navigator.onLine) return;
             const btn = document.getElementById('manualSyncBtn');
 
-            const tx = db.transaction(['students'], 'readonly');
-            tx.objectStore('students').getAll().onsuccess = async e => {
-                const unsynced = e.target.result.filter(s => !s.synced);
-
-                if (unsynced.length === 0) {
-                    if (btn) {
-                        btn.textContent = "✅ All Synced";
-                        setTimeout(() => btn.textContent = "🔄 Sync Pending", 2000);
-                    }
-                    return;
-                }
-
-                // 🚀 NEW: Sync one at a time (not all in parallel) — large legacy photos were overwhelming
-                // weaker devices when fired simultaneously, which is why the button got stuck on "Synchronizing..."
-                let successCount = 0, failCount = 0;
-                for (let i = 0; i < unsynced.length; i++) {
-                    if (btn) btn.textContent = `Syncing ${i + 1}/${unsynced.length}...`;
-                    try {
-                        await syncToFirebase(unsynced[i]);
-                        successCount++;
-                    } catch (err) {
-                        failCount++;
-                        // keep going — one bad record should never block the rest of the queue
-                    }
-                }
-
-                if (btn) {
-                    if (failCount === 0) {
-                        btn.textContent = "✅ All Synced";
+            // 🚀 NEW: Collect just the IDs of unsynced records first via a cursor, instead of getAll()
+            // (which would load the ENTIRE pending backlog — e.g. 250MB of photos — into memory at once,
+            // and could freeze/crash the tab on lower-end devices with a large backlog).
+            const unsyncedIds = [];
+            await new Promise((resolve, reject) => {
+                const tx = db.transaction(['students'], 'readonly');
+                const cursorReq = tx.objectStore('students').openCursor();
+                cursorReq.onsuccess = e => {
+                    const cursor = e.target.result;
+                    if (cursor) {
+                        if (!cursor.value.synced) unsyncedIds.push(cursor.value.id);
+                        cursor.continue();
                     } else {
-                        btn.textContent = `⚠️ ${successCount} synced, ${failCount} failed`;
-                        console.error(`${failCount} record(s) failed to sync. Check console errors above for details.`);
+                        resolve();
                     }
-                    setTimeout(() => btn.textContent = "🔄 Sync Pending", 3000);
+                };
+                cursorReq.onerror = () => reject(cursorReq.error);
+            });
+
+            if (unsyncedIds.length === 0) {
+                if (btn) {
+                    btn.textContent = "✅ All Synced";
+                    setTimeout(() => btn.textContent = "🔄 Sync Pending", 2000);
                 }
-            };
+                return;
+            }
+
+            // Process one record at a time — fetched fresh from IndexedDB right before use, and
+            // allowed to be garbage-collected right after, instead of all sitting in memory together
+            let successCount = 0, failCount = 0;
+            for (let i = 0; i < unsyncedIds.length; i++) {
+                if (btn) btn.textContent = `Syncing ${i + 1}/${unsyncedIds.length}...`;
+                try {
+                    const student = await new Promise((resolve, reject) => {
+                        const tx = db.transaction(['students'], 'readonly');
+                        const getReq = tx.objectStore('students').get(unsyncedIds[i]);
+                        getReq.onsuccess = () => resolve(getReq.result);
+                        getReq.onerror = () => reject(getReq.error);
+                    });
+                    if (!student || student.synced) continue; // already handled by another path
+                    await syncToFirebase(student);
+                    successCount++;
+                } catch (err) {
+                    failCount++;
+                    // keep going — one bad record should never block the rest of the queue
+                }
+            }
+
+            if (btn) {
+                if (failCount === 0) {
+                    btn.textContent = "✅ All Synced";
+                } else {
+                    btn.textContent = `⚠️ ${successCount} synced, ${failCount} failed`;
+                    console.error(`${failCount} record(s) failed to sync. Check console errors above for details.`);
+                }
+                setTimeout(() => btn.textContent = "🔄 Sync Pending", 3000);
+            }
         }
 
         // --- SCHOOL LOGIC ---
@@ -510,6 +538,40 @@
             document.getElementById('editSchoolModal').style.display = 'flex';
         }
 
+        // 🚀 NEW: Pushes a school name/detail edit to all already-synced Firestore docs (mirrors Admin's
+        // own rename logic) so the app and admin panel never disagree on a school's identity again.
+        async function pushSchoolRenameToFirestore(oldName, updates) {
+            if (!navigator.onLine) {
+                localStorage.setItem('pendingSchoolRename', JSON.stringify({ oldName, updates }));
+                console.log("Offline — school rename queued, will retry once online.");
+                return;
+            }
+            try {
+                const snap = await firestore.collection('students').where('schoolName', '==', oldName).get();
+                const docs = snap.docs;
+                const chunks = [];
+                for (let i = 0; i < docs.length; i += 400) chunks.push(docs.slice(i, i + 400));
+                for (const chunk of chunks) {
+                    const batch = firestore.batch();
+                    chunk.forEach(doc => batch.update(doc.ref, updates));
+                    await batch.commit();
+                }
+                localStorage.removeItem('pendingSchoolRename');
+            } catch (err) {
+                console.error("Failed to push school rename to Firestore, queued for retry:", err);
+                localStorage.setItem('pendingSchoolRename', JSON.stringify({ oldName, updates }));
+            }
+        }
+
+        // Retry any queued rename whenever we come back online or reopen the app
+        window.addEventListener('online', () => {
+            const pending = localStorage.getItem('pendingSchoolRename');
+            if (pending) {
+                const { oldName, updates } = JSON.parse(pending);
+                pushSchoolRenameToFirestore(oldName, updates);
+            }
+        });
+
         document.getElementById('saveSchoolEditBtn').onclick = async () => {
             const newName = document.getElementById('editSchoolNameInput').value.trim();
             const newPhone = document.getElementById('editSchoolPhoneInput').value.trim();
@@ -537,6 +599,20 @@
             if(newSignFile) {
                 updatedSchool.hmSignature = await blobToBase64(newSignFile);
             }
+
+            // 🚀 NEW: Push the rename/edit to already-synced Firestore records too (was previously
+            // only updating local IndexedDB — that's why renamed schools showed as a duplicate in Admin)
+            const firestoreUpdates = {
+                schoolName: newName,
+                hmPhone: newPhone,
+                block: newBlock,
+                district: newDistrict,
+                pin: newPin,
+                udise: newUdise,
+                lastModified: Date.now()
+            };
+            if (newSignFile) firestoreUpdates.hmSignature = updatedSchool.hmSignature;
+            await pushSchoolRenameToFirestore(oldName, firestoreUpdates);
 
             const tx = db.transaction(['schools', 'students'], 'readwrite');
             if(oldName !== newName) {

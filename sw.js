@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v9-sync-fix'; // Bumped to v9: fixed sync stuck for users with legacy oversized photos
+const CACHE_NAME = 'student-data-v11-rename-fix'; // Bumped to v11: school renames now sync to Firestore (no more duplicate schools in Admin) + memory-safe sync for large backlogs
 
 const urlsToCache = [
   './',
