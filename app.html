@@ -243,12 +243,15 @@
         });
 
         // 🚀 NEW: Universal Image Compressor to Fix 1MB Firestore Quota Limit
+        // Tuned to the actual print destination: both the app preview and Admin's final
+        // printed card draw the photo into a 187x225px box — anything bigger than that is
+        // wasted resolution that only slows down sync and eats into Firestore storage.
         function compressImageToDataURL(imgElement) {
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                const MAX_WIDTH = 300;
+                const MAX_WIDTH = 220; // covers the 187px-wide print box with a little headroom for cropping
                 let width = imgElement.width;
                 let height = imgElement.height;
                 
@@ -261,8 +264,8 @@
                 canvas.height = height;
                 ctx.drawImage(imgElement, 0, 0, width, height);
                 
-                // Compress as JPEG at 60% quality (~25KB output)
-                resolve(canvas.toDataURL('image/jpeg', 0.6));
+                // Compress as JPEG at 50% quality (~10-15KB output) — well within the print box's needs
+                resolve(canvas.toDataURL('image/jpeg', 0.5));
             });
         }
 

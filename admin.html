@@ -299,8 +299,59 @@ try{
 
 /* ---------- SMART DATA LOGIC ---------- */
 function initDashboard() {
-    renderDashboard(); 
-    quickSync();       
+    renderDashboard();
+    // 🚀 NEW: lastModified-based Quick Sync uses a Firestore range query (>), which silently
+    // skips any document that doesn't have that field at all — e.g. students synced before this
+    // field existed in the app. A brand-new admin device (no cached sync state) needs one full
+    // read to guarantee it sees everything, instead of relying on someone remembering to click
+    // "Full Refresh" manually.
+    if (lastSyncId === 0 && Object.keys(schoolsMap).length === 0) {
+        silentFullSync();
+    } else {
+        quickSync();
+    }
+}
+
+// Same as fullResync() but without the confirm dialog / quota warning — used only for the
+// one-time automatic bootstrap above, where a full read is actually necessary, not optional.
+function silentFullSync() {
+    document.getElementById('schoolGrid').innerHTML = '<p>First-time setup: loading all students from Firebase...</p>';
+    db.collection('students').get().then(qs => {
+        schoolsMap = {};
+        lastSyncId = 0;
+        qs.forEach(doc => {
+            const d = doc.data();
+            const sName = d.schoolName;
+            if(sName) {
+                if(!schoolsMap[sName]) {
+                    schoolsMap[sName] = {
+                        name: sName, count: 0,
+                        block: d.block || '', district: d.district || '',
+                        pin: d.pin || '', udise: d.udise || '', phone: d.hmPhone || d.mobile || '',
+                        signature: d.hmSignature || '',
+                        latestActivity: Number(d.lastModified) || Number(d.id) || 0
+                    };
+                }
+                schoolsMap[sName].count++;
+                schoolsMap[sName].latestActivity = Math.max(schoolsMap[sName].latestActivity, Number(d.lastModified) || Number(d.id) || 0);
+
+                const sm = schoolsMap[sName];
+                if(!sm.signature && d.hmSignature) sm.signature = d.hmSignature;
+                if(!sm.block && d.block) sm.block = d.block;
+                if(!sm.district && d.district) sm.district = d.district;
+                if(!sm.pin && d.pin) sm.pin = d.pin;
+                if(!sm.udise && d.udise) sm.udise = d.udise;
+                if(!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
+            }
+            lastSyncId = Math.max(lastSyncId, Number(d.lastModified) || Number(d.id) || 0);
+        });
+        localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        localStorage.setItem('adminLastSyncId', lastSyncId.toString());
+        renderDashboard();
+    }).catch(err => {
+        console.error("Initial full sync failed:", err);
+        document.getElementById('schoolGrid').innerHTML = `<p style="color:red;">Could not load data: ${err.message}</p>`;
+    });
 }
 
 // 🚀 NEW: Quick Sync updated to check 'lastModified' to catch invisible edits!

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v11-rename-fix'; // Bumped to v11: school renames now sync to Firestore (no more duplicate schools in Admin) + memory-safe sync for large backlogs
+const CACHE_NAME = 'student-data-v12-tighter-compression'; // Bumped to v12: smaller photo compression target (220px/50% quality) for faster sync + less Firestore usage
 
 const urlsToCache = [
   './',
