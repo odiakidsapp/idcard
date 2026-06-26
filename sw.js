@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v13-udise-disambiguation'; // Bumped to v13: ask which school to restore when one UDISE has multiple different school names
+const CACHE_NAME = 'student-data-v14-sync-lock-errors'; // Bumped to v14: prevent overlapping syncs + show real error on stuck records
 
 const urlsToCache = [
   './',

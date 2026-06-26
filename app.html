@@ -298,8 +298,15 @@
             if (document.visibilityState === 'visible') syncAllPending();
         });
 
+        // 🚀 NEW: Prevent overlapping sync runs — without this, the 'online', 'visibilitychange',
+        // and page-load triggers could all fire syncAllPending() at once on a large backlog
+        // (recompression takes time), causing the progress counter to keep resetting back to 1.
+        let isSyncing = false;
+
         async function syncAllPending() {
             if(!db || !navigator.onLine) return;
+            if(isSyncing) { console.log("Sync already in progress, skipping duplicate trigger."); return; }
+            isSyncing = true;
             const btn = document.getElementById('manualSyncBtn');
 
             // 🚀 NEW: Collect just the IDs of unsynced records first via a cursor, instead of getAll()
@@ -326,38 +333,65 @@
                     btn.textContent = "✅ All Synced";
                     setTimeout(() => btn.textContent = "🔄 Sync Pending", 2000);
                 }
+                isSyncing = false;
                 return;
             }
 
-            // Process one record at a time — fetched fresh from IndexedDB right before use, and
-            // allowed to be garbage-collected right after, instead of all sitting in memory together
-            let successCount = 0, failCount = 0;
-            for (let i = 0; i < unsyncedIds.length; i++) {
-                if (btn) btn.textContent = `Syncing ${i + 1}/${unsyncedIds.length}...`;
-                try {
-                    const student = await new Promise((resolve, reject) => {
-                        const tx = db.transaction(['students'], 'readonly');
-                        const getReq = tx.objectStore('students').get(unsyncedIds[i]);
-                        getReq.onsuccess = () => resolve(getReq.result);
-                        getReq.onerror = () => reject(getReq.error);
-                    });
-                    if (!student || student.synced) continue; // already handled by another path
-                    await syncToFirebase(student);
-                    successCount++;
-                } catch (err) {
-                    failCount++;
-                    // keep going — one bad record should never block the rest of the queue
-                }
-            }
+            try {
+                // Process one record at a time — fetched fresh from IndexedDB right before use, and
+                // allowed to be garbage-collected right after, instead of all sitting in memory together
+                let successCount = 0, failCount = 0;
+                for (let i = 0; i < unsyncedIds.length; i++) {
+                    if (btn) btn.textContent = `Syncing ${i + 1}/${unsyncedIds.length}...`;
+                    try {
+                        const student = await new Promise((resolve, reject) => {
+                            const tx = db.transaction(['students'], 'readonly');
+                            const getReq = tx.objectStore('students').get(unsyncedIds[i]);
+                            getReq.onsuccess = () => resolve(getReq.result);
+                            getReq.onerror = () => reject(getReq.error);
+                        });
+                        if (!student || student.synced) continue; // already handled by another path
+                        await syncToFirebase(student);
+                        successCount++;
 
-            if (btn) {
-                if (failCount === 0) {
-                    btn.textContent = "✅ All Synced";
-                } else {
-                    btn.textContent = `⚠️ ${successCount} synced, ${failCount} failed`;
-                    console.error(`${failCount} record(s) failed to sync. Check console errors above for details.`);
+                        // Clear any previously recorded error now that it succeeded
+                        if (student.syncError) {
+                            delete student.syncError;
+                            const tx2 = db.transaction(['students'], 'readwrite');
+                            tx2.objectStore('students').put(student);
+                        }
+                    } catch (err) {
+                        failCount++;
+                        // 🚀 NEW: Save the actual error message onto the record itself so it's visible
+                        // in the student list on screen — console.error alone is invisible to the user.
+                        console.error(`Sync failed for record id ${unsyncedIds[i]}:`, err);
+                        try {
+                            const tx3 = db.transaction(['students'], 'readwrite');
+                            const getReq2 = tx3.objectStore('students').get(unsyncedIds[i]);
+                            getReq2.onsuccess = () => {
+                                const rec = getReq2.result;
+                                if (rec) {
+                                    rec.syncError = (err && err.message) ? err.message : String(err);
+                                    tx3.objectStore('students').put(rec);
+                                }
+                            };
+                        } catch (e2) { /* best-effort only */ }
+                        // keep going — one bad record should never block the rest of the queue
+                    }
                 }
-                setTimeout(() => btn.textContent = "🔄 Sync Pending", 3000);
+
+                if (btn) {
+                    if (failCount === 0) {
+                        btn.textContent = "✅ All Synced";
+                    } else {
+                        btn.textContent = `⚠️ ${successCount} synced, ${failCount} failed`;
+                        console.error(`${failCount} record(s) failed to sync. Check console errors above for details.`);
+                    }
+                    setTimeout(() => btn.textContent = "🔄 Sync Pending", 3000);
+                }
+                loadStudents(); // refresh list so any error badges show up immediately
+            } finally {
+                isSyncing = false;
             }
         }
 
@@ -712,6 +746,7 @@
                         <small>Class: ${s.class} | Roll: ${s.roll}</small><br>
                         <small>📞 ${s.mobile || 'N/A'}</small>
                         <div style="font-size:10px; color:${s.synced?'green':'orange'}">${s.synced?'Synced':'Pending'}</div>
+                        ${s.syncError ? `<div style="font-size:10px; color:#dc3545; font-weight:600;">⚠️ Sync error: ${s.syncError}</div>` : ''}
                     </div>
                     <div class="student-actions">
                         <div class="action-icon edit-icon" onclick="editStudent(${s.id})">✎</div>
