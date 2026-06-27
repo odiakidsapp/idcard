@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v14-sync-lock-errors'; // Bumped to v14: prevent overlapping syncs + show real error on stuck records
+const CACHE_NAME = 'student-data-v15-optional-photo-quality'; // Bumped to v15: photo now optional (add later), improved photo quality
 
 const urlsToCache = [
   './',

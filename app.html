@@ -243,15 +243,14 @@
         });
 
         // 🚀 NEW: Universal Image Compressor to Fix 1MB Firestore Quota Limit
-        // Tuned to the actual print destination: both the app preview and Admin's final
-        // printed card draw the photo into a 187x225px box — anything bigger than that is
-        // wasted resolution that only slows down sync and eats into Firestore storage.
+        // Target is roughly 2x the actual 187x225px print box (for sharpness on high-DPI screens
+        // and cleaner printing), bumped up from an earlier, too-aggressive compression pass.
         function compressImageToDataURL(imgElement) {
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                const MAX_WIDTH = 220; // covers the 187px-wide print box with a little headroom for cropping
+                const MAX_WIDTH = 380; // ~2x the 187px print box width, for crisper printed photos
                 let width = imgElement.width;
                 let height = imgElement.height;
                 
@@ -264,8 +263,9 @@
                 canvas.height = height;
                 ctx.drawImage(imgElement, 0, 0, width, height);
                 
-                // Compress as JPEG at 50% quality (~10-15KB output) — well within the print box's needs
-                resolve(canvas.toDataURL('image/jpeg', 0.5));
+                // Compress as JPEG at 75% quality (~35-50KB output) — noticeably sharper than
+                // before, while still tiny compared to Firestore's 1MB document limit
+                resolve(canvas.toDataURL('image/jpeg', 0.75));
             });
         }
 
@@ -740,12 +740,13 @@
                 div.className = 'student-item';
                 div.innerHTML = `
                     <span class="serial-no">#${students.length - index}</span>
-                    <img src="${s.photoBase64 || ''}" class="student-img">
+                    ${s.photoBase64 ? `<img src="${s.photoBase64}" class="student-img">` : `<div class="student-img" style="display:flex; align-items:center; justify-content:center; background:#eee; font-size:20px; color:#999;">👤</div>`}
                     <div class="student-info">
                         <strong>${s.name}</strong><br>
                         <small>Class: ${s.class} | Roll: ${s.roll}</small><br>
                         <small>📞 ${s.mobile || 'N/A'}</small>
                         <div style="font-size:10px; color:${s.synced?'green':'orange'}">${s.synced?'Synced':'Pending'}</div>
+                        ${!s.photoBase64 ? `<div style="font-size:10px; color:#dc3545; font-weight:600;">📷 Photo not added yet — tap ✎ to add</div>` : ''}
                         ${s.syncError ? `<div style="font-size:10px; color:#dc3545; font-weight:600;">⚠️ Sync error: ${s.syncError}</div>` : ''}
                     </div>
                     <div class="student-actions">
@@ -789,9 +790,8 @@
                 base64 = await blobToBase64(currentPhotoBlob);
             } else if(id) {
                 base64 = students.find(x => x.id == id).photoBase64;
-            } else {
-                return alert("Please take or upload a photo first to see preview!");
             }
+            if (!base64) return alert("This student doesn't have a photo yet. Take or upload one to preview the ID card.");
 
             const CARD_W = 638, CARD_H = 1012;
             const cvs = document.createElement('canvas');
@@ -893,10 +893,11 @@
                 base64 = await blobToBase64(currentPhotoBlob);
             } else if(id) {
                 const old = students.find(x => x.id == id);
-                base64 = old.photoBase64;
-            } else {
-                return alert('Photo is required');
+                base64 = old.photoBase64 || null;
             }
+            // 🚀 NEW: Photo is now optional — a student can be saved without one, and the
+            // teacher can come back later (tap Edit on this student) to add/update the photo
+            // whenever it's convenient, instead of being blocked from saving at all.
 
             const student = {
                 id: id ? Number(id) : Date.now(),
@@ -935,8 +936,13 @@
             document.getElementById('sPhone').value = s.mobile || '';
             document.getElementById('sDob').value = s.dob;
             document.getElementById('sBlood').value = s.bloodGroup;
-            document.getElementById('preview').src = s.photoBase64;
-            document.getElementById('preview').style.display = 'block';
+            if (s.photoBase64) {
+                document.getElementById('preview').src = s.photoBase64;
+                document.getElementById('preview').style.display = 'block';
+            } else {
+                document.getElementById('preview').src = '';
+                document.getElementById('preview').style.display = 'none';
+            }
             document.getElementById('formTitle').textContent = "Edit Student";
             document.getElementById('saveBtn').textContent = "Update Student";
             document.getElementById('cancelEdit').classList.remove('hidden');
