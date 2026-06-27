@@ -62,7 +62,19 @@
 </head>
 <body>
 
-<div class="container">
+<!-- 🚀 NEW: Simple client-side password gate -->
+<div id="lockScreen" style="position:fixed; inset:0; background:#0b53a0; z-index:5000; display:flex; align-items:center; justify-content:center; flex-direction:column; color:white; font-family:system-ui,sans-serif;">
+    <div style="background:white; color:#222; padding:35px 30px; border-radius:14px; width:90%; max-width:340px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+        <div style="font-size:40px; margin-bottom:10px;">🔒</div>
+        <h2 style="margin:0 0 5px 0; color:#0b53a0;">Admin Access</h2>
+        <p style="font-size:13px; color:#666; margin-bottom:20px;">Enter password to continue</p>
+        <input type="password" id="adminPasswordInput" placeholder="Password" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ccc; margin-bottom:12px; box-sizing:border-box; font-size:15px;">
+        <button id="adminPasswordBtn" class="btn btn-primary" style="width:100%; padding:12px;">Unlock</button>
+        <div id="adminPasswordError" style="color:#dc3545; font-size:13px; margin-top:10px; display:none;">Incorrect password. Try again.</div>
+    </div>
+</div>
+
+<div class="container" id="mainContainer" style="display:none;">
 
   <div id="dashboardView">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap: wrap; gap: 10px;">
@@ -280,22 +292,54 @@ async function loadAutoAssets() {
 }
 
 /* ---------- FIREBASE ---------- */
-try{
-  const firebaseConfig = {
-      apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
-      authDomain: "idcard-60586.firebaseapp.com",
-      projectId: "idcard-60586",
-      storageBucket: "idcard-60586.firebasestorage.app",
-      messagingSenderId: "331979663377",
-      appId: "1:331979663377:web:026e537a7fcaca813129b0",
-      measurementId: "G-PXVV87C78S"
-  };
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  
-  initDashboard();
-  loadAutoAssets();
-} catch(e){ console.error(e); alert('Firebase error: '+e.message); }
+function startApp() {
+  try{
+    const firebaseConfig = {
+        apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+        authDomain: "idcard-60586.firebaseapp.com",
+        projectId: "idcard-60586",
+        storageBucket: "idcard-60586.firebasestorage.app",
+        messagingSenderId: "331979663377",
+        appId: "1:331979663377:web:026e537a7fcaca813129b0",
+        measurementId: "G-PXVV87C78S"
+    };
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    
+    initDashboard();
+    loadAutoAssets();
+    initializeFaceDetector();
+  } catch(e){ console.error(e); alert('Firebase error: '+e.message); }
+}
+
+// 🚀 NEW: Simple client-side password gate. NOTE: this only hides the UI/delays startup —
+// it is NOT real security (anyone can read this password from the page source). Treat this
+// as a basic deterrent only, and move to real Firebase Auth + security rules when possible.
+const ADMIN_PASSWORD = "Anwesh@1998";
+
+function unlockAdmin() {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('mainContainer').style.display = 'block';
+    startApp();
+}
+
+if (sessionStorage.getItem('adminAuthed') === 'true') {
+    unlockAdmin();
+} else {
+    document.getElementById('adminPasswordBtn').onclick = () => {
+        const entered = document.getElementById('adminPasswordInput').value;
+        if (entered === ADMIN_PASSWORD) {
+            sessionStorage.setItem('adminAuthed', 'true');
+            unlockAdmin();
+        } else {
+            document.getElementById('adminPasswordError').style.display = 'block';
+            document.getElementById('adminPasswordInput').value = '';
+        }
+    };
+    document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('adminPasswordBtn').click();
+    });
+}
 
 /* ---------- SMART DATA LOGIC ---------- */
 function initDashboard() {
@@ -319,32 +363,7 @@ function silentFullSync() {
     db.collection('students').get().then(qs => {
         schoolsMap = {};
         lastSyncId = 0;
-        qs.forEach(doc => {
-            const d = doc.data();
-            const sName = d.schoolName;
-            if(sName) {
-                if(!schoolsMap[sName]) {
-                    schoolsMap[sName] = {
-                        name: sName, count: 0,
-                        block: d.block || '', district: d.district || '',
-                        pin: d.pin || '', udise: d.udise || '', phone: d.hmPhone || d.mobile || '',
-                        signature: d.hmSignature || '',
-                        latestActivity: Number(d.lastModified) || Number(d.id) || 0
-                    };
-                }
-                schoolsMap[sName].count++;
-                schoolsMap[sName].latestActivity = Math.max(schoolsMap[sName].latestActivity, Number(d.lastModified) || Number(d.id) || 0);
-
-                const sm = schoolsMap[sName];
-                if(!sm.signature && d.hmSignature) sm.signature = d.hmSignature;
-                if(!sm.block && d.block) sm.block = d.block;
-                if(!sm.district && d.district) sm.district = d.district;
-                if(!sm.pin && d.pin) sm.pin = d.pin;
-                if(!sm.udise && d.udise) sm.udise = d.udise;
-                if(!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
-            }
-            lastSyncId = Math.max(lastSyncId, Number(d.lastModified) || Number(d.id) || 0);
-        });
+        qs.forEach(doc => mergeStudentIntoSchoolsMap(doc.data()));
         localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         localStorage.setItem('adminLastSyncId', lastSyncId.toString());
         renderDashboard();
@@ -352,6 +371,53 @@ function silentFullSync() {
         console.error("Initial full sync failed:", err);
         document.getElementById('schoolGrid').innerHTML = `<p style="color:red;">Could not load data: ${err.message}</p>`;
     });
+}
+
+// 🚀 NEW: Single shared function for grouping a student doc into schoolsMap, keyed by UDISE
+// (not school name). UDISE is mandatory + unique per school in the app, so it's the correct
+// identity key — grouping by name was merging genuinely different schools that share a common
+// name, and splitting one real school into two cards whenever a teacher typo'd the name.
+// We also track every distinct name seen under a UDISE, so typo mismatches are visible
+// instead of silently hidden.
+function mergeStudentIntoSchoolsMap(d) {
+    const sName = d.schoolName;
+    // 🚀 NEW: Legacy records from before UDISE was made mandatory have no udise field at all.
+    // Previously these were silently skipped and vanished from the dashboard. Now they're grouped
+    // by school name instead (the only identity we have for them) and flagged so you know to add
+    // a UDISE to that school, rather than them being invisible.
+    const udise = d.udise || (sName ? `NO_UDISE:${sName}` : null);
+    if (!udise) return; // no name and no udise — nothing usable to group by at all
+    const missingUdise = !d.udise;
+
+    if (!schoolsMap[udise]) {
+        schoolsMap[udise] = {
+            name: sName, count: 0,
+            block: d.block || '', district: d.district || '',
+            pin: d.pin || '', udise: d.udise || '', phone: d.hmPhone || d.mobile || '',
+            signature: d.hmSignature || '',
+            latestActivity: Number(d.lastModified) || Number(d.id) || 0,
+            nameCounts: {},
+            missingUdise: missingUdise
+        };
+    }
+    const sm = schoolsMap[udise];
+    sm.count++;
+    sm.latestActivity = Math.max(sm.latestActivity, Number(d.lastModified) || Number(d.id) || 0);
+    if (!sm.signature && d.hmSignature) sm.signature = d.hmSignature;
+    if (!sm.block && d.block) sm.block = d.block;
+    if (!sm.district && d.district) sm.district = d.district;
+    if (!sm.pin && d.pin) sm.pin = d.pin;
+    if (!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
+    if (!sm.udise && d.udise) sm.udise = d.udise;
+    if (d.udise) sm.missingUdise = false; // at least one record here does have it now
+
+    if (sName) {
+        sm.nameCounts[sName] = (sm.nameCounts[sName] || 0) + 1;
+        // Display name = whichever name currently has the most students under this UDISE
+        const best = Object.keys(sm.nameCounts).sort((a, b) => sm.nameCounts[b] - sm.nameCounts[a])[0];
+        sm.name = best;
+    }
+    lastSyncId = Math.max(lastSyncId, Number(d.lastModified) || Number(d.id) || 0);
 }
 
 // 🚀 NEW: Quick Sync updated to check 'lastModified' to catch invisible edits!
@@ -362,32 +428,7 @@ function quickSync() {
     // We check lastModified instead of ID so we catch recently edited documents
     db.collection('students').where('lastModified', '>', lastSyncId).get().then(qs => {
         if(!qs.empty) {
-            qs.forEach(doc => {
-                const d = doc.data();
-                const sName = d.schoolName;
-                if(sName) {
-                    if(!schoolsMap[sName]) {
-                        schoolsMap[sName] = {
-                            name: sName, count: 0,
-                            block: d.block || '', district: d.district || '',
-                            pin: d.pin || '', udise: d.udise || '', phone: d.hmPhone || d.mobile || '',
-                            signature: d.hmSignature || '',
-                            latestActivity: Number(d.lastModified) || Number(d.id) || 0
-                        };
-                    }
-                    schoolsMap[sName].count++;
-                    schoolsMap[sName].latestActivity = Math.max(schoolsMap[sName].latestActivity, Number(d.lastModified) || Number(d.id) || 0);
-                    
-                    const sm = schoolsMap[sName];
-                    if(!sm.signature && d.hmSignature) sm.signature = d.hmSignature;
-                    if(!sm.block && d.block) sm.block = d.block;
-                    if(!sm.district && d.district) sm.district = d.district;
-                    if(!sm.pin && d.pin) sm.pin = d.pin;
-                    if(!sm.udise && d.udise) sm.udise = d.udise;
-                    if(!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
-                }
-                lastSyncId = Math.max(lastSyncId, Number(d.lastModified) || Number(d.id) || 0);
-            });
+            qs.forEach(doc => mergeStudentIntoSchoolsMap(doc.data()));
             localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
             localStorage.setItem('adminLastSyncId', lastSyncId.toString());
             renderDashboard();
@@ -409,33 +450,7 @@ function fullResync() {
     db.collection('students').get().then(qs => {
         schoolsMap = {};
         lastSyncId = 0;
-        
-        qs.forEach(doc => {
-            const d = doc.data();
-            const sName = d.schoolName;
-            if(sName) {
-                if(!schoolsMap[sName]) {
-                    schoolsMap[sName] = {
-                        name: sName, count: 0,
-                        block: d.block || '', district: d.district || '',
-                        pin: d.pin || '', udise: d.udise || '', phone: d.hmPhone || d.mobile || '',
-                        signature: d.hmSignature || '',
-                        latestActivity: Number(d.lastModified) || Number(d.id) || 0
-                    };
-                }
-                schoolsMap[sName].count++;
-                schoolsMap[sName].latestActivity = Math.max(schoolsMap[sName].latestActivity, Number(d.lastModified) || Number(d.id) || 0);
-                
-                const sm = schoolsMap[sName];
-                if(!sm.signature && d.hmSignature) sm.signature = d.hmSignature;
-                if(!sm.block && d.block) sm.block = d.block;
-                if(!sm.district && d.district) sm.district = d.district;
-                if(!sm.pin && d.pin) sm.pin = d.pin;
-                if(!sm.udise && d.udise) sm.udise = d.udise;
-                if(!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
-            }
-            lastSyncId = Math.max(lastSyncId, Number(d.lastModified) || Number(d.id) || 0);
-        });
+        qs.forEach(doc => mergeStudentIntoSchoolsMap(doc.data()));
         
         localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         localStorage.setItem('adminLastSyncId', lastSyncId.toString());
@@ -451,12 +466,12 @@ function renderDashboard(){
     const grid = document.getElementById('schoolGrid');
     grid.innerHTML = '';
     
-    const names = Object.keys(schoolsMap).sort((a, b) => schoolsMap[b].latestActivity - schoolsMap[a].latestActivity);
+    const udises = Object.keys(schoolsMap).sort((a, b) => schoolsMap[b].latestActivity - schoolsMap[a].latestActivity);
     
-    if(names.length === 0){ grid.innerHTML = '<p>No schools found. Try Quick Sync.</p>'; return; }
+    if(udises.length === 0){ grid.innerHTML = '<p>No schools found. Try Quick Sync.</p>'; return; }
     
-    names.forEach(name => {
-        const s = schoolsMap[name];
+    udises.forEach(udise => {
+        const s = schoolsMap[udise];
         const div = document.createElement('div');
         div.className = 'school-card';
         
@@ -464,14 +479,31 @@ function renderDashboard(){
         if(s.block || s.district) loc = `📍 ${escapeHtml(s.block || '')}, ${escapeHtml(s.district || '')}`;
         else loc = `<span style="color:red">📍 Missing Address</span>`;
 
+        // 🚀 NEW: Warn if this UDISE has more than one distinct school name recorded against it —
+        // likely a typo by a different teacher, now visible instead of silently merged/hidden.
+        const altNames = Object.keys(s.nameCounts || {});
+        let typoWarning = '';
+        if (altNames.length > 1) {
+            const list = altNames.map(n => `"${escapeHtml(n)}" (${s.nameCounts[n]})`).join(', ');
+            typoWarning = `<div style="background:#fff3cd; color:#856404; font-size:11px; padding:6px 8px; border-radius:6px; margin-top:6px;">⚠️ ${altNames.length} different names recorded for this UDISE: ${list}. Edit the school to normalize them to one name.</div>`;
+        }
+
+        let missingUdiseWarning = '';
+        if (s.missingUdise) {
+            missingUdiseWarning = `<div style="background:#f8d7da; color:#721c24; font-size:11px; padding:6px 8px; border-radius:6px; margin-top:6px;">⚠️ No UDISE recorded for this school (from before UDISE was required). Tap Edit School to add it.</div>`;
+        }
+
         div.innerHTML = `
-            <div class="school-card-content" onclick="openSchoolDetail('${escapeHtml(name)}')">
+            <div class="school-card-content" onclick="openSchoolDetail('${escapeHtml(udise)}')">
                 <h3 style="margin:0 0 5px 0">${escapeHtml(s.name)}</h3>
+                <div class="school-meta">📋 UDISE: ${s.missingUdise ? '<span style="color:#dc3545;">Not set</span>' : escapeHtml(udise)}</div>
                 <div class="school-meta">${loc}</div>
                 <div class="school-meta">👥 ${s.count} Students</div>
+                ${typoWarning}
+                ${missingUdiseWarning}
             </div>
             <div class="school-actions">
-                <button class="btn btn-primary" style="padding: 5px 10px; font-size:12px;" onclick="openSchoolEdit('${escapeHtml(name)}')">✎ Edit School</button>
+                <button class="btn btn-primary" style="padding: 5px 10px; font-size:12px;" onclick="openSchoolEdit('${escapeHtml(udise)}')">✎ Edit School</button>
             </div>
         `;
         grid.appendChild(div);
@@ -484,10 +516,12 @@ function showDashboard(){
     renderDashboard();
 }
 
-function openSchoolDetail(name){
-    let s = schoolsMap[name];
-    if(!s) s = schoolsMap[Object.keys(schoolsMap).find(k => k === name)];
+let currentViewUdise = null;
+
+function openSchoolDetail(udise){
+    let s = schoolsMap[udise];
     if(!s) return;
+    currentViewUdise = udise;
     
     document.getElementById('viewSchoolName').textContent = s.name;
     document.getElementById('viewAddress').textContent = `${s.block}, ${s.district} - ${s.pin}`;
@@ -501,15 +535,24 @@ function openSchoolDetail(name){
     document.getElementById('detailView').classList.remove('hidden');
     document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading students from Firebase...</td></tr>';
     
-    db.collection('students').where('schoolName', '==', name).get().then(qs => {
+    db.collection('students').where(...(udise.startsWith('NO_UDISE:')
+        ? ['schoolName', '==', udise.slice('NO_UDISE:'.length)]
+        : ['udise', '==', udise]
+    )).get().then(qs => {
         currentSchoolStudents = [];
-        qs.forEach(doc => currentSchoolStudents.push(doc.data()));
+        qs.forEach(doc => {
+            const data = doc.data();
+            // When grouped by name fallback, only include docs that genuinely lack a udise —
+            // otherwise a real-UDISE school with the same name could leak in here.
+            if (udise.startsWith('NO_UDISE:') && data.udise) return;
+            currentSchoolStudents.push(data);
+        });
         currentSchoolStudents.sort((a,b) => b.id - a.id);
         renderTable();
         
         if(s.count !== currentSchoolStudents.length) {
-            schoolsMap[name].count = currentSchoolStudents.length;
-            if(schoolsMap[name].count === 0) delete schoolsMap[name];
+            schoolsMap[udise].count = currentSchoolStudents.length;
+            if(schoolsMap[udise].count === 0) delete schoolsMap[udise];
             localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         }
     }).catch(e => {
@@ -605,7 +648,6 @@ async function initializeFaceDetector(){
   }
   updateSelection();
 }
-initializeFaceDetector();
 
 function removeWhiteBg(img) {
     const c = document.createElement('canvas');
@@ -640,7 +682,7 @@ async function drawCard(s) {
     ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
 
     if(window.assets.mode === 'auto') {
-        const sm = schoolsMap[s.schoolName];
+        const sm = schoolsMap[s.udise || ('NO_UDISE:' + s.schoolName)];
         const centerHeadX = SCHOOL_NAME_POS.x + (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) / 2;
         ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
         
@@ -807,11 +849,11 @@ document.getElementById('generateBtn').onclick = async () => {
 };
 
 /* ---------- EDIT SCHOOL FUNCTIONS ---------- */
-function openSchoolEdit(name){
-    const s = schoolsMap[name];
+function openSchoolEdit(udise){
+    const s = schoolsMap[udise];
     if(!s) return alert("School data missing");
     
-    document.getElementById('oldSchoolName').value = s.name;
+    document.getElementById('oldSchoolName').value = udise; // now stores the OLD UDISE (the map key), not the name
     document.getElementById('esName').value = s.name;
     document.getElementById('esPhone').value = s.phone || '';
     document.getElementById('esBlock').value = s.block || '';
@@ -827,15 +869,16 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
     const btn = document.getElementById('saveSchoolBtn');
     btn.disabled = true; btn.textContent = "Updating...";
     
-    const oldName = document.getElementById('oldSchoolName').value;
+    const oldUdise = document.getElementById('oldSchoolName').value; // map key before this edit
     const newName = document.getElementById('esName').value.trim();
+    const newUdise = document.getElementById('esUdise').value.trim();
     const updates = {
         schoolName: newName,
         hmPhone: document.getElementById('esPhone').value.trim(),
         block: document.getElementById('esBlock').value.trim(),
         district: document.getElementById('esDistrict').value.trim(),
         pin: document.getElementById('esPin').value.trim(),
-        udise: document.getElementById('esUdise').value.trim(),
+        udise: newUdise,
         lastModified: Date.now() // Trigger QuickSync updates
     };
     
@@ -845,10 +888,21 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
     }
     
     try {
-        const snap = await db.collection('students').where('schoolName', '==', oldName).get();
-        const docs = snap.docs;
+        // 🚀 NEW: Query by UDISE, not by name — this means every record sharing this UDISE
+        // (even ones with a mismatched/typo'd school name) gets normalized to the SAME clean
+        // name in one go, directly fixing the typo-mismatch problem from the admin side.
+        // 🚀 NEW: If this was a legacy no-UDISE entry (synthetic key), find its records by name
+        // instead — there's no real 'udise' field value to query by yet for these.
+        const isLegacyNoUdise = oldUdise.startsWith('NO_UDISE:');
+        const legacyOldName = isLegacyNoUdise ? oldUdise.slice('NO_UDISE:'.length) : null;
+
+        const snap = isLegacyNoUdise
+            ? await db.collection('students').where('schoolName', '==', legacyOldName).get()
+            : await db.collection('students').where('udise', '==', oldUdise).get();
+        let docs = snap.docs;
+        if (isLegacyNoUdise) docs = docs.filter(doc => !doc.data().udise); // only the ones genuinely missing it
         
-        // 🚀 NEW: Chunk Batch operations so they don't break the 500-limit
+        // 🚀 Chunk Batch operations so they don't break the 500-limit
         const chunks = [];
         for (let i = 0; i < docs.length; i += 400) {
             chunks.push(docs.slice(i, i + 400));
@@ -863,15 +917,17 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         alert("School updated successfully!");
         document.getElementById('editSchoolModal').style.display='none';
         
-        if(oldName !== newName) {
-             schoolsMap[newName] = schoolsMap[oldName];
-             schoolsMap[newName].name = newName;
-             delete schoolsMap[oldName];
+        // Move the map entry if the UDISE itself changed; otherwise just update in place
+        if(oldUdise !== newUdise) {
+             schoolsMap[newUdise] = schoolsMap[oldUdise];
+             delete schoolsMap[oldUdise];
         }
-        Object.assign(schoolsMap[newName], {
-            phone: updates.hmPhone, block: updates.block, district: updates.district, pin: updates.pin, udise: updates.udise
+        schoolsMap[newUdise].name = newName;
+        schoolsMap[newUdise].nameCounts = { [newName]: schoolsMap[newUdise].count }; // normalized — only one name now
+        Object.assign(schoolsMap[newUdise], {
+            phone: updates.hmPhone, block: updates.block, district: updates.district, pin: updates.pin, udise: newUdise
         });
-        if(updates.hmSignature) schoolsMap[newName].signature = updates.hmSignature;
+        if(updates.hmSignature) schoolsMap[newUdise].signature = updates.hmSignature;
         
         localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         renderDashboard();
@@ -899,10 +955,9 @@ function del(id){
         currentSchoolStudents = currentSchoolStudents.filter(x => x.id != id);
         renderTable(); 
         
-        const sName = document.getElementById('viewSchoolName').textContent;
-        if(schoolsMap[sName]) {
-             schoolsMap[sName].count = currentSchoolStudents.length;
-             if(schoolsMap[sName].count === 0) delete schoolsMap[sName];
+        if(currentViewUdise && schoolsMap[currentViewUdise]) {
+             schoolsMap[currentViewUdise].count = currentSchoolStudents.length;
+             if(schoolsMap[currentViewUdise].count === 0) delete schoolsMap[currentViewUdise];
              localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         }
     }).catch(e => alert(e.message));
