@@ -97,9 +97,10 @@
             <div id="viewAddress" style="color:#555; font-size:14px; margin-top:5px;"></div>
             <div id="viewContact" style="color:#0277bd; font-weight:bold; margin-top:5px;"></div>
         </div>
-        <div style="text-align:right;">
-            <small>HM Signature:</small><br>
+        <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
+            <small>HM Signature:</small>
             <img id="viewHmSign" class="hm-sign-img" src="" alt="No Sign">
+            <button id="downloadSignBtn" class="btn btn-secondary" style="font-size:11px; padding:4px 8px; margin-top:8px; display:none;" onclick="downloadHmSignature()" title="Download HM Signature">⬇ Download</button>
         </div>
     </div>
 
@@ -528,8 +529,15 @@ function openSchoolDetail(udise){
     document.getElementById('viewContact').textContent = `📞 ${s.phone}`;
     
     const sign = document.getElementById('viewHmSign');
-    if(s.signature) { sign.src = s.signature; sign.style.display='block'; } 
-    else { sign.style.display='none'; }
+    const downloadBtn = document.getElementById('downloadSignBtn');
+    if(s.signature) { 
+        sign.src = s.signature; 
+        sign.style.display='block'; 
+        downloadBtn.style.display='inline-block';
+    } else { 
+        sign.style.display='none'; 
+        downloadBtn.style.display='none';
+    }
     
     document.getElementById('dashboardView').classList.add('hidden');
     document.getElementById('detailView').classList.remove('hidden');
@@ -560,6 +568,22 @@ function openSchoolDetail(udise){
     });
     
     updateSelection();
+}
+
+// 🚀 NEW: Download HM Signature Function
+function downloadHmSignature() {
+    if(!currentViewUdise || !schoolsMap[currentViewUdise] || !schoolsMap[currentViewUdise].signature) {
+        alert("No signature available to download.");
+        return;
+    }
+    const s = schoolsMap[currentViewUdise];
+    const a = document.createElement('a');
+    a.href = s.signature;
+    const safeName = (s.name || 'School').replace(/[^a-zA-Z0-9]/g, '_');
+    a.download = `HM_Signature_${safeName}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 function renderTable(){
