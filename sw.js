@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v15-optional-photo-quality'; // Bumped to v15: photo now optional (add later), improved photo quality
+const CACHE_NAME = 'student-data-v16-firebase-storage-migration'; // Bumped to v16: Migrated to Firebase Storage to fix 1MB limit and save quota
 
 const urlsToCache = [
   './',
@@ -22,6 +22,7 @@ const urlsToCache = [
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js',
+  'https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js', // Added Storage Library
   'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css'
 ];
