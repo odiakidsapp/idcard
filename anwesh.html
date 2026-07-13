@@ -10,6 +10,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
 
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; padding:20px; background:#f4f7f6; color:#222; }
@@ -25,7 +26,6 @@
     .btn-secondary { background:#6c757d; }
     input, select { padding:10px; border-radius:6px; border:1px solid #ccc; box-sizing: border-box; }
 
-    /* Layouts */
     .school-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
     .school-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative; transition: 0.2s; }
     .school-card:hover { transform: translateY(-3px); border-color: #007bff; }
@@ -49,7 +49,6 @@
 
     .action-bar { margin-top: 20px; padding: 20px; background: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 100; }
 
-    /* Modals */
     .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center; }
     .modal-content { background:white; padding:25px; border-radius:8px; width:90%; max-width:400px; max-height: 90vh; overflow-y: auto; }
     .form-group { margin-bottom: 12px; }
@@ -62,7 +61,6 @@
 </head>
 <body>
 
-<!-- 🚀 NEW: Simple client-side password gate -->
 <div id="lockScreen" style="position:fixed; inset:0; background:#0b53a0; z-index:5000; display:flex; align-items:center; justify-content:center; flex-direction:column; color:white; font-family:system-ui,sans-serif;">
     <div style="background:white; color:#222; padding:35px 30px; border-radius:14px; width:90%; max-width:340px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
         <div style="font-size:40px; margin-bottom:10px;">🔒</div>
@@ -75,7 +73,6 @@
 </div>
 
 <div class="container" id="mainContainer" style="display:none;">
-
   <div id="dashboardView">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap: wrap; gap: 10px;">
         <h1 style="margin:0;">Admin Dashboard</h1>
@@ -99,7 +96,7 @@
         </div>
         <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
             <small>HM Signature:</small>
-            <img id="viewHmSign" class="hm-sign-img" src="" alt="No Sign">
+            <img id="viewHmSign" class="hm-sign-img" src="" alt="No Sign" crossorigin="anonymous">
             <button id="downloadSignBtn" class="btn btn-secondary" style="font-size:11px; padding:4px 8px; margin-top:8px; display:none;" onclick="downloadHmSignature()" title="Download HM Signature">⬇ Download</button>
         </div>
     </div>
@@ -204,7 +201,6 @@
     </div>
 </div>
 
-<!-- Admin Preview Modal -->
 <div id="adminPreviewModal" class="modal">
     <div class="modal-content" style="text-align: center; background: #eef2f5; z-index: 2500;">
         <h3 style="margin-top:0; color: #0b53a0;">Edit Preview</h3>
@@ -214,7 +210,6 @@
 </div>
 
 <script>
-/* ---------- CONFIGURATION ---------- */
 const DPI = 300;
 const CARD_W = 638;  
 const CARD_H = 1012; 
@@ -224,7 +219,6 @@ const SCHOOL_NAME_POS = { x: 121, y: 55, maxX: 611 };
 const ADDR_POS = { x: 198, y: 94 };
 const SIGN_POS = { x: 434, y: 850, maxW: 180, maxH: 80 };
 
-/* ---------- HELPERS ---------- */
 window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
 function toOdiaDigits(str){ if (str===undefined||str===null) return ''; return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); }
 
@@ -253,14 +247,12 @@ const blobToBase64 = blob => new Promise((resolve, reject) => {
     reader.onerror = reject;
 });
 
-/* ---------- STATE LOGIC (CACHED FOR QUOTA SAVING) ---------- */
 let db = null;
 let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
 let lastSyncId = Number(localStorage.getItem('adminLastSyncId')) || 0;
 let currentSchoolStudents = [];
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual' }; 
 
-/* ---------- ASSET LOADER ---------- */
 async function loadAutoAssets() {
     try {
         const resp = await fetch('OdiaFont.ttf');
@@ -292,7 +284,6 @@ async function loadAutoAssets() {
     updateSelection();
 }
 
-/* ---------- FIREBASE ---------- */
 function startApp() {
   try{
     const firebaseConfig = {
@@ -306,6 +297,7 @@ function startApp() {
     };
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    window.storage = firebase.storage();
     
     initDashboard();
     loadAutoAssets();
@@ -313,9 +305,6 @@ function startApp() {
   } catch(e){ console.error(e); alert('Firebase error: '+e.message); }
 }
 
-// 🚀 NEW: Simple client-side password gate. NOTE: this only hides the UI/delays startup —
-// it is NOT real security (anyone can read this password from the page source). Treat this
-// as a basic deterrent only, and move to real Firebase Auth + security rules when possible.
 const ADMIN_PASSWORD = "Anwesh@1998";
 
 function unlockAdmin() {
@@ -342,14 +331,8 @@ if (sessionStorage.getItem('adminAuthed') === 'true') {
     });
 }
 
-/* ---------- SMART DATA LOGIC ---------- */
 function initDashboard() {
     renderDashboard();
-    // 🚀 NEW: lastModified-based Quick Sync uses a Firestore range query (>), which silently
-    // skips any document that doesn't have that field at all — e.g. students synced before this
-    // field existed in the app. A brand-new admin device (no cached sync state) needs one full
-    // read to guarantee it sees everything, instead of relying on someone remembering to click
-    // "Full Refresh" manually.
     if (lastSyncId === 0 && Object.keys(schoolsMap).length === 0) {
         silentFullSync();
     } else {
@@ -357,8 +340,6 @@ function initDashboard() {
     }
 }
 
-// Same as fullResync() but without the confirm dialog / quota warning — used only for the
-// one-time automatic bootstrap above, where a full read is actually necessary, not optional.
 function silentFullSync() {
     document.getElementById('schoolGrid').innerHTML = '<p>First-time setup: loading all students from Firebase...</p>';
     db.collection('students').get().then(qs => {
@@ -374,20 +355,10 @@ function silentFullSync() {
     });
 }
 
-// 🚀 NEW: Single shared function for grouping a student doc into schoolsMap, keyed by UDISE
-// (not school name). UDISE is mandatory + unique per school in the app, so it's the correct
-// identity key — grouping by name was merging genuinely different schools that share a common
-// name, and splitting one real school into two cards whenever a teacher typo'd the name.
-// We also track every distinct name seen under a UDISE, so typo mismatches are visible
-// instead of silently hidden.
 function mergeStudentIntoSchoolsMap(d) {
     const sName = d.schoolName;
-    // 🚀 NEW: Legacy records from before UDISE was made mandatory have no udise field at all.
-    // Previously these were silently skipped and vanished from the dashboard. Now they're grouped
-    // by school name instead (the only identity we have for them) and flagged so you know to add
-    // a UDISE to that school, rather than them being invisible.
     const udise = d.udise || (sName ? `NO_UDISE:${sName}` : null);
-    if (!udise) return; // no name and no udise — nothing usable to group by at all
+    if (!udise) return; 
     const missingUdise = !d.udise;
 
     if (!schoolsMap[udise]) {
@@ -410,23 +381,20 @@ function mergeStudentIntoSchoolsMap(d) {
     if (!sm.pin && d.pin) sm.pin = d.pin;
     if (!sm.phone && d.hmPhone) sm.phone = d.hmPhone;
     if (!sm.udise && d.udise) sm.udise = d.udise;
-    if (d.udise) sm.missingUdise = false; // at least one record here does have it now
+    if (d.udise) sm.missingUdise = false;
 
     if (sName) {
         sm.nameCounts[sName] = (sm.nameCounts[sName] || 0) + 1;
-        // Display name = whichever name currently has the most students under this UDISE
         const best = Object.keys(sm.nameCounts).sort((a, b) => sm.nameCounts[b] - sm.nameCounts[a])[0];
         sm.name = best;
     }
     lastSyncId = Math.max(lastSyncId, Number(d.lastModified) || Number(d.id) || 0);
 }
 
-// 🚀 NEW: Quick Sync updated to check 'lastModified' to catch invisible edits!
 function quickSync() {
     const btn = document.getElementById('quickSyncBtn');
     if(btn) btn.textContent = "Syncing...";
     
-    // We check lastModified instead of ID so we catch recently edited documents
     db.collection('students').where('lastModified', '>', lastSyncId).get().then(qs => {
         if(!qs.empty) {
             qs.forEach(doc => mergeStudentIntoSchoolsMap(doc.data()));
@@ -480,8 +448,6 @@ function renderDashboard(){
         if(s.block || s.district) loc = `📍 ${escapeHtml(s.block || '')}, ${escapeHtml(s.district || '')}`;
         else loc = `<span style="color:red">📍 Missing Address</span>`;
 
-        // 🚀 NEW: Warn if this UDISE has more than one distinct school name recorded against it —
-        // likely a typo by a different teacher, now visible instead of silently merged/hidden.
         const altNames = Object.keys(s.nameCounts || {});
         let typoWarning = '';
         if (altNames.length > 1) {
@@ -550,8 +516,6 @@ function openSchoolDetail(udise){
         currentSchoolStudents = [];
         qs.forEach(doc => {
             const data = doc.data();
-            // When grouped by name fallback, only include docs that genuinely lack a udise —
-            // otherwise a real-UDISE school with the same name could leak in here.
             if (udise.startsWith('NO_UDISE:') && data.udise) return;
             currentSchoolStudents.push(data);
         });
@@ -570,7 +534,6 @@ function openSchoolDetail(udise){
     updateSelection();
 }
 
-// 🚀 NEW: Download HM Signature Function
 function downloadHmSignature() {
     if(!currentViewUdise || !schoolsMap[currentViewUdise] || !schoolsMap[currentViewUdise].signature) {
         alert("No signature available to download.");
@@ -600,7 +563,7 @@ function renderTable(){
         const tr = document.createElement('tr');
         
         tr.innerHTML = `<td><input type="checkbox" class="sel" value="${s.id}"></td><td>${i+1}</td>
-        <td><img class="thumb" src="${s.photoBase64 || ''}"></td>
+        <td><img class="thumb" src="${s.photoBase64 || ''}" crossorigin="anonymous"></td>
         <td>${s.name}</td><td>${s.class}</td><td>${s.roll}</td><td>${s.dob}</td><td>${s.bloodGroup||''}</td>
         <td>${s.mobile || s.phone || ''}</td> 
         <td><button class="btn btn-primary" onclick="openEditModal('${s.id}')">✎</button> <button class="btn btn-danger" onclick="del('${s.id}')">🗑</button></td>`;
@@ -628,7 +591,6 @@ function updateSelection(){
     }
 }
 
-/* ---------- MANUAL UPLOAD HANDLERS ---------- */
 document.getElementById('fontInput').onchange = async e => {
     const f = e.target.files[0]; if(!f) return;
     const buf = await f.arrayBuffer();
@@ -695,7 +657,6 @@ function removeWhiteBg(img) {
     return c;
 }
 
-/* ---------- DRAWING ---------- */
 const canvas = document.getElementById('cardCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -728,7 +689,9 @@ async function drawCard(s) {
         }
 
         if(sm && sm.signature) {
-            const signImg = new Image(); signImg.src = sm.signature;
+            const signImg = new Image(); 
+            signImg.crossOrigin = "Anonymous"; // REQUIRED for Cloud Storage URLs
+            signImg.src = sm.signature;
             await new Promise(r => signImg.onload=r);
             const cleanSign = removeWhiteBg(signImg);
             const ratio = Math.min(SIGN_POS.maxW / cleanSign.width, SIGN_POS.maxH / cleanSign.height);
@@ -745,7 +708,9 @@ async function drawCard(s) {
     ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
 
     if(s.photoBase64) {
-        const photo = new Image(); photo.src = s.photoBase64;
+        const photo = new Image(); 
+        photo.crossOrigin = "Anonymous"; // REQUIRED for Cloud Storage URLs
+        photo.src = s.photoBase64;
         await new Promise(r => photo.onload=r);
         let sx=0, sy=0, sw=photo.width, sh=photo.height;
         if(window.assets.aiModel === 'loaded' && faceDetector) {
@@ -781,7 +746,6 @@ async function drawCard(s) {
     return await new Promise(r => canvas.toBlob(r, 'image/png'));
 }
 
-/* ---------- BACKUP ALL TO EXCEL ---------- */
 document.getElementById('downloadRawBtn').onclick = async () => {
     const btn = document.getElementById('downloadRawBtn');
     btn.disabled = true; btn.textContent = "Fetching DB...";
@@ -802,7 +766,6 @@ document.getElementById('downloadRawBtn').onclick = async () => {
     btn.disabled = false; btn.innerHTML = "💾 Backup";
 };
 
-/* ---------- GENERATE HANDLER ---------- */
 document.getElementById('generateBtn').onclick = async () => {
     const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
     const targets = currentSchoolStudents.filter(s => ids.includes(s.id.toString()));
@@ -872,12 +835,11 @@ document.getElementById('generateBtn').onclick = async () => {
     btn.disabled = false; updateSelection();
 };
 
-/* ---------- EDIT SCHOOL FUNCTIONS ---------- */
 function openSchoolEdit(udise){
     const s = schoolsMap[udise];
     if(!s) return alert("School data missing");
     
-    document.getElementById('oldSchoolName').value = udise; // now stores the OLD UDISE (the map key), not the name
+    document.getElementById('oldSchoolName').value = udise;
     document.getElementById('esName').value = s.name;
     document.getElementById('esPhone').value = s.phone || '';
     document.getElementById('esBlock').value = s.block || '';
@@ -893,7 +855,7 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
     const btn = document.getElementById('saveSchoolBtn');
     btn.disabled = true; btn.textContent = "Updating...";
     
-    const oldUdise = document.getElementById('oldSchoolName').value; // map key before this edit
+    const oldUdise = document.getElementById('oldSchoolName').value;
     const newName = document.getElementById('esName').value.trim();
     const newUdise = document.getElementById('esUdise').value.trim();
     const updates = {
@@ -903,20 +865,33 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         district: document.getElementById('esDistrict').value.trim(),
         pin: document.getElementById('esPin').value.trim(),
         udise: newUdise,
-        lastModified: Date.now() // Trigger QuickSync updates
+        lastModified: Date.now() 
     };
     
     const file = document.getElementById('esSignInput').files[0];
     if(file) {
-        updates.hmSignature = await blobToBase64(file);
+        // Admin-side compression before uploading to Storage to save 5GB limit
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        await new Promise(r => img.onload = r);
+        
+        const canvas = document.createElement('canvas');
+        const cx = canvas.getContext('2d');
+        const maxW = 400;
+        let w = img.width, h = img.height;
+        if(w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
+        canvas.width = w; canvas.height = h;
+        cx.drawImage(img, 0, 0, w, h);
+        
+        // Convert canvas to Blob (compressed JPEG)
+        const compressedBlob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.7));
+        
+        const ref = window.storage.ref(`school_signatures/${newUdise}_signature.jpg`);
+        await ref.put(compressedBlob);
+        updates.hmSignature = await ref.getDownloadURL();
     }
     
     try {
-        // 🚀 NEW: Query by UDISE, not by name — this means every record sharing this UDISE
-        // (even ones with a mismatched/typo'd school name) gets normalized to the SAME clean
-        // name in one go, directly fixing the typo-mismatch problem from the admin side.
-        // 🚀 NEW: If this was a legacy no-UDISE entry (synthetic key), find its records by name
-        // instead — there's no real 'udise' field value to query by yet for these.
         const isLegacyNoUdise = oldUdise.startsWith('NO_UDISE:');
         const legacyOldName = isLegacyNoUdise ? oldUdise.slice('NO_UDISE:'.length) : null;
 
@@ -924,9 +899,8 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
             ? await db.collection('students').where('schoolName', '==', legacyOldName).get()
             : await db.collection('students').where('udise', '==', oldUdise).get();
         let docs = snap.docs;
-        if (isLegacyNoUdise) docs = docs.filter(doc => !doc.data().udise); // only the ones genuinely missing it
+        if (isLegacyNoUdise) docs = docs.filter(doc => !doc.data().udise);
         
-        // 🚀 Chunk Batch operations so they don't break the 500-limit
         const chunks = [];
         for (let i = 0; i < docs.length; i += 400) {
             chunks.push(docs.slice(i, i + 400));
@@ -941,13 +915,12 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         alert("School updated successfully!");
         document.getElementById('editSchoolModal').style.display='none';
         
-        // Move the map entry if the UDISE itself changed; otherwise just update in place
         if(oldUdise !== newUdise) {
              schoolsMap[newUdise] = schoolsMap[oldUdise];
              delete schoolsMap[oldUdise];
         }
         schoolsMap[newUdise].name = newName;
-        schoolsMap[newUdise].nameCounts = { [newName]: schoolsMap[newUdise].count }; // normalized — only one name now
+        schoolsMap[newUdise].nameCounts = { [newName]: schoolsMap[newUdise].count };
         Object.assign(schoolsMap[newUdise], {
             phone: updates.hmPhone, block: updates.block, district: updates.district, pin: updates.pin, udise: newUdise
         });
@@ -959,7 +932,6 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
     finally { btn.disabled = false; btn.textContent = "Update All Records"; }
 };
 
-/* ---------- EDIT STUDENT ---------- */
 function openEditModal(id){
     const s = currentSchoolStudents.find(x => x.id == id);
     if(!s) return;
@@ -996,7 +968,7 @@ document.getElementById('saveEditBtn').onclick = async () => {
         dob: document.getElementById('editDob').value,
         bloodGroup: document.getElementById('editBlood').value,
         mobile: document.getElementById('editPhone').value,
-        lastModified: Date.now() // Track for QuickSync!
+        lastModified: Date.now()
     };
     try {
         await db.collection('students').doc(id.toString()).update(data);
@@ -1007,7 +979,6 @@ document.getElementById('saveEditBtn').onclick = async () => {
     } catch(e) { alert("Error: "+e.message); }
 };
 
-/* ---------- ADMIN PREVIEW FUNCTION ---------- */
 document.getElementById('previewEditBtn').onclick = async () => {
     if(!window.assets.font || !window.assets.template) {
         return alert("Please ensure 'OdiaFont' and 'Background PNG' are loaded first in the config panel.");
