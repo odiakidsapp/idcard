@@ -6,6 +6,7 @@
     <title>Data Entry</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
     
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
@@ -41,7 +42,6 @@
 <body>
 
     <div class="container">
-        
         <div id="schoolSection" class="hidden">
             <h2 style="text-align:center; color:#0056b3;">School Registration</h2>
             
@@ -139,10 +139,8 @@
             
             <div id="studentList"></div>
         </div>
-
     </div>
 
-    <!-- Modals -->
     <div id="editSchoolModal" class="modal">
         <div class="modal-content">
             <h3>Edit School Details</h3>
@@ -184,7 +182,6 @@
         </div>
     </div>
 
-    <!-- ID Card Preview Modal -->
     <div id="cardPreviewModal" class="modal">
         <div class="modal-content" style="text-align: center; background: #eef2f5;">
             <h3 style="margin-top:0; color: #0b53a0;">Card Preview</h3>
@@ -195,7 +192,6 @@
     </div>
 
     <script>
-        // CONFIG
         const firebaseConfig = {
               apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
               authDomain: "idcard-60586.firebaseapp.com",
@@ -207,11 +203,11 @@
         };
         firebase.initializeApp(firebaseConfig);
         const firestore = firebase.firestore();
+        const storage = firebase.storage();
 
         let db, currentSchool = null, currentSchoolData = null, students = [], currentPhotoBlob = null;
         window.assets = { template: null, fontLoaded: false };
 
-        // DB INIT
         const req = indexedDB.open('SchoolDataApp', 5);
         req.onupgradeneeded = e => {
             db = e.target.result;
@@ -224,7 +220,6 @@
         req.onsuccess = e => {
             db = e.target.result;
             loadSchools();
-            // 🚀 NEW: Auto-sync any pending students as soon as the app/db is ready (covers page reload)
             if (navigator.onLine) {
                 syncAllPending();
                 const pending = localStorage.getItem('pendingSchoolRename');
@@ -242,42 +237,57 @@
             reader.onerror = reject;
         });
 
-        // 🚀 NEW: Universal Image Compressor to Fix 1MB Firestore Quota Limit
-        // Target is roughly 2x the actual 187x225px print box (for sharpness on high-DPI screens
-        // and cleaner printing), bumped up from an earlier, too-aggressive compression pass.
-        function compressImageToDataURL(imgElement) {
+        function dataURLtoBlob(dataurl) {
+            let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+            while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+            return new Blob([u8arr], {type:mime});
+        }
+
+        // Universal Image Compressor to Protect 5GB Storage Limit (~15KB-25KB per image)
+        function compressImageToDataURL(imgElement, maxWidth = 300, quality = 0.65) {
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                const MAX_WIDTH = 380; // ~2x the 187px print box width, for crisper printed photos
                 let width = imgElement.width;
                 let height = imgElement.height;
                 
-                if (width > MAX_WIDTH) {
-                    height = Math.round((height * MAX_WIDTH) / width);
-                    width = MAX_WIDTH;
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
                 }
                 
                 canvas.width = width;
                 canvas.height = height;
                 ctx.drawImage(imgElement, 0, 0, width, height);
                 
-                // Compress as JPEG at 75% quality (~35-50KB output) — noticeably sharper than
-                // before, while still tiny compared to Firestore's 1MB document limit
-                resolve(canvas.toDataURL('image/jpeg', 0.75));
+                // JPEG output removes transparency but is drastically smaller than PNG
+                resolve(canvas.toDataURL('image/jpeg', quality));
             });
         }
 
-        // 🚀 NEW: Re-compress an already-stored base64 photo (for legacy records saved before compression existed)
-        function recompressBase64(dataUrl) {
+        function compressFile(file, maxWidth = 300) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                img.onload = async () => {
+                    const base64 = await compressImageToDataURL(img, maxWidth);
+                    URL.revokeObjectURL(img.src);
+                    resolve(base64);
+                };
+            });
+        }
+
+        function recompressBase64(dataUrl, maxWidth = 300) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
-                img.onload = () => resolve(compressImageToDataURL(img));
+                img.onload = () => resolve(compressImageToDataURL(img, maxWidth));
                 img.onerror = reject;
                 img.src = dataUrl;
             });
         }
+
         async function loadPreviewAssets() {
             try {
                 const f = new FontFace('OdiaFont', await (await fetch('OdiaFont.ttf')).arrayBuffer());
@@ -292,15 +302,11 @@
         }
         loadPreviewAssets();
 
-        // 🚀 NEW: Auto Background Offline Sync Processor
         window.addEventListener('online', () => { syncAllPending(); });
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') syncAllPending();
         });
 
-        // 🚀 NEW: Prevent overlapping sync runs — without this, the 'online', 'visibilitychange',
-        // and page-load triggers could all fire syncAllPending() at once on a large backlog
-        // (recompression takes time), causing the progress counter to keep resetting back to 1.
         let isSyncing = false;
 
         async function syncAllPending() {
@@ -309,9 +315,6 @@
             isSyncing = true;
             const btn = document.getElementById('manualSyncBtn');
 
-            // 🚀 NEW: Collect just the IDs of unsynced records first via a cursor, instead of getAll()
-            // (which would load the ENTIRE pending backlog — e.g. 250MB of photos — into memory at once,
-            // and could freeze/crash the tab on lower-end devices with a large backlog).
             const unsyncedIds = [];
             await new Promise((resolve, reject) => {
                 const tx = db.transaction(['students'], 'readonly');
@@ -338,8 +341,6 @@
             }
 
             try {
-                // Process one record at a time — fetched fresh from IndexedDB right before use, and
-                // allowed to be garbage-collected right after, instead of all sitting in memory together
                 let successCount = 0, failCount = 0;
                 for (let i = 0; i < unsyncedIds.length; i++) {
                     if (btn) btn.textContent = `Syncing ${i + 1}/${unsyncedIds.length}...`;
@@ -350,11 +351,10 @@
                             getReq.onsuccess = () => resolve(getReq.result);
                             getReq.onerror = () => reject(getReq.error);
                         });
-                        if (!student || student.synced) continue; // already handled by another path
+                        if (!student || student.synced) continue; 
                         await syncToFirebase(student);
                         successCount++;
 
-                        // Clear any previously recorded error now that it succeeded
                         if (student.syncError) {
                             delete student.syncError;
                             const tx2 = db.transaction(['students'], 'readwrite');
@@ -362,8 +362,6 @@
                         }
                     } catch (err) {
                         failCount++;
-                        // 🚀 NEW: Save the actual error message onto the record itself so it's visible
-                        // in the student list on screen — console.error alone is invisible to the user.
                         console.error(`Sync failed for record id ${unsyncedIds[i]}:`, err);
                         try {
                             const tx3 = db.transaction(['students'], 'readwrite');
@@ -375,8 +373,7 @@
                                     tx3.objectStore('students').put(rec);
                                 }
                             };
-                        } catch (e2) { /* best-effort only */ }
-                        // keep going — one bad record should never block the rest of the queue
+                        } catch (e2) { }
                     }
                 }
 
@@ -385,17 +382,15 @@
                         btn.textContent = "✅ All Synced";
                     } else {
                         btn.textContent = `⚠️ ${successCount} synced, ${failCount} failed`;
-                        console.error(`${failCount} record(s) failed to sync. Check console errors above for details.`);
                     }
                     setTimeout(() => btn.textContent = "🔄 Sync Pending", 3000);
                 }
-                loadStudents(); // refresh list so any error badges show up immediately
+                loadStudents(); 
             } finally {
                 isSyncing = false;
             }
         }
 
-        // --- SCHOOL LOGIC ---
         document.getElementById('hmSignInput').onchange = (e) => {
             const file = e.target.files[0];
             if(file) {
@@ -417,18 +412,11 @@
             };
         }
 
-        // Actually performs the restore for one specific school name's subset of docs
         function performRestore(docs, schoolName, udise, statusEl) {
             const first = docs[0].data;
             const schoolObj = {
-                name: schoolName,
-                phone: first.hmPhone || '',
-                block: first.block || '',
-                district: first.district || '',
-                pin: first.pin || '',
-                udise: first.udise || udise,
-                hmSignature: first.hmSignature || '',
-                createdAt: Date.now()
+                name: schoolName, phone: first.hmPhone || '', block: first.block || '', district: first.district || '',
+                pin: first.pin || '', udise: first.udise || udise, hmSignature: first.hmSignature || '', createdAt: Date.now()
             };
 
             statusEl.style.color = '#0056b3';
@@ -481,10 +469,6 @@
                 }
 
                 const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
-
-                // 🚀 NEW: Group by the actual schoolName field — if this UDISE has more than one
-                // distinct school name attached to it (typo by a different teacher, mismatched entry, etc),
-                // don't silently merge them into one — ask which school to restore.
                 const groups = {};
                 docs.forEach(d => {
                     const name = d.data.schoolName || '(Unnamed School)';
@@ -498,7 +482,6 @@
                     return;
                 }
 
-                // Multiple different school names share this UDISE — show a picker instead of guessing
                 statusEl.style.color = '#dc3545';
                 statusEl.innerHTML = `⚠️ This UDISE has <b>${distinctNames.length} different school names</b> saved against it (likely a typo by someone). Please choose the correct one:`;
 
@@ -518,7 +501,6 @@
                 statusEl.appendChild(pickerDiv);
                 btn.disabled = false;
             } catch (err) {
-                console.error(err);
                 statusEl.style.color = '#dc3545';
                 statusEl.textContent = "Could not reach the server. Check your connection and try again.";
                 btn.disabled = false;
@@ -535,12 +517,9 @@
             const signFile = document.getElementById('hmSignInput').files[0];
 
             if(!name) return alert("Enter School Name");
-
-            // 🚀 NEW: UDISE is now mandatory and must be exactly 11 digits
             if(!udise) return alert("UDISE Number is mandatory. Please enter the 11-digit UDISE code.");
             if(!/^\d{11}$/.test(udise)) return alert("UDISE Number must be exactly 11 digits. Please check and re-enter.");
             
-            // 🚀 NEW: Check for duplicate school name prevent overwrite trap
             const checkTx = db.transaction(['schools'], 'readonly');
             checkTx.objectStore('schools').get(name).onsuccess = async (e) => {
                 if (e.target.result) {
@@ -551,17 +530,12 @@
                 document.getElementById('addSchoolBtn').textContent = "Processing...";
                 
                 let signBase64 = null;
-                if(signFile) signBase64 = await blobToBase64(signFile);
+                if(signFile) {
+                    signBase64 = await compressFile(signFile, 400); // Compress signature to max 400px width
+                }
 
                 const schoolObj = {
-                    name: name,
-                    phone: phone,
-                    block: block,
-                    district: district,
-                    pin: pin,
-                    udise: udise,
-                    hmSignature: signBase64,
-                    createdAt: Date.now()
+                    name: name, phone: phone, block: block, district: district, pin: pin, udise: udise, hmSignature: signBase64, createdAt: Date.now()
                 };
 
                 const tx = db.transaction(['schools'], 'readwrite');
@@ -571,7 +545,6 @@
         };
 
         function hardResetApp() {
-            // 🚀 NEW: Protect offline users from accidentally deleting unsynced records
             const checkTx = db.transaction(['students'], 'readonly');
             checkTx.objectStore('students').getAll().onsuccess = e => {
                 const unsynced = e.target.result.filter(s => !s.synced);
@@ -613,8 +586,6 @@
             document.getElementById('editSchoolModal').style.display = 'flex';
         }
 
-        // 🚀 NEW: Pushes a school name/detail edit to all already-synced Firestore docs (mirrors Admin's
-        // own rename logic) so the app and admin panel never disagree on a school's identity again.
         async function pushSchoolRenameToFirestore(oldName, updates) {
             if (!navigator.onLine) {
                 localStorage.setItem('pendingSchoolRename', JSON.stringify({ oldName, updates }));
@@ -638,7 +609,6 @@
             }
         }
 
-        // Retry any queued rename whenever we come back online or reopen the app
         window.addEventListener('online', () => {
             const pending = localStorage.getItem('pendingSchoolRename');
             if (pending) {
@@ -657,8 +627,6 @@
             const newSignFile = document.getElementById('editSchoolSignInput').files[0];
 
             if(!newName) return alert("Name cannot be empty");
-
-            // 🚀 NEW: UDISE is mandatory and must be exactly 11 digits, even on edit
             if(!newUdise) return alert("UDISE Number is mandatory. Please enter the 11-digit UDISE code.");
             if(!/^\d{11}$/.test(newUdise)) return alert("UDISE Number must be exactly 11 digits. Please check and re-enter.");
 
@@ -672,19 +640,11 @@
             updatedSchool.udise = newUdise;
             
             if(newSignFile) {
-                updatedSchool.hmSignature = await blobToBase64(newSignFile);
+                updatedSchool.hmSignature = await compressFile(newSignFile, 400);
             }
 
-            // 🚀 NEW: Push the rename/edit to already-synced Firestore records too (was previously
-            // only updating local IndexedDB — that's why renamed schools showed as a duplicate in Admin)
             const firestoreUpdates = {
-                schoolName: newName,
-                hmPhone: newPhone,
-                block: newBlock,
-                district: newDistrict,
-                pin: newPin,
-                udise: newUdise,
-                lastModified: Date.now()
+                schoolName: newName, hmPhone: newPhone, block: newBlock, district: newDistrict, pin: newPin, udise: newUdise, lastModified: Date.now()
             };
             if (newSignFile) firestoreUpdates.hmSignature = updatedSchool.hmSignature;
             await pushSchoolRenameToFirestore(oldName, firestoreUpdates);
@@ -695,21 +655,15 @@
             }
             tx.objectStore('schools').put(updatedSchool);
 
-            // 🚀 NEW: Replaced Cursor Mutation logic with safer getAll() to prevent skipping updates
             if(oldName !== newName) {
                 const stStore = tx.objectStore('students');
                 const idx = stStore.index('schoolName');
                 idx.getAll(oldName).onsuccess = (e) => {
                     const studentsToUpdate = e.target.result;
                     studentsToUpdate.forEach(s => {
-                        s.schoolName = newName;
-                        s.hmSignature = updatedSchool.hmSignature;
-                        s.block = updatedSchool.block;
-                        s.district = updatedSchool.district;
-                        s.pin = updatedSchool.pin;
-                        s.udise = updatedSchool.udise;
-                        s.hmPhone = updatedSchool.phone;
-                        stStore.put(s); 
+                        s.schoolName = newName; s.hmSignature = updatedSchool.hmSignature; s.block = updatedSchool.block;
+                        s.district = updatedSchool.district; s.pin = updatedSchool.pin; s.udise = updatedSchool.udise;
+                        s.hmPhone = updatedSchool.phone; stStore.put(s); 
                     });
                 };
             }
@@ -758,7 +712,6 @@
             });
         }
 
-        // --- PREVIEW LOGIC ---
         window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
         function toOdiaDigits(str){ if (str===undefined||str===null) return ''; return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); }
 
@@ -820,14 +773,18 @@
             }
 
             if(currentSchoolData.hmSignature) {
-                const signImg = new Image(); signImg.src = currentSchoolData.hmSignature;
+                const signImg = new Image(); 
+                signImg.crossOrigin = "Anonymous"; // Crucial for Storage URLs
+                signImg.src = currentSchoolData.hmSignature;
                 await new Promise(r => signImg.onload=r);
                 const cleanSign = removeWhiteBg(signImg);
                 const ratio = Math.min(180 / cleanSign.width, 60 / cleanSign.height);
                 ctx.drawImage(cleanSign, 434, 850, cleanSign.width * ratio, cleanSign.height * ratio);
             }
 
-            const photo = new Image(); photo.src = base64;
+            const photo = new Image(); 
+            photo.crossOrigin = "Anonymous"; // Crucial for Storage URLs
+            photo.src = base64;
             await new Promise(r => photo.onload=r);
             const px = 222, py = 250, pw = 187, ph = 225, border = 3;
             ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
@@ -876,7 +833,6 @@
             document.getElementById('cardPreviewModal').style.display = 'flex';
         };
 
-        // --- SAVE / EDIT ---
         document.getElementById('saveBtn').onclick = async () => {
             const id = document.getElementById('editId').value;
             const name = document.getElementById('sName').value;
@@ -895,25 +851,13 @@
                 const old = students.find(x => x.id == id);
                 base64 = old.photoBase64 || null;
             }
-            // 🚀 NEW: Photo is now optional — a student can be saved without one, and the
-            // teacher can come back later (tap Edit on this student) to add/update the photo
-            // whenever it's convenient, instead of being blocked from saving at all.
 
             const student = {
                 id: id ? Number(id) : Date.now(),
-                schoolName: currentSchool,
-                hmSignature: currentSchoolData.hmSignature || '',
-                block: currentSchoolData.block || '',
-                district: currentSchoolData.district || '',
-                pin: currentSchoolData.pin || '',
-                udise: currentSchoolData.udise || '',
-                hmPhone: currentSchoolData.phone || '',
-                name, class: cls, roll, dob, bloodGroup: blood,
-                mobile: phone,
-                photoBase64: base64,
-                photoName: `${Date.now()}.jpg`,
-                synced: false,
-                lastModified: Date.now(), // 🚀 NEW: Tracking updates to support Admin Quick Sync
+                schoolName: currentSchool, hmSignature: currentSchoolData.hmSignature || '', block: currentSchoolData.block || '',
+                district: currentSchoolData.district || '', pin: currentSchoolData.pin || '', udise: currentSchoolData.udise || '',
+                hmPhone: currentSchoolData.phone || '', name, class: cls, roll, dob, bloodGroup: blood, mobile: phone,
+                photoBase64: base64, photoName: `${Date.now()}.jpg`, synced: false, lastModified: Date.now(),
                 submittedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
@@ -982,7 +926,6 @@
             document.getElementById('cameraVideo').srcObject = stream;
         };
 
-        // 🚀 NEW: Aggressively compress live camera shots to protect Firestore Limits
         document.getElementById('snap').onclick = () => {
             const vid = document.getElementById('cameraVideo');
             const img = new Image();
@@ -994,7 +937,7 @@
             
             img.src = tempCanvas.toDataURL('image/jpeg');
             img.onload = async () => {
-                const compressedBase64 = await compressImageToDataURL(img);
+                const compressedBase64 = await compressImageToDataURL(img, 300);
                 document.getElementById('preview').src = compressedBase64;
                 document.getElementById('preview').style.display = 'block';
                 
@@ -1010,14 +953,13 @@
             document.getElementById('cameraModal').style.display = 'none';
         }
 
-        // 🚀 NEW: Aggressively compress gallery uploads to protect Firestore Limits
         document.getElementById('fileInput').onchange = e => {
             const file = e.target.files[0];
             if (file) {
                 const img = new Image();
                 img.src = URL.createObjectURL(file);
                 img.onload = async () => {
-                    const compressedBase64 = await compressImageToDataURL(img);
+                    const compressedBase64 = await compressImageToDataURL(img, 300);
                     document.getElementById('preview').src = compressedBase64;
                     document.getElementById('preview').style.display = 'block';
                     
@@ -1028,25 +970,40 @@
             }
         };
 
-        // Firestore's hard document size limit, with safety margin for the other text fields
-        const FIRESTORE_SAFE_LIMIT = 900 * 1024; // ~900KB
-
         async function syncToFirebase(student) {
             try {
-                // 🚀 NEW: Detect legacy oversized photos (captured before compression existed) and shrink them first
+                // Detect legacy oversized photos and shrink them first
                 let payloadSize = new Blob([JSON.stringify(student)]).size;
-                if (payloadSize > FIRESTORE_SAFE_LIMIT && student.photoBase64) {
-                    console.log(`Student ${student.id} payload is ${(payloadSize/1024/1024).toFixed(2)}MB — recompressing legacy photo before sync...`);
-                    const shrunk = await recompressBase64(student.photoBase64);
-                    student.photoBase64 = shrunk;
+                if (payloadSize > 500 * 1024 && student.photoBase64 && student.photoBase64.startsWith('data:image')) {
+                    console.log(`Student ${student.id} payload is massive — recompressing legacy photo before Storage upload...`);
+                    student.photoBase64 = await recompressBase64(student.photoBase64, 300);
+                }
 
-                    // Save the shrunk photo back to IndexedDB permanently — no data lost, just a smaller image
-                    await new Promise((resolve, reject) => {
-                        const tx = db.transaction(['students'], 'readwrite');
-                        tx.objectStore('students').put(student);
-                        tx.oncomplete = resolve;
-                        tx.onerror = reject;
-                    });
+                // 1. Upload Student Photo to Firebase Storage
+                if (student.photoBase64 && student.photoBase64.startsWith('data:image')) {
+                    console.log(`Uploading photo for student ${student.id} to Storage...`);
+                    const photoBlob = dataURLtoBlob(student.photoBase64);
+                    const photoRef = storage.ref(`student_photos/${student.udise || 'NO_UDISE'}/${student.id}.jpg`);
+                    await photoRef.put(photoBlob);
+                    student.photoBase64 = await photoRef.getDownloadURL(); 
+                }
+
+                // 2. Upload HM Signature to Firebase Storage
+                if (student.hmSignature && student.hmSignature.startsWith('data:image')) {
+                    console.log(`Uploading signature for school ${student.udise} to Storage...`);
+                    if (student.hmSignature.length > 100000) {
+                        student.hmSignature = await recompressBase64(student.hmSignature, 400);
+                    }
+                    const signBlob = dataURLtoBlob(student.hmSignature);
+                    const signRef = storage.ref(`school_signatures/${student.udise || 'NO_UDISE'}_signature.jpg`);
+                    await signRef.put(signBlob);
+                    student.hmSignature = await signRef.getDownloadURL(); 
+                    
+                    if (currentSchoolData && currentSchoolData.udise === student.udise) {
+                         currentSchoolData.hmSignature = student.hmSignature;
+                         const tx = db.transaction(['schools'], 'readwrite');
+                         tx.objectStore('schools').put(currentSchoolData);
+                    }
                 }
 
                 await firestore.collection('students').doc(String(student.id)).set(student);
@@ -1060,9 +1017,8 @@
                 });
                 loadStudents();
             } catch (err) {
-                // 🚀 NEW: Real, visible error logging instead of silent swallow
                 console.error(`Sync failed for student ${student.id} (${student.name || 'unknown'}):`, err);
-                throw err; // let syncAllPending track this as a failure
+                throw err;
             }
         }
     </script>
