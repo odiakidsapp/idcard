@@ -713,9 +713,9 @@ async function drawCard(s) {
             signImg.crossOrigin = "Anonymous"; // REQUIRED for Cloud Storage URLs
             signImg.src = sm.signature;
             await new Promise(r => signImg.onload=r);
-            const cleanSign = removeWhiteBg(signImg);
-            const ratio = Math.min(SIGN_POS.maxW / cleanSign.width, SIGN_POS.maxH / cleanSign.height);
-            ctx.drawImage(cleanSign, SIGN_POS.x, SIGN_POS.y, cleanSign.width * ratio, cleanSign.height * ratio);
+            // Draw PNG directly — no background removal needed, trust the uploaded PNG has transparency
+            const ratio = Math.min(SIGN_POS.maxW / signImg.width, SIGN_POS.maxH / signImg.height);
+            ctx.drawImage(signImg, SIGN_POS.x, SIGN_POS.y, signImg.width * ratio, signImg.height * ratio);
         }
     }
 
