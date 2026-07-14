@@ -642,15 +642,35 @@ function removeWhiteBg(img) {
     cx.drawImage(img, 0, 0);
     const imgData = cx.getImageData(0,0, c.width, c.height);
     const d = imgData.data;
+
+    // Auto-detect if the signature has a dark/black background (JPEG-compressed upload)
+    // by sampling corners of the image
+    let cornerDark = 0;
+    const samplePx = [[0,0],[c.width-1,0],[0,c.height-1],[c.width-1,c.height-1]];
+    samplePx.forEach(([px,py]) => {
+        const idx = (py * c.width + px) * 4;
+        if((d[idx]+d[idx+1]+d[idx+2])/3 < 40) cornerDark++;
+    });
+    const hasDarkBg = cornerDark >= 2;
+
     for(let i=0; i<d.length; i+=4) {
         const r = d[i], g = d[i+1], b = d[i+2];
         const bright = (r+g+b)/3;
-        
-        if(bright > 210) { 
-            d[i+3] = 0; 
-        } 
-        else if(bright > 150) { 
-            d[i+3] = Math.max(0, 255 - (bright - 150) * 4); 
+
+        if(hasDarkBg) {
+            // Remove dark/black background: keep bright ink, erase dark pixels
+            if(bright < 40) {
+                d[i+3] = 0; // fully transparent
+            } else if(bright < 90) {
+                d[i+3] = Math.round((bright - 40) / 50 * 255);
+            }
+        } else {
+            // Remove white/light background (original behaviour)
+            if(bright > 210) {
+                d[i+3] = 0;
+            } else if(bright > 150) {
+                d[i+3] = Math.max(0, 255 - (bright - 150) * 4);
+            }
         }
     }
     cx.putImageData(imgData, 0, 0);
@@ -881,12 +901,14 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         let w = img.width, h = img.height;
         if(w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
         canvas.width = w; canvas.height = h;
+        // Clear to transparent BEFORE drawing — preserves PNG alpha channel
+        cx.clearRect(0, 0, w, h);
         cx.drawImage(img, 0, 0, w, h);
         
-        // Convert canvas to Blob (compressed JPEG)
-        const compressedBlob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.7));
+        // Save as PNG (not JPEG) so transparent backgrounds stay transparent
+        const compressedBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
         
-        const ref = window.storage.ref(`school_signatures/${newUdise}_signature.jpg`);
+        const ref = window.storage.ref(`school_signatures/${newUdise}_signature.png`);
         await ref.put(compressedBlob);
         updates.hmSignature = await ref.getDownloadURL();
     }
