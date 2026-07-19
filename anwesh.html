@@ -209,6 +209,18 @@
     </div>
 </div>
 
+<!-- Custom Alert/Confirm Modal replacement -->
+<div id="customAlertModal" class="modal" style="z-index: 9999;">
+    <div class="modal-content" style="text-align:center;">
+        <h3 id="customAlertTitle" style="margin-top:0; color: #0b53a0;">Notice</h3>
+        <p id="customAlertMsg" style="margin-bottom:20px;"></p>
+        <div class="modal-btns" style="justify-content:center;">
+            <button class="btn btn-secondary" id="customAlertCancel" style="display:none;">Cancel</button>
+            <button class="btn btn-primary" id="customAlertOk">OK</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const DPI = 300;
 const CARD_W = 638;  
@@ -246,6 +258,26 @@ const blobToBase64 = blob => new Promise((resolve, reject) => {
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
 });
+
+// Custom Alert UI Logic
+function showMsg(msg, isConfirm = false) {
+    return new Promise(resolve => {
+        document.getElementById('customAlertMsg').textContent = msg;
+        document.getElementById('customAlertCancel').style.display = isConfirm ? 'inline-block' : 'none';
+        document.getElementById('customAlertModal').style.display = 'flex';
+
+        document.getElementById('customAlertOk').onclick = () => {
+            document.getElementById('customAlertModal').style.display = 'none';
+            resolve(true);
+        };
+        if(isConfirm) {
+            document.getElementById('customAlertCancel').onclick = () => {
+                document.getElementById('customAlertModal').style.display = 'none';
+                resolve(false);
+            };
+        }
+    });
+}
 
 let db = null;
 let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
@@ -302,7 +334,10 @@ function startApp() {
     initDashboard();
     loadAutoAssets();
     initializeFaceDetector();
-  } catch(e){ console.error(e); alert('Firebase error: '+e.message); }
+  } catch(e){ 
+      console.error(e); 
+      showMsg('Firebase error: '+e.message); 
+  }
 }
 
 const ADMIN_PASSWORD = "Anwesh@1998";
@@ -409,8 +444,8 @@ function quickSync() {
     });
 }
 
-function fullResync() {
-    if(!confirm('This will read the ENTIRE database and consume your free Firebase quota. Continue?')) return;
+async function fullResync() {
+    if(!(await showMsg('This will read the ENTIRE database and consume your free Firebase quota. Continue?', true))) return;
     
     const btn = document.getElementById('fullSyncBtn');
     btn.textContent = "Fetching...";
@@ -426,7 +461,7 @@ function fullResync() {
         renderDashboard();
         btn.innerHTML = "🔄 Full Refresh";
     }).catch(err => {
-        alert("Error: " + err.message);
+        showMsg("Error: " + err.message);
         btn.innerHTML = "🔄 Full Refresh";
     });
 }
@@ -536,7 +571,7 @@ function openSchoolDetail(udise){
 
 function downloadHmSignature() {
     if(!currentViewUdise || !schoolsMap[currentViewUdise] || !schoolsMap[currentViewUdise].signature) {
-        alert("No signature available to download.");
+        showMsg("No signature available to download.");
         return;
     }
     const s = schoolsMap[currentViewUdise];
@@ -613,7 +648,6 @@ document.getElementById('templateInput').onchange = e => {
     }
 };
 
-/* ---------- ROBUST AI LOADER ---------- */
 let FaceDetector = null, FilesetResolver = null, faceDetector = null;
 async function importVision(url){ try{ return await import(url); }catch(e){ return null; } }
 async function loadVisionBundle(){
@@ -643,8 +677,6 @@ function removeWhiteBg(img) {
     const imgData = cx.getImageData(0,0, c.width, c.height);
     const d = imgData.data;
 
-    // Auto-detect if the signature has a dark/black background (JPEG-compressed upload)
-    // by sampling corners of the image
     let cornerDark = 0;
     const samplePx = [[0,0],[c.width-1,0],[0,c.height-1],[c.width-1,c.height-1]];
     samplePx.forEach(([px,py]) => {
@@ -658,14 +690,12 @@ function removeWhiteBg(img) {
         const bright = (r+g+b)/3;
 
         if(hasDarkBg) {
-            // Remove dark/black background: keep bright ink, erase dark pixels
             if(bright < 40) {
-                d[i+3] = 0; // fully transparent
+                d[i+3] = 0; 
             } else if(bright < 90) {
                 d[i+3] = Math.round((bright - 40) / 50 * 255);
             }
         } else {
-            // Remove white/light background (original behaviour)
             if(bright > 210) {
                 d[i+3] = 0;
             } else if(bright > 150) {
@@ -710,10 +740,9 @@ async function drawCard(s) {
 
         if(sm && sm.signature) {
             const signImg = new Image(); 
-            signImg.crossOrigin = "Anonymous"; // REQUIRED for Cloud Storage URLs
+            signImg.crossOrigin = "Anonymous"; 
             signImg.src = sm.signature;
             await new Promise(r => signImg.onload=r);
-            // Draw PNG directly — no background removal needed, trust the uploaded PNG has transparency
             const ratio = Math.min(SIGN_POS.maxW / signImg.width, SIGN_POS.maxH / signImg.height);
             ctx.drawImage(signImg, SIGN_POS.x, SIGN_POS.y, signImg.width * ratio, signImg.height * ratio);
         }
@@ -729,7 +758,7 @@ async function drawCard(s) {
 
     if(s.photoBase64) {
         const photo = new Image(); 
-        photo.crossOrigin = "Anonymous"; // REQUIRED for Cloud Storage URLs
+        photo.crossOrigin = "Anonymous";
         photo.src = s.photoBase64;
         await new Promise(r => photo.onload=r);
         let sx=0, sy=0, sw=photo.width, sh=photo.height;
@@ -782,7 +811,7 @@ document.getElementById('downloadRawBtn').onclick = async () => {
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Students");
         XLSX.writeFile(wb, `ID_Cards_Database_Backup.xlsx`);
-    } catch(e) { alert("Export error: " + e.message); }
+    } catch(e) { showMsg("Export error: " + e.message); }
     btn.disabled = false; btn.innerHTML = "💾 Backup";
 };
 
@@ -794,6 +823,11 @@ document.getElementById('generateBtn').onclick = async () => {
 
     const zip = new JSZip();
     const folder = zip.folder("PNGs");
+    
+    // Create dual folders for A4 layouts
+    const folderA4WithGaps = zip.folder("A4_Sheets_With_Gaps");
+    const folderA4NoGaps = zip.folder("A4_Sheets_No_Gaps");
+    
     const { jsPDF } = window.jspdf;
     
     const verifyPdf = new jsPDF({ unit:'px', format:[CARD_W, CARD_H] });
@@ -827,22 +861,42 @@ document.getElementById('generateBtn').onclick = async () => {
     btn.textContent = "Building Sheets...";
     const pageCvs = document.createElement('canvas'); pageCvs.width=A4_W; pageCvs.height=A4_H;
     const pctx = pageCvs.getContext('2d');
+    
+    // Config for sheets WITH GAPS
     const GAP_X = 40, GAP_Y = 150;
-    const startX = (A4_W - ((5*CARD_W)+(4*GAP_X)))/2;
-    const startY = (A4_H - ((2*CARD_H)+(1*GAP_Y)))/2;
+    const startX_Gaps = (A4_W - ((5*CARD_W)+(4*GAP_X)))/2;
+    const startY_Gaps = (A4_H - ((2*CARD_H)+(1*GAP_Y)))/2;
+
+    // Config for sheets NO GAPS
+    const startX_NoGaps = (A4_W - (5*CARD_W))/2;
+    const startY_NoGaps = (A4_H - (2*CARD_H))/2;
 
     for(let i=0; i<imgs.length; i+=10) {
-        pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
         const chunk = imgs.slice(i, i+10);
+        
+        // 1. Generate A4 sheet WITH gaps
+        pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
         chunk.forEach((img, idx) => {
             const c = idx % 5; const r = Math.floor(idx/5);
-            const x = startX + c*(CARD_W+GAP_X);
-            const y = startY + r*(CARD_H+GAP_Y);
+            const x = startX_Gaps + c*(CARD_W+GAP_X);
+            const y = startY_Gaps + r*(CARD_H+GAP_Y);
             pctx.drawImage(img, x, y);
             pctx.strokeStyle='#ccc'; pctx.lineWidth=2; pctx.strokeRect(x,y,CARD_W,CARD_H);
         });
-        const pBlob = await new Promise(r => pageCvs.toBlob(r, 'image/jpeg', 0.9));
-        zip.file(`A4_Print_Sheet_${Math.floor(i/10)+1}.jpg`, pBlob);
+        const pBlobGaps = await new Promise(r => pageCvs.toBlob(r, 'image/jpeg', 0.9));
+        folderA4WithGaps.file(`A4_Print_Sheet_${Math.floor(i/10)+1}.jpg`, pBlobGaps);
+
+        // 2. Generate A4 sheet NO gaps
+        pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
+        chunk.forEach((img, idx) => {
+            const c = idx % 5; const r = Math.floor(idx/5);
+            const x = startX_NoGaps + c*CARD_W;
+            const y = startY_NoGaps + r*CARD_H;
+            pctx.drawImage(img, x, y);
+            pctx.strokeStyle='#ccc'; pctx.lineWidth=2; pctx.strokeRect(x,y,CARD_W,CARD_H);
+        });
+        const pBlobNoGaps = await new Promise(r => pageCvs.toBlob(r, 'image/jpeg', 0.9));
+        folderA4NoGaps.file(`A4_Print_Sheet_NoGaps_${Math.floor(i/10)+1}.jpg`, pBlobNoGaps);
     }
 
     zip.file("Verify_Proof.pdf", verifyPdf.output('arraybuffer'));
@@ -855,9 +909,12 @@ document.getElementById('generateBtn').onclick = async () => {
     btn.disabled = false; updateSelection();
 };
 
-function openSchoolEdit(udise){
+async function openSchoolEdit(udise){
     const s = schoolsMap[udise];
-    if(!s) return alert("School data missing");
+    if(!s) {
+        await showMsg("School data missing");
+        return;
+    }
     
     document.getElementById('oldSchoolName').value = udise;
     document.getElementById('esName').value = s.name;
@@ -890,7 +947,6 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
     
     const file = document.getElementById('esSignInput').files[0];
     if(file) {
-        // Admin-side compression before uploading to Storage to save 5GB limit
         const img = new Image();
         img.src = URL.createObjectURL(file);
         await new Promise(r => img.onload = r);
@@ -901,11 +957,9 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         let w = img.width, h = img.height;
         if(w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
         canvas.width = w; canvas.height = h;
-        // Clear to transparent BEFORE drawing — preserves PNG alpha channel
         cx.clearRect(0, 0, w, h);
         cx.drawImage(img, 0, 0, w, h);
         
-        // Save as PNG (not JPEG) so transparent backgrounds stay transparent
         const compressedBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
         
         const ref = window.storage.ref(`school_signatures/${newUdise}_signature.png`);
@@ -934,7 +988,7 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
             await batch.commit();
         }
 
-        alert("School updated successfully!");
+        await showMsg("School updated successfully!");
         document.getElementById('editSchoolModal').style.display='none';
         
         if(oldUdise !== newUdise) {
@@ -950,7 +1004,7 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         
         localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         renderDashboard();
-    } catch(e) { alert("Error updating school: " + e.message); } 
+    } catch(e) { showMsg("Error updating school: " + e.message); } 
     finally { btn.disabled = false; btn.textContent = "Update All Records"; }
 };
 
@@ -967,8 +1021,8 @@ function openEditModal(id){
     document.getElementById('editModal').style.display = 'flex';
 }
 
-function del(id){
-    if(!confirm('Delete this student?')) return;
+async function del(id){
+    if(!(await showMsg('Delete this student?', true))) return;
     db.collection('students').doc(id.toString()).delete().then(() => {
         currentSchoolStudents = currentSchoolStudents.filter(x => x.id != id);
         renderTable(); 
@@ -978,7 +1032,7 @@ function del(id){
              if(schoolsMap[currentViewUdise].count === 0) delete schoolsMap[currentViewUdise];
              localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         }
-    }).catch(e => alert(e.message));
+    }).catch(e => showMsg(e.message));
 }
 
 document.getElementById('saveEditBtn').onclick = async () => {
@@ -998,12 +1052,13 @@ document.getElementById('saveEditBtn').onclick = async () => {
         if(s) Object.assign(s, data);
         document.getElementById('editModal').style.display='none';
         renderTable();
-    } catch(e) { alert("Error: "+e.message); }
+    } catch(e) { showMsg("Error: "+e.message); }
 };
 
 document.getElementById('previewEditBtn').onclick = async () => {
     if(!window.assets.font || !window.assets.template) {
-        return alert("Please ensure 'OdiaFont' and 'Background PNG' are loaded first in the config panel.");
+        await showMsg("Please ensure 'OdiaFont' and 'Background PNG' are loaded first in the config panel.");
+        return;
     }
     
     document.getElementById('previewEditBtn').textContent = "Generating...";
