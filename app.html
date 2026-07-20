@@ -107,7 +107,7 @@
                 <input type="tel" id="sPhone" placeholder="Mobile Number">
 
                 <div style="display:flex; gap:10px;">
-                    <input type="date" id="sDob">
+                    <input type="text" id="sDob" placeholder="Date of Birth" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')">
                     <select id="sBlood">
                         <option value="">Blood Group</option>
                         <option value="A+">A+</option><option value="A-">A-</option>
