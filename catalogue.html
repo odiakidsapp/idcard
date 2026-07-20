@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AN ID Cards - Professional ID Card Solutions</title>
+  
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+            accent: { 400: '#fbbf24', 500: '#f59e0b' }
+          },
+          animation: {
+            'spin-slow': 'spin 3s linear infinite',
+            'slide-up': 'slideUp 0.3s ease-out forwards',
+            'shake': 'shake 0.4s cubic-bezier(.36,.07,.19,.97) both'
+          },
+          keyframes: {
+            slideUp: {
+              '0%': { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            shake: {
+              '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+              '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+              '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+              '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Loader Styles */
+    .loader-overlay {
+      position: fixed; inset: 0; background: rgba(255, 255, 255, 0.9);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 99999; transition: opacity 0.4s ease, visibility 0.4s;
+    }
+    .loader-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .loader { position: relative; width: 60px; height: 60px; animation: rotate 2s linear infinite; }
+    .loader-circle {
+      position: absolute; width: 100%; height: 100%; box-sizing: border-box;
+      border: 4px solid transparent; border-radius: 50%;
+      animation: spin 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    }
+    .loader-circle:nth-child(1) { border-top-color: #0ea5e9; animation-delay: -0.6s; }
+    .loader-circle:nth-child(2) { border-top-color: #f59e0b; animation-delay: -0.45s; }
+    .loader-circle:nth-child(3) { border-top-color: #ef4444; animation-delay: -0.3s; }
+    
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes rotate { 100% { transform: rotate(360deg); } }
+    
+    /* Hide input number arrows */
+    input[type="number"]::-webkit-inner-spin-button, 
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased overflow-x-hidden">
+
+  <!-- Loader -->
+  <div id="pageLoader" class="loader-overlay">
+    <div class="loader">
+      <div class="loader-circle"></div>
+      <div class="loader-circle"></div>
+      <div class="loader-circle"></div>
+    </div>
+  </div>
+
+  <!-- Top Bar -->
+  <div class="bg-brand-900 text-white text-xs py-2 px-4 md:px-8 flex justify-between items-center">
+    <div class="flex gap-4">
+      <span class="hidden sm:inline"><i class="fas fa-envelope mr-1 text-brand-500"></i> asidcardservice@gmail.com</span>
+      <span><i class="fas fa-phone mr-1 text-brand-500"></i> +91-7978581319</span>
+    </div>
+    <div class="flex gap-3 text-gray-300">
+      <a href="#" class="hover:text-white transition"><i class="fab fa-instagram"></i></a>
+      <a href="#" class="hover:text-white transition"><i class="fab fa-facebook"></i></a>
+      <a href="#" class="hover:text-white transition"><i class="fab fa-whatsapp"></i></a>
+    </div>
+  </div>
+
+  <!-- Main Header -->
+  <header class="bg-white shadow-sm sticky top-0 z-40 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-20">
+        <!-- Logo -->
+        <div class="flex-shrink-0 flex items-center cursor-pointer" onclick="window.scrollTo(0,0)">
+          <i class="fas fa-id-badge text-brand-600 text-3xl mr-2"></i>
+          <span class="font-bold text-2xl tracking-tight text-gray-900">AN ID CARDS</span>
+        </div>
+
+        <!-- Desktop Nav -->
+        <nav class="hidden md:flex space-x-8 items-center">
+          <a href="#" class="text-brand-600 font-semibold transition flex items-center gap-2"><i class="fas fa-home"></i> Home</a>
+          <a href="#id-cards" class="text-gray-600 hover:text-brand-600 font-medium transition">Catalog & Order</a>
+          <a href="#contact" class="text-gray-600 hover:text-brand-600 font-medium transition">Contact</a>
+        </nav>
+
+        <!-- Right Action -->
+        <div class="hidden md:flex items-center space-x-4">
+          <a href="https://wa.me/917978581319" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center gap-2">
+            <i class="fab fa-whatsapp text-lg"></i> Message Us
+          </a>
+        </div>
+
+        <!-- Mobile Menu Toggle -->
+        <div class="md:hidden flex items-center gap-4">
+          <button id="menuToggleBtn" class="text-gray-600 hover:text-brand-600 focus:outline-none p-2">
+            <i class="fas fa-bars text-2xl"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Side Drawer -->
+  <div id="sideMenu" class="fixed inset-y-0 left-0 w-64 bg-white shadow-2xl z-50 transform -translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-6 border-b flex justify-between items-center bg-gray-50">
+      <span class="font-bold text-xl">Menu</span>
+      <button id="closeMenu" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+    </div>
+    <div class="flex-1 overflow-y-auto py-4">
+      <a href="#" class="block px-6 py-3 text-gray-700 font-medium hover:bg-brand-50 hover:text-brand-600">Home</a>
+      <a href="#id-cards" class="block px-6 py-3 text-gray-700 font-medium hover:bg-brand-50 hover:text-brand-600" onclick="toggleMenu()">Catalog & Order</a>
+      <a href="#contact" class="block px-6 py-3 text-gray-700 font-medium hover:bg-brand-50 hover:text-brand-600" onclick="toggleMenu()">Contact</a>
+    </div>
+    <div class="p-6 border-t bg-gray-50">
+      <a href="https://wa.me/917978581319" target="_blank" class="w-full bg-green-500 text-white py-2 rounded-lg font-medium shadow-md hover:bg-green-600 flex items-center justify-center gap-2">
+        <i class="fab fa-whatsapp text-lg"></i> WhatsApp Us
+      </a>
+    </div>
+  </div>
+  <div id="sideMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden transition-opacity"></div>
+
+  <main class="w-full pt-4">
+    <!-- Hero Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+      <div class="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col lg:flex-row">
+        <div class="p-8 lg:p-12 flex-1 flex flex-col justify-center relative z-10 bg-white">
+          <div class="inline-block px-3 py-1 bg-brand-100 text-brand-700 rounded-full text-sm font-semibold mb-6 w-max">ID Card Specialists</div>
+          <h1 class="text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
+            Premium ID Cards <br> <span class="text-brand-600">Online Portal.</span>
+          </h1>
+          <p class="text-lg text-gray-600 mb-8 max-w-md">
+            Browse our catalog and order premium PVC ID cards, custom lanyards, and holders directly. (Minimum Order: 30 items)
+          </p>
+          
+          <div class="flex flex-col sm:flex-row gap-4 mb-8">
+            <a href="#id-cards" class="bg-brand-600 hover:bg-brand-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center gap-2 w-full sm:w-auto">
+              See Catalog <i class="fas fa-arrow-down"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="lg:w-5/12 relative min-h-[300px] lg:min-h-full overflow-hidden bg-gray-100">
+          <img src="static/images/Icard.jpg" alt="Printing Illustration" onerror="this.src='https://placehold.co/600x800/e2e8f0/475569?text=ID+Card+Printing'" class="absolute inset-0 w-full h-full object-cover transform hover:scale-105 transition duration-700">
+          <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-8">
+             <div class="text-white">
+                <div class="flex gap-2 mb-2">
+                  <i class="fas fa-star text-accent-400"></i>
+                  <i class="fas fa-star text-accent-400"></i>
+                  <i class="fas fa-star text-accent-400"></i>
+                  <i class="fas fa-star text-accent-400"></i>
+                  <i class="fas fa-star text-accent-400"></i>
+                </div>
+                <p class="font-medium text-lg">"The easiest ID ordering process."</p>
+                <p class="text-sm opacity-80 mt-1">- Corporate Client</p>
+             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ID Card Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20" id="id-cards">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Complete ID Card Catalog</h2>
+        <div class="w-16 h-1 bg-brand-500 mx-auto rounded mb-4"></div>
+        <p class="text-gray-600 max-w-2xl mx-auto text-lg">Select an item below to calculate pricing and place your bulk order. Minimum order quantity is 30 pieces.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        
+        <!-- Item 1 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(1)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_1.png" alt="Item 1" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+1'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">1. SINGLE SIDE STIKI HOLDER WITH DORI</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹18</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 2 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(2)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_2.png" alt="Item 2" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+2'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">2. DUAL SIDE STIKI HOLDER WITH DORI</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹23</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 3 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(3)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_3.png" alt="Item 3" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+3'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">3. SINGLE SIDE STIKI HOLDER WITH 16MM DIGITAL PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹26</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 4 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(4)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_4.png" alt="Item 4" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+4'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">4. DUAL SIDE STIKI HOLDER WITH 16MM DIGITAL PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹31</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 5 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(5)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_5.png" alt="Item 5" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+5'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">5. EXE CARD WITH 16MM DIGITAL LANYARD PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹35</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 6 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(6)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_6.png" alt="Item 6" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+6'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">6. HAVY PLASTIC HOLDER WITH PVC CARD & 16MM DIGITAL LANYARD PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹40</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 7 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(7)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_7.png" alt="Item 7" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+7'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">7. ACRYLIC PLASTIC HOLDER WITH PVC CARD & 16MM DIGITAL LANYARD PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹45</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 8 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(8)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_8.png" alt="Item 8" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+8'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">8. METALIC HOLDER WITH PVC CARD & 16MM DIGITAL LANYARD PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹83</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 9 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(9)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_9.png" alt="Item 9" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+9'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">9. 16MM DIGITAL LANYARD PRINT WITH HOOK</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹28</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 10 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(10)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_10.png" alt="Item 10" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+10'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">10. 20MM DIGITAL LANYARD PRINT WITH HOOK</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹31</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 2 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(2)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_2.png" alt="Item 2" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+2'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">2. DUAL SIDE STIKI HOLDER WITH DORI</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹22</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 3 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(3)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_3.png" alt="Item 3" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+3'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">3. SINGLE SIDE STIKI HOLDER WITH 16MM DIGITAL PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹25</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 4 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(4)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_4.png" alt="Item 4" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+4'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">4. DUAL SIDE STIKI HOLDER WITH 16MM DIGITAL PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹30</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 5 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(5)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_5.png" alt="Item 5" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+5'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">5. EXE CARD WITH 16MM DIGITAL LANYARD PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹34</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 6 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(6)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_6.png" alt="Item 6" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+6'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">6. HAVY PLASTIC HOLDER WITH PVC CARD & 16MM DIGITAL LANYARD PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹39</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 7 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(7)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_7.png" alt="Item 7" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+7'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">7. ACRYLIC PLASTIC HOLDER WITH PVC CARD & 16MM DIGITAL LANYARD PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹44</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 8 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(8)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_8.png" alt="Item 8" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+8'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">8. METALIC HOLDER WITH PVC CARD & 16MM DIGITAL LANYARD PRINT</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹82</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 9 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(9)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_9.png" alt="Item 9" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+9'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">9. 16MM DIGITAL LANYARD PRINT WITH HOOK</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹27</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+        <!-- Item 10 -->
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl p-5 border border-gray-100 transition duration-300 transform hover:-translate-y-1 flex flex-col group cursor-pointer" onclick="openOrderModal(10)">
+          <div class="bg-gray-100 rounded-xl aspect-[3/4] mb-4 overflow-hidden relative border border-gray-100">
+             <img src="idcard_10.png" alt="Item 10" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=ID+Card+10'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+          </div>
+          <h3 class="font-bold text-gray-800 text-sm sm:text-xs md:text-sm mb-3 leading-tight flex-1">10. 20MM DIGITAL LANYARD PRINT WITH HOOK</h3>
+          <div class="mt-auto pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+             <span class="font-extrabold text-brand-600 text-lg">₹30</span>
+             <button class="w-full sm:w-auto justify-center text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2 rounded-lg transition flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Order</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Order Configuration Modal -->
+  <div id="orderModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-0 md:p-4 transition-opacity duration-300 opacity-0 overflow-y-auto">
+    <div class="bg-white md:rounded-2xl shadow-2xl w-full max-w-5xl min-h-screen md:min-h-0 overflow-hidden transform transition-all scale-95 flex flex-col my-auto" id="orderModalContent">
+      
+      <!-- Modal Header (Mobile Sticky) -->
+      <div class="sticky top-0 z-10 px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white shadow-sm md:shadow-none md:bg-gray-50">
+        <h3 class="font-bold text-xl text-gray-900">Product Details</h3>
+        <button onclick="closeOrderModal()" class="text-gray-400 hover:text-red-500 transition focus:outline-none p-2 rounded-full hover:bg-gray-100 bg-gray-50 md:bg-transparent">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <!-- Modal Body - E-commerce Layout -->
+      <div class="p-6 md:p-8 flex flex-col md:grid md:grid-cols-12 gap-8 md:gap-12 overflow-y-auto">
+        
+        <!-- Left: Large Product Image -->
+        <div class="md:col-span-5 flex-shrink-0">
+          <div class="bg-gray-50 rounded-2xl overflow-hidden aspect-[3/4] border border-gray-200 relative group flex items-center justify-center p-4">
+             <div class="absolute inset-0 bg-gradient-to-t from-gray-100/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+             <img id="modalImage" src="" alt="Product" class="w-full h-full object-contain drop-shadow-xl transform group-hover:scale-105 transition duration-500">
+             <div class="absolute top-4 left-4 bg-brand-100 text-brand-700 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+               Premium Quality
+             </div>
+          </div>
+        </div>
+        
+        <!-- Right: Details, Features & Order Form -->
+        <div class="md:col-span-7 flex flex-col">
+          
+          <!-- Title & Price -->
+          <div class="mb-6">
+            <h2 id="modalTitle" class="font-extrabold text-2xl md:text-3xl text-gray-900 mb-3 leading-tight">Product Name</h2>
+            <div class="flex items-end gap-2">
+              <span id="modalBasePrice" class="font-black text-4xl text-brand-600">₹0</span>
+              <span class="text-gray-500 font-medium pb-1">/ per unit</span>
+            </div>
+            <p class="text-sm text-green-600 font-bold mt-2"><i class="fas fa-truck-fast"></i> Delivery within 5-7 days</p>
+          </div>
+          
+          <hr class="mb-6 border-gray-100">
+          
+          <!-- Dynamic Features List -->
+          <div class="mb-8">
+            <h4 class="font-bold text-lg text-gray-900 mb-4">Key Features</h4>
+            <ul id="modalFeatures" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Injected dynamically via JS -->
+            </ul>
+          </div>
+
+          <div class="bg-gray-50 border border-brand-100 rounded-2xl p-6 mb-2 mt-auto shadow-sm">
+            <h4 class="font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-box-open text-brand-500"></i> Configure Order</h4>
+            
+            <!-- Quantity Control -->
+            <div class="mb-5 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Quantity Required</label>
+                <span class="text-xs text-gray-500">Minimum order: 30 pieces</span>
+              </div>
+              <div class="flex items-center shadow-sm rounded-lg overflow-hidden border border-gray-300">
+                <button onclick="adjustQty(-1)" class="w-12 h-12 flex justify-center items-center bg-white hover:bg-gray-100 transition focus:outline-none"><i class="fas fa-minus text-gray-600"></i></button>
+                <input type="number" id="modalQty" value="30" min="30" oninput="updatePrice()" class="w-20 h-12 text-center border-x border-gray-300 font-bold text-lg text-gray-900 focus:outline-none focus:ring-0 bg-white">
+                <button onclick="adjustQty(1)" class="w-12 h-12 flex justify-center items-center bg-white hover:bg-gray-100 transition focus:outline-none"><i class="fas fa-plus text-gray-600"></i></button>
+              </div>
+            </div>
+            <p id="qtyError" class="text-red-500 text-sm font-semibold mb-4 hidden bg-red-50 p-2 rounded border border-red-100"><i class="fas fa-exclamation-circle"></i> Minimum quantity is 30.</p>
+
+            <!-- Lanyard Batch Warning -->
+            <div id="batchWarning" class="bg-amber-50 border border-amber-200 text-amber-900 text-sm p-4 rounded-xl mb-6 hidden shadow-inner leading-relaxed">
+              <!-- Dynamic Tip Injected Here -->
+            </div>
+
+            <!-- Price Breakdown -->
+            <div class="flex flex-col gap-3 mb-6 bg-white p-4 rounded-xl border border-gray-100">
+               <div class="flex justify-between items-center">
+                   <span class="text-gray-600 font-medium">Items Subtotal:</span>
+                   <span id="modalSubtotal" class="font-bold text-gray-800 text-lg">₹0</span>
+               </div>
+               <div class="flex justify-between items-center">
+                   <span class="text-gray-600 font-medium">Delivery Charge:</span>
+                   <span class="font-bold text-gray-800 text-lg">₹150</span>
+               </div>
+               <hr class="border-gray-200 border-dashed my-2">
+               <div class="flex justify-between items-end">
+                   <span class="text-gray-900 font-black text-lg">Estimated Total:</span>
+                   <span id="modalTotal" class="text-3xl font-black text-brand-600 tracking-tight">₹0</span>
+               </div>
+            </div>
+
+            <button onclick="submitOrder()" class="w-full bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold py-4 rounded-xl shadow-lg transition transform hover:-translate-y-1 flex justify-center items-center gap-3 text-lg">
+              <i class="fab fa-whatsapp text-2xl"></i> Place Order via WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG Curve Divider -->
+  <div class="w-full overflow-hidden leading-none relative z-10 -mb-1 text-gray-900 mt-12">
+    <svg viewBox="0 0 1200 120" preserveAspectRatio="none" class="w-full h-12 md:h-24 block fill-current">
+      <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.08,130.83,120.73,195.4,105.82,238.16,95.89,280.4,74.5,321.39,56.44Z"></path>
+    </svg>
+  </div>
+
+  <footer class="bg-gray-900 text-white pt-16 pb-8 relative z-0" id="contact">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12 border-b border-gray-800 pb-12">
+        <div>
+          <div class="flex items-center mb-6">
+            <i class="fas fa-id-badge text-brand-500 text-4xl mr-3"></i>
+            <h1 class="font-bold text-3xl tracking-tight">AN ID CARDS</h1>
+          </div>
+          <p class="text-gray-400 mb-6 max-w-sm">Your reliable partner for high-volume, professional-grade ID cards and accessories.</p>
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-brand-500 transition cursor-pointer"><i class="fab fa-facebook-f"></i></div>
+            <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-brand-500 transition cursor-pointer"><i class="fab fa-twitter"></i></div>
+            <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center hover:bg-brand-500 transition cursor-pointer"><i class="fab fa-instagram"></i></div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold mb-6 text-white uppercase tracking-wider">Contact Us</h3>
+          <ul class="space-y-4 text-gray-400">
+            <li class="flex items-start gap-3">
+              <i class="fas fa-map-marker-alt mt-1 text-brand-500"></i>
+              <span>123 Printing Hub Avenue,<br>Tech City, TC 10010</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <i class="fas fa-phone text-brand-500"></i>
+              <span>+91-7978581319</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <i class="fas fa-envelope text-brand-500"></i>
+              <span>asidcardservice@gmail.com</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-bold mb-6 text-white uppercase tracking-wider">Color Standard</h3>
+          <p class="text-gray-400 mb-4">Calibrated for perfection.</p>
+          <div class="flex gap-2">
+            <div class="w-12 h-12 bg-cyan-400 rounded-md shadow flex items-center justify-center text-xs font-bold text-gray-900">C</div>
+            <div class="w-12 h-12 bg-pink-500 rounded-md shadow flex items-center justify-center text-xs font-bold text-white">M</div>
+            <div class="w-12 h-12 bg-yellow-400 rounded-md shadow flex items-center justify-center text-xs font-bold text-gray-900">Y</div>
+            <div class="w-12 h-12 bg-black border border-gray-700 rounded-md shadow flex items-center justify-center text-xs font-bold text-white">K</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row justify-between items-center text-gray-500 text-sm">
+        <p>&copy; 2026 Asstride / AN ID Cards. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Back to top -->
+  <button id="backToTop" class="fixed bottom-6 right-6 bg-brand-600 text-white w-12 h-12 rounded-full shadow-2xl flex items-center justify-center hover:bg-brand-700 transition transform hover:-translate-y-2 opacity-0 invisible z-40">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <script>
+    // --- Mobile Menu Toggle ---
+    const menuBtn = document.getElementById('menuToggleBtn');
+    const sideMenu = document.getElementById('sideMenu');
+    const closeMenu = document.getElementById('closeMenu');
+    const menuOverlay = document.getElementById('sideMenuOverlay');
+
+    function toggleMenu() {
+      const isClosed = sideMenu.classList.contains('-translate-x-full');
+      if (isClosed) {
+        sideMenu.classList.remove('-translate-x-full');
+        menuOverlay.classList.remove('hidden');
+        setTimeout(() => menuOverlay.classList.add('opacity-100'), 10);
+      } else {
+        sideMenu.classList.add('-translate-x-full');
+        menuOverlay.classList.remove('opacity-100');
+        setTimeout(() => menuOverlay.classList.add('hidden'), 300);
+      }
+    }
+    menuBtn.addEventListener('click', toggleMenu);
+    closeMenu.addEventListener('click', toggleMenu);
+    menuOverlay.addEventListener('click', toggleMenu);
+
+    // --- Loader & Scroll Logic ---
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.getElementById('pageLoader').classList.add('hidden');
+      }, 500); 
+    });
+
+    const backToTopBtn = document.getElementById('backToTop');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 300) {
+        backToTopBtn.classList.remove('opacity-0', 'invisible');
+      } else {
+        backToTopBtn.classList.add('opacity-0', 'invisible');
+      }
+    });
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // --- Order Logic & Calculations ---
+    const MOQ = 30;
+    
+    // Product Database mapping ID to rules with dynamic lanyard costs and features
+    const products = [
+      { id: 1, name: "1. SINGLE SIDE STIKI HOLDER WITH DORI", price: 18, hasLanyardRule: false, image: "idcard_1.png", features: ["Standard thread dori included", "Single-sided ID visibility", "Cost-effective Stiki material", "Perfect for daily events"] },
+      { id: 2, name: "2. DUAL SIDE STIKI HOLDER WITH DORI", price: 23, hasLanyardRule: false, image: "idcard_2.png", features: ["Standard thread dori included", "Dual-sided ID visibility", "Durable Stiki material", "Lightweight & comfortable"] },
+      { id: 3, name: "3. SINGLE SIDE STIKI HOLDER WITH 16MM DIGITAL PRINT", price: 26, hasLanyardRule: true, lanyardCost: 12, image: "idcard_3.png", features: ["Premium 16mm printed lanyard", "High-res digital sublimation", "Single-sided ID visibility", "Washable & fade-resistant"] },
+      { id: 4, name: "4. DUAL SIDE STIKI HOLDER WITH 16MM DIGITAL PRINT", price: 31, hasLanyardRule: true, lanyardCost: 12, image: "idcard_4.png", features: ["Premium 16mm printed lanyard", "High-res digital sublimation", "Dual-sided ID visibility", "Washable & fade-resistant"] },
+      { id: 5, name: "5. EXE CARD WITH 16MM DIGITAL LANYARD PRINT", price: 35, hasLanyardRule: true, lanyardCost: 12, image: "idcard_5.png", features: ["Corporate Exe card holder", "16mm custom digital lanyard", "Rigid protection for ID", "Professional sleek look"] },
+      { id: 6, name: "6. HAVY PLASTIC HOLDER WITH PVC CARD & 16MM DIGITAL LANYARD PRINT", price: 40, hasLanyardRule: true, lanyardCost: 12, image: "idcard_6.png", features: ["Heavy-duty plastic enclosure", "High-quality PVC card included", "16mm digital printed lanyard", "Maximum durability & protection"] },
+      { id: 7, name: "7. ACRYLIC PLASTIC HOLDER WITH PVC CARD & 16MM DIGITAL LANYARD PRINT", price: 45, hasLanyardRule: true, lanyardCost: 12, image: "idcard_7.png", features: ["Premium acrylic glass-like finish", "High-quality PVC card included", "16mm digital printed lanyard", "Scratch-resistant casing"] },
+      { id: 8, name: "8. METALIC HOLDER WITH PVC CARD & 16MM DIGITAL LANYARD PRINT", price: 83, hasLanyardRule: true, lanyardCost: 12, image: "idcard_8.png", features: ["Luxury metallic alloy holder", "High-quality PVC card included", "16mm digital printed lanyard", "Ultimate executive aesthetic"] },
+      { id: 9, name: "9. 16MM DIGITAL LANYARD PRINT WITH HOOK", price: 28, hasLanyardRule: true, lanyardCost: 12, image: "idcard_9.png", features: ["16mm width custom print", "Smooth satin-like finish", "Heavy-duty metal dog hook", "Edge-to-edge sublimation"] },
+      { id: 10, name: "10. 20MM DIGITAL LANYARD PRINT WITH HOOK", price: 31, hasLanyardRule: true, lanyardCost: 14, image: "idcard_10.png", features: ["Extra-wide 20mm custom print", "Ideal for bold text/logos", "Heavy-duty metal dog hook", "Edge-to-edge sublimation"] }
+    ];
+
+    let currentItem = null;
+    const modal = document.getElementById('orderModal');
+    const modalContent = document.getElementById('orderModalContent');
+
+    function openOrderModal(id) {
+      currentItem = products.find(p => p.id === id);
+      if (!currentItem) return;
+
+      // Populate Data
+      document.getElementById('modalImage').src = currentItem.image;
+      document.getElementById('modalTitle').innerText = currentItem.name;
+      document.getElementById('modalBasePrice').innerText = '₹' + currentItem.price;
+      
+      // Populate Features
+      const featuresContainer = document.getElementById('modalFeatures');
+      featuresContainer.innerHTML = currentItem.features.map(feature => 
+        `<li class="flex items-start gap-2 text-gray-700 text-sm">
+          <i class="fas fa-check-circle text-brand-500 mt-0.5"></i>
+          <span>${feature}</span>
+        </li>`
+      ).join('');
+      
+      const qtyInput = document.getElementById('modalQty');
+      qtyInput.value = MOQ;
+      document.getElementById('qtyError').classList.add('hidden');
+      
+      // UI Animation
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modalContent.classList.remove('scale-95');
+        modalContent.classList.add('scale-100');
+      }, 10);
+
+      updatePrice();
+    }
+
+    function closeOrderModal() {
+      modal.classList.add('opacity-0');
+      modalContent.classList.remove('scale-100');
+      modalContent.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 300);
+    }
+
+    function adjustQty(amount) {
+      const input = document.getElementById('modalQty');
+      let currentVal = parseInt(input.value) || 0;
+      let newVal = currentVal + amount;
+      
+      // Don't let arrow buttons push below MOQ
+      if (newVal < MOQ) {
+        triggerErrorShake();
+        newVal = MOQ;
+      }
+      
+      input.value = newVal;
+      updatePrice();
+    }
+
+    function triggerErrorShake() {
+      const errorMsg = document.getElementById('qtyError');
+      const input = document.getElementById('modalQty');
+      errorMsg.classList.remove('hidden');
+      input.classList.remove('border-gray-300');
+      input.classList.add('border-red-500', 'bg-red-50', 'animate-shake');
+      
+      setTimeout(() => {
+        input.classList.remove('animate-shake');
+      }, 400);
+    }
+
+    function updatePrice() {
+      if (!currentItem) return;
+      
+      const qtyInput = document.getElementById('modalQty');
+      const errorMsg = document.getElementById('qtyError');
+      const batchWarningEl = document.getElementById('batchWarning');
+      
+      let qty = parseInt(qtyInput.value);
+      
+      // Handle invalid or empty inputs
+      if (isNaN(qty)) {
+          document.getElementById('modalSubtotal').innerText = '₹0';
+          document.getElementById('modalTotal').innerText = '₹0';
+          batchWarningEl.classList.add('hidden');
+          return;
+      }
+
+      // Check MOQ Validation
+      if (qty < MOQ) {
+        errorMsg.classList.remove('hidden');
+        qtyInput.classList.remove('border-gray-300');
+        qtyInput.classList.add('border-red-500', 'bg-red-50');
+      } else {
+        errorMsg.classList.add('hidden');
+        qtyInput.classList.remove('border-red-500', 'bg-red-50');
+        qtyInput.classList.add('border-gray-300');
+      }
+
+      let subtotal = 0;
+      let warningHTML = "";
+
+      // Only calculate if Qty >= MOQ (or just calculate anyway for preview, but we warn)
+      if (qty >= MOQ) {
+        if (!currentItem.hasLanyardRule) {
+            // Standard linear pricing for items 1 & 2
+            subtotal = qty * currentItem.price;
+        } else {
+            // Complex pricing for items 3 to 10 (Sublimation Batches of 30)
+            let batches = Math.ceil(qty / 30);
+            let totalLanyardsPaidFor = batches * 30;
+            
+            let currentLanyardCost = currentItem.lanyardCost || 0;
+            let lanyardCostTotal = totalLanyardsPaidFor * currentLanyardCost;
+            let otherComponentsCost = qty * (currentItem.price - currentLanyardCost);
+            
+            subtotal = lanyardCostTotal + otherComponentsCost;
+
+            // Generate Warning if not divisible by 30
+            if (qty % 30 !== 0) {
+                let itemsNeededToNextBatch = totalLanyardsPaidFor - qty;
+                let extraCostToUpgrade = itemsNeededToNextBatch * (currentItem.price - currentLanyardCost);
+                
+                warningHTML = `<strong><i class="fas fa-lightbulb text-amber-500 mr-1"></i> Money Saving Tip:</strong><br> 
+                               Lanyards are printed in batches of 30, so you are already paying for <strong>${totalLanyardsPaidFor} lanyards</strong>. 
+                               Add <strong>${itemsNeededToNextBatch} more item(s)</strong> for just <strong>₹${extraCostToUpgrade}</strong> extra to maximize your value!`;
+            }
+        }
+      } else {
+        // Fallback display if they type a low number manually just to preview
+        subtotal = qty * currentItem.price;
+      }
+
+      let grandTotal = subtotal + 150; // Added fixed ₹150 delivery charge
+
+      // Update UI
+      document.getElementById('modalSubtotal').innerText = '₹' + subtotal;
+      document.getElementById('modalTotal').innerText = '₹' + grandTotal;
+      
+      if (warningHTML && qty >= MOQ) {
+          batchWarningEl.innerHTML = warningHTML;
+          batchWarningEl.classList.remove('hidden');
+      } else {
+          batchWarningEl.classList.add('hidden');
+      }
+    }
+
+    function submitOrder() {
+      const qtyInput = document.getElementById('modalQty');
+      let qty = parseInt(qtyInput.value) || 0;
+      
+      if (qty < MOQ) {
+          triggerErrorShake();
+          return;
+      }
+
+      let subtotal = document.getElementById('modalSubtotal').innerText;
+      let total = document.getElementById('modalTotal').innerText;
+      
+      // Construct WhatsApp Message
+      let text = `Hello AN ID Cards! I would like to place an order:\n\n` +
+                 `*Product:* ${currentItem.name}\n` +
+                 `*Quantity:* ${qty}\n` +
+                 `*Items Subtotal:* ${subtotal}\n` +
+                 `*Delivery Charge:* ₹150\n` +
+                 `*Estimated Total:* ${total}\n\n` +
+                 `Please let me know the payment and delivery next steps.`;
+                 
+      let url = `https://wa.me/917978581319?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+      closeOrderModal();
+    }
+  </script>
+</body>
+</html>
