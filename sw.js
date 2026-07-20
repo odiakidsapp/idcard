@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v16-firebase-storage-migration'; // Bumped to v16: Migrated to Firebase Storage to fix 1MB limit and save quota
+const CACHE_NAME = 'student-data-v17-firebase-storage-migration'; // Bumped to v16: Migrated to Firebase Storage to fix 1MB limit and save quota
 
 const urlsToCache = [
   './',
