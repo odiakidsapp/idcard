@@ -109,6 +109,13 @@
 
     <div class="config-panel">
         <div>
+            <label style="font-size:12px; font-weight:bold;">Card Language</label><br>
+            <select id="langToggle" onchange="changeLanguage()" style="padding: 9px; font-size: 13px;">
+                <option value="odia" selected>Odia (Default)</option>
+                <option value="english">English</option>
+            </select>
+        </div>
+        <div>
             <label style="font-size:12px; font-weight:bold;">Background PNG</label><br>
             <input id="templateInput" type="file" accept="image/png">
             <span id="tplStatus" class="status-badge status-err">Missing</span>
@@ -262,10 +269,17 @@ const ADDR_POS = { x: 198, y: 94 };
 const SIGN_POS = { x: 434, y: 850, maxW: 180, maxH: 80 };
 
 window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
-function toOdiaDigits(str){ if (str===undefined||str===null) return ''; return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); }
+
+function toOdiaDigits(str){ 
+    if (str===undefined||str===null) return ''; 
+    if (window.assets.language === 'english') return str; // Bypass conversion for English
+    return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); 
+}
 
 function toOdiaClass(str) {
     if (!str) return '';
+    if (window.assets.language === 'english') return str; // Bypass conversion for English
+    
     let s = String(str).toLowerCase().trim();
     if (s.includes('nursery') || s.includes('nursary') || s.includes('ଶିଶୁ ବାଟିକା')) return 'ଶିଶୁ ବାଟିକା';
     if (s === '1' || s === 'class 1' || s === 'class-1') return 'ପ୍ରଥମ';
@@ -313,11 +327,48 @@ let db = null;
 let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
 let lastSyncId = Number(localStorage.getItem('adminLastSyncId')) || 0;
 let currentSchoolStudents = [];
-window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual' }; 
+
+// Added Language State
+window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
 
 // Cropper specific variables
 let currentCropper = null;
 let currentCropStudentId = null;
+
+// Handle Language Switch & Auto Background Load
+async function changeLanguage() {
+    const lang = document.getElementById('langToggle').value;
+    window.assets.language = lang;
+    
+    document.getElementById('tplStatus').className = 'status-badge status-err';
+    document.getElementById('tplStatus').textContent = 'Loading...';
+    
+    const bgFile = lang === 'odia' ? 'background.png' : 'eng_background.png';
+    
+    try {
+        const resp = await fetch(bgFile);
+        if(resp.ok) {
+            const blob = await resp.blob();
+            const img = new Image();
+            img.src = URL.createObjectURL(blob);
+            img.onload = () => {
+                window.assets.template = img;
+                window.assets.mode = 'auto';
+                document.getElementById('tplStatus').className = 'status-badge status-ok';
+                document.getElementById('tplStatus').textContent = `Auto-Loaded (${lang === 'odia' ? 'Odia' : 'English'})`;
+                updateSelection();
+            }
+        } else {
+            document.getElementById('tplStatus').className = 'status-badge status-err';
+            document.getElementById('tplStatus').textContent = 'Missing';
+            window.assets.template = null;
+            updateSelection();
+        }
+    } catch(e) {
+        document.getElementById('tplStatus').className = 'status-badge status-err';
+        document.getElementById('tplStatus').textContent = 'Error Fetching';
+    }
+}
 
 async function loadAutoAssets() {
     try {
@@ -332,22 +383,8 @@ async function loadAutoAssets() {
         }
     } catch(e) {}
 
-    try {
-        const resp = await fetch('background.png');
-        if(resp.ok) {
-            const blob = await resp.blob();
-            const img = new Image();
-            img.src = URL.createObjectURL(blob);
-            img.onload = () => {
-                window.assets.template = img;
-                window.assets.mode = 'auto';
-                document.getElementById('tplStatus').className = 'status-badge status-ok';
-                document.getElementById('tplStatus').textContent = 'Auto-Loaded';
-                updateSelection();
-            }
-        }
-    } catch(e) {}
-    updateSelection();
+    // Initialize background based on default dropdown value
+    changeLanguage(); 
 }
 
 function startApp() {
@@ -772,8 +809,6 @@ document.getElementById('saveCropBtn').onclick = async () => {
         btn.textContent = "💾 Save Crop";
     }
 };
-
-// ... REST OF THE CODE REMAINS UNCHANGED ...
 
 document.getElementById('fontInput').onchange = async e => {
     const f = e.target.files[0]; if(!f) return;
@@ -1206,7 +1241,7 @@ document.getElementById('saveEditBtn').onclick = async () => {
 
 document.getElementById('previewEditBtn').onclick = async () => {
     if(!window.assets.font || !window.assets.template) {
-        await showMsg("Please ensure 'OdiaFont' and 'Background PNG' are loaded first in the config panel.");
+        await showMsg("Please ensure 'OdiaFont' and a Background PNG are loaded first in the config panel.");
         return;
     }
     
