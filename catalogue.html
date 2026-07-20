@@ -116,16 +116,13 @@
           <a href="#contact" class="text-gray-600 hover:text-brand-600 font-medium transition">Contact</a>
         </nav>
 
-        <!-- Right Action -->
-        <div class="hidden md:flex items-center space-x-4">
-          <a href="https://wa.me/917855800205" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-medium transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center gap-2">
-            <i class="fab fa-whatsapp text-lg"></i> Message Us
+        <!-- Right Action & Mobile Toggle Combined -->
+        <div class="flex items-center gap-3 md:gap-4">
+          <a href="https://wa.me/917855800205" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center gap-2">
+            <i class="fab fa-whatsapp text-xl sm:text-lg"></i> <span class="hidden sm:inline">WhatsApp Us</span>
           </a>
-        </div>
-
-        <!-- Mobile Menu Toggle -->
-        <div class="md:hidden flex items-center gap-4">
-          <button id="menuToggleBtn" class="text-gray-600 hover:text-brand-600 focus:outline-none p-2">
+          <!-- Mobile Menu Toggle -->
+          <button id="menuToggleBtn" class="md:hidden text-gray-600 hover:text-brand-600 focus:outline-none p-1 ml-1">
             <i class="fas fa-bars text-2xl"></i>
           </button>
         </div>
@@ -144,11 +141,7 @@
       <a href="#id-cards" class="block px-6 py-3 text-gray-700 font-medium hover:bg-brand-50 hover:text-brand-600" onclick="toggleMenu()">Catalog & Order</a>
       <a href="#contact" class="block px-6 py-3 text-gray-700 font-medium hover:bg-brand-50 hover:text-brand-600" onclick="toggleMenu()">Contact</a>
     </div>
-    <div class="p-6 border-t bg-gray-50">
-      <a href="https://wa.me/917855800205" target="_blank" class="w-full bg-green-500 text-white py-2 rounded-lg font-medium shadow-md hover:bg-green-600 flex items-center justify-center gap-2">
-        <i class="fab fa-whatsapp text-lg"></i> WhatsApp Us
-      </a>
-    </div>
+    <!-- WhatsApp button removed from here as per request -->
   </div>
   <div id="sideMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden transition-opacity"></div>
 
