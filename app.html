@@ -67,10 +67,6 @@
                     <input type="number" id="newPin" placeholder="Pin Code">
                     <input type="text" id="newUdise" placeholder="UDISE Number (11 digits) *" maxlength="11" inputmode="numeric">
                 </div>
-                
-                <label>HM Signature (Photo)</label>
-                <input type="file" id="hmSignInput" accept="image/*">
-                <img id="signPreview" class="preview-thumb">
 
                 <button class="btn btn-primary" id="addSchoolBtn">Submit</button>
             </div>
@@ -161,9 +157,6 @@
                 <input type="number" id="editSchoolPin" placeholder="Pin Code">
                 <input type="text" id="editSchoolUdise" placeholder="UDISE Number (11 digits) *" maxlength="11" inputmode="numeric">
             </div>
-            
-            <label>Update Signature (Optional)</label>
-            <input type="file" id="editSchoolSignInput" accept="image/*">
             
             <div style="display:flex; gap:10px; margin-top:15px; flex-direction: column;">
                 <button class="btn btn-success" id="saveSchoolEditBtn">Save Changes</button>
@@ -396,14 +389,6 @@
         }
 
         // --- SCHOOL LOGIC ---
-        document.getElementById('hmSignInput').onchange = (e) => {
-            const file = e.target.files[0];
-            if(file) {
-                document.getElementById('signPreview').src = URL.createObjectURL(file);
-                document.getElementById('signPreview').style.display = 'block';
-            }
-        };
-
         function loadSchools() {
             const tx = db.transaction(['schools'], 'readonly');
             tx.objectStore('schools').getAll().onsuccess = e => {
@@ -532,7 +517,6 @@
             const district = document.getElementById('newDistrict').value.trim();
             const pin = document.getElementById('newPin').value.trim();
             const udise = document.getElementById('newUdise').value.trim();
-            const signFile = document.getElementById('hmSignInput').files[0];
 
             if(!name) return alert("Enter School Name");
 
@@ -549,9 +533,6 @@
                 }
                 
                 document.getElementById('addSchoolBtn').textContent = "Processing...";
-                
-                let signBase64 = null;
-                if(signFile) signBase64 = await blobToBase64(signFile);
 
                 const schoolObj = {
                     name: name,
@@ -560,7 +541,7 @@
                     district: district,
                     pin: pin,
                     udise: udise,
-                    hmSignature: signBase64,
+                    hmSignature: '',
                     createdAt: Date.now()
                 };
 
@@ -609,7 +590,6 @@
             document.getElementById('editSchoolDistrict').value = currentSchoolData.district || '';
             document.getElementById('editSchoolPin').value = currentSchoolData.pin || '';
             document.getElementById('editSchoolUdise').value = currentSchoolData.udise || '';
-            document.getElementById('editSchoolSignInput').value = ''; 
             document.getElementById('editSchoolModal').style.display = 'flex';
         }
 
@@ -654,7 +634,6 @@
             const newDistrict = document.getElementById('editSchoolDistrict').value.trim();
             const newPin = document.getElementById('editSchoolPin').value.trim();
             const newUdise = document.getElementById('editSchoolUdise').value.trim();
-            const newSignFile = document.getElementById('editSchoolSignInput').files[0];
 
             if(!newName) return alert("Name cannot be empty");
 
@@ -670,10 +649,7 @@
             updatedSchool.district = newDistrict;
             updatedSchool.pin = newPin;
             updatedSchool.udise = newUdise;
-            
-            if(newSignFile) {
-                updatedSchool.hmSignature = await blobToBase64(newSignFile);
-            }
+            updatedSchool.hmSignature = currentSchoolData.hmSignature || '';
 
             // 🚀 NEW: Push the rename/edit to already-synced Firestore records too (was previously
             // only updating local IndexedDB — that's why renamed schools showed as a duplicate in Admin)
@@ -686,7 +662,7 @@
                 udise: newUdise,
                 lastModified: Date.now()
             };
-            if (newSignFile) firestoreUpdates.hmSignature = updatedSchool.hmSignature;
+            
             await pushSchoolRenameToFirestore(oldName, firestoreUpdates);
 
             const tx = db.transaction(['schools', 'students'], 'readwrite');
