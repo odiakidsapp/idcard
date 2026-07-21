@@ -28,6 +28,8 @@
     .btn-danger { background:#dc3545; }
     .btn-warning { background:#ffc107; color:#222; }
     .btn-secondary { background:#6c757d; }
+    .btn-outline { background: transparent; border: 1px solid #ccc; color: #333; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     input, select { padding:10px; border-radius:6px; border:1px solid #ccc; box-sizing: border-box; }
 
     .school-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
@@ -42,6 +44,9 @@
     .status-badge { display:inline-block; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold; margin-left:5px; }
     .status-ok { background:#d4edda; color:#155724; }
     .status-err { background:#f8d7da; color:#721c24; }
+    
+    .badge-printed { background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight:bold; }
+    .badge-unprinted { background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight:bold; }
 
     .config-panel { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #90caf9; display: flex; gap: 20px; align-items: center; flex-wrap:wrap; }
     
@@ -53,7 +58,7 @@
     th { background:#f8f9fa; font-weight: 600; }
     img.thumb { width:35px; height:35px; border-radius:4px; object-fit: cover; border: 1px solid #ddd; }
 
-    .action-bar { margin-top: 20px; padding: 20px; background: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 100; }
+    .action-bar { margin-top: 20px; padding: 20px; background: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 100; flex-wrap: wrap; gap: 10px; }
 
     .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center; }
     .modal-content { background:white; padding:25px; border-radius:8px; width:90%; max-width:400px; max-height: 90vh; overflow-y: auto; }
@@ -130,13 +135,19 @@
         </div>
     </div>
 
-    <!-- Filter Bar for Class-wise Generation -->
+    <!-- Filter Bar for Class-wise and Print Status Generation -->
     <div class="filter-bar">
         <label style="font-size:13px; font-weight:bold;">Filter by Class:</label>
         <select id="classFilterSelect" onchange="renderTable()" style="padding: 6px; border-radius: 4px; min-width: 150px;">
             <option value="all">All Classes</option>
         </select>
-        <span style="font-size: 12px; color: #666;">(Select a class to filter before generating or modifying)</span>
+        
+        <label style="font-size:13px; font-weight:bold; margin-left: 10px;">Print Status:</label>
+        <select id="printFilterSelect" onchange="renderTable()" style="padding: 6px; border-radius: 4px; min-width: 120px;">
+            <option value="all">All</option>
+            <option value="unprinted">Pending (Not Printed)</option>
+            <option value="printed">Already Printed</option>
+        </select>
     </div>
 
     <div class="table-container">
@@ -144,7 +155,7 @@
             <thead>
                 <tr>
                     <th style="width:30px;"><input type="checkbox" id="selectAll"></th>
-                    <th>#</th><th>Photo</th><th>Name</th><th>Class</th><th>Roll</th><th>DOB</th><th>Blood</th><th>Mobile</th><th>Action</th>
+                    <th>#</th><th>Photo</th><th>Name</th><th>Class</th><th>Roll</th><th>DOB</th><th>Blood</th><th>Mobile</th><th>Status</th><th>Action</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -152,8 +163,12 @@
     </div>
 
     <div class="action-bar">
-        <span id="selectionCount">0 students selected</span>
-        <button id="generateBtn" class="btn btn-success" disabled>🖨 Generate Automated ID Cards</button>
+        <span id="selectionCount" style="font-weight: bold;">0 students selected</span>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button id="markPrintedBtn" class="btn btn-outline" onclick="markSelectedPrinted(true)" disabled>✔ Mark Printed</button>
+            <button id="markUnprintedBtn" class="btn btn-outline" onclick="markSelectedPrinted(false)" disabled>✖ Mark Unprinted</button>
+            <button id="generateBtn" class="btn btn-success" disabled>🖨 Generate Selected</button>
+        </div>
     </div>
   </div>
 </div>
@@ -614,11 +629,12 @@ function openSchoolDetail(udise){
     document.getElementById('dashboardView').classList.add('hidden');
     document.getElementById('detailView').classList.remove('hidden');
     
-    // Reset Filter
-    const filterSelect = document.getElementById('classFilterSelect');
-    filterSelect.innerHTML = '<option value="all">All Classes</option>';
+    // Reset Filters
+    const classFilterSelect = document.getElementById('classFilterSelect');
+    classFilterSelect.innerHTML = '<option value="all">All Classes</option>';
+    document.getElementById('printFilterSelect').value = 'all';
 
-    document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading students from Firebase...</td></tr>';
+    document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="11" style="text-align:center;">Loading students from Firebase...</td></tr>';
     
     db.collection('students').where(...(udise.startsWith('NO_UDISE:')
         ? ['schoolName', '==', udise.slice('NO_UDISE:'.length)]
@@ -634,12 +650,12 @@ function openSchoolDetail(udise){
         });
         currentSchoolStudents.sort((a,b) => b.id - a.id);
         
-        // Populate Filter
+        // Populate Class Filter
         Array.from(classes).sort().forEach(cls => {
             const opt = document.createElement('option');
             opt.value = cls; 
             opt.textContent = 'Class: ' + cls;
-            filterSelect.appendChild(opt);
+            classFilterSelect.appendChild(opt);
         });
 
         renderTable();
@@ -650,7 +666,7 @@ function openSchoolDetail(udise){
             localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         }
     }).catch(e => {
-        document.getElementById('studentTable').querySelector('tbody').innerHTML = `<tr><td colspan="10" style="color:red;">Error: ${e.message}</td></tr>`;
+        document.getElementById('studentTable').querySelector('tbody').innerHTML = `<tr><td colspan="11" style="color:red;">Error: ${e.message}</td></tr>`;
     });
     
     updateSelection();
@@ -673,18 +689,27 @@ function downloadHmSignature() {
 
 function renderTable(){
     const tbody = document.querySelector('#studentTable tbody');
-    const filter = document.getElementById('classFilterSelect').value;
+    const classFilter = document.getElementById('classFilterSelect').value;
+    const printFilter = document.getElementById('printFilterSelect').value;
     
-    // Filter logic
-    const filteredStudents = filter === 'all' 
-        ? currentSchoolStudents 
-        : currentSchoolStudents.filter(s => s.class === filter);
+    // Apply both filters
+    let filteredStudents = currentSchoolStudents;
+    
+    if (classFilter !== 'all') {
+        filteredStudents = filteredStudents.filter(s => s.class === classFilter);
+    }
+    
+    if (printFilter === 'printed') {
+        filteredStudents = filteredStudents.filter(s => s.isPrinted);
+    } else if (printFilter === 'unprinted') {
+        filteredStudents = filteredStudents.filter(s => !s.isPrinted);
+    }
 
     tbody.innerHTML = '';
     document.getElementById('selectAll').checked = false;
     
     if(filteredStudents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No students found in this selection.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">No students found in this selection.</td></tr>';
         updateSelection();
         return;
     }
@@ -692,11 +717,15 @@ function renderTable(){
     filteredStudents.forEach((s, i) => {
         const tr = document.createElement('tr');
         
-        // Added the Crop button below
+        const printStatusBadge = s.isPrinted 
+            ? `<span class="badge-printed">Printed</span>` 
+            : `<span class="badge-unprinted">Pending</span>`;
+        
         tr.innerHTML = `<td><input type="checkbox" class="sel" value="${s.id}"></td><td>${i+1}</td>
         <td><img class="thumb" src="${s.photoBase64 || ''}" crossorigin="anonymous"></td>
         <td>${s.name}</td><td>${s.class}</td><td>${s.roll}</td><td>${s.dob}</td><td>${s.bloodGroup||''}</td>
         <td>${s.mobile || s.phone || ''}</td> 
+        <td>${printStatusBadge}</td>
         <td style="display: flex; gap: 5px;">
             <button class="btn btn-warning" style="padding: 6px 10px;" onclick="openCropModal('${s.id}')" title="Crop Photo">✂</button>
             <button class="btn btn-primary" style="padding: 6px 10px;" onclick="openEditModal('${s.id}')" title="Edit Student">✎</button> 
@@ -718,14 +747,65 @@ document.getElementById('selectAll').onchange = e => {
 
 function updateSelection(){
     const n = document.querySelectorAll('.sel:checked').length;
-    document.getElementById('selectionCount').textContent = `${n} selected`;
-    const btn = document.getElementById('generateBtn');
+    document.getElementById('selectionCount').textContent = `${n} students selected`;
     
-    if(n > 0 && window.assets.font && window.assets.template) {
-        btn.disabled = false;
-        btn.innerHTML = `🖨 Generate <b>${n}</b> Cards`;
+    const genBtn = document.getElementById('generateBtn');
+    const markPBtn = document.getElementById('markPrintedBtn');
+    const markUBtn = document.getElementById('markUnprintedBtn');
+    
+    if(n > 0) {
+        markPBtn.disabled = false;
+        markUBtn.disabled = false;
+        if(window.assets.font && window.assets.template) {
+            genBtn.disabled = false;
+            genBtn.innerHTML = `🖨 Generate <b>${n}</b> Cards`;
+        } else {
+            genBtn.disabled = true;
+        }
     } else {
-        btn.disabled = true;
+        genBtn.disabled = true;
+        genBtn.innerHTML = `🖨 Generate Selected`;
+        markPBtn.disabled = true;
+        markUBtn.disabled = true;
+    }
+}
+
+// PRINT STATUS LOGIC
+async function markSelectedPrinted(status) {
+    const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
+    if(ids.length === 0) return;
+    
+    const btn = status ? document.getElementById('markPrintedBtn') : document.getElementById('markUnprintedBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "Updating...";
+    btn.disabled = true;
+    
+    try {
+        const chunks = [];
+        for (let i = 0; i < ids.length; i += 400) chunks.push(ids.slice(i, i + 400));
+        
+        for (const chunk of chunks) {
+            const batch = db.batch();
+            chunk.forEach(id => {
+                const ref = db.collection('students').doc(id.toString());
+                batch.update(ref, { isPrinted: status, lastModified: Date.now() });
+            });
+            await batch.commit();
+        }
+
+        // Update local state
+        ids.forEach(id => {
+            const s = currentSchoolStudents.find(x => x.id == id);
+            if(s) s.isPrinted = status;
+        });
+
+        renderTable(); 
+    } catch (e) {
+        showMsg("Error updating print status: " + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        updateSelection();
     }
 }
 
@@ -1091,6 +1171,13 @@ document.getElementById('generateBtn').onclick = async () => {
     a.download = `ID_Cards_${Date.now()}.zip`; a.click();
     
     btn.disabled = false; updateSelection();
+    
+    // Auto-prompt to update printed status
+    setTimeout(async () => {
+        if(await showMsg("ID Cards generated! Do you want to mark these selected students as 'Printed'?", true)) {
+            await markSelectedPrinted(true);
+        }
+    }, 500);
 };
 
 async function openSchoolEdit(udise){
