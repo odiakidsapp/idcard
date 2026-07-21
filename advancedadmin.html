@@ -618,12 +618,12 @@ function renderDashboard(){
             missingUdiseWarning = `<div style="background:#f8d7da; color:#721c24; font-size:11px; padding:6px 8px; border-radius:6px; margin-top:6px;">⚠️ No UDISE recorded for this school (from before UDISE was required). Tap Edit School to add it.</div>`;
         }
 
+        // Removed student count from here as requested
         div.innerHTML = `
             <div class="school-card-content" onclick="openSchoolDetail('${escapeHtml(udise)}')">
                 <h3 style="margin:0 0 5px 0">${escapeHtml(s.name)}</h3>
                 <div class="school-meta">📋 UDISE: ${s.missingUdise ? '<span style="color:#dc3545;">Not set</span>' : escapeHtml(udise)}</div>
                 <div class="school-meta">${loc}</div>
-                <div class="school-meta">👥 ${s.count} Students</div>
                 ${typoWarning}
                 ${missingUdiseWarning}
             </div>
@@ -1023,14 +1023,14 @@ document.getElementById('verifyBtn').onclick = async () => {
             const imgObj = new Image(); imgObj.src = imgUrl;
             await new Promise(r => imgObj.onload=r);
 
-            // Downscale and convert to JPEG for a smaller file size
+            // Convert to JPEG at full resolution but 90% quality for smaller file size without "cracking" photos
             const tempCvs = document.createElement('canvas');
-            tempCvs.width = Math.round(CARD_W * 0.5);
-            tempCvs.height = Math.round(CARD_H * 0.5);
+            tempCvs.width = CARD_W;
+            tempCvs.height = CARD_H;
             const tctx = tempCvs.getContext('2d');
             tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
             tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
-            const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.6);
+            const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.90);
 
             if(i>0) verifyPdf.addPage([CARD_W, CARD_H], 'portrait');
             verifyPdf.addImage(jpegUrl, 'JPEG', 0, 0, CARD_W, CARD_H, undefined, 'FAST');
@@ -1088,14 +1088,14 @@ document.getElementById('generateBtn').onclick = async () => {
         await new Promise(r => imgObj.onload=r);
         imgs.push(imgObj);
 
-        // Downscale and convert to JPEG for a smaller file size in Verification PDF
+        // Convert to JPEG at full resolution but 90% quality for smaller file size without "cracking" photos
         const tempCvs = document.createElement('canvas');
-        tempCvs.width = Math.round(CARD_W * 0.5);
-        tempCvs.height = Math.round(CARD_H * 0.5);
+        tempCvs.width = CARD_W;
+        tempCvs.height = CARD_H;
         const tctx = tempCvs.getContext('2d');
         tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
         tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
-        const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.6);
+        const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.90);
 
         if(i>0) verifyPdf.addPage([CARD_W, CARD_H], 'portrait');
         verifyPdf.addImage(jpegUrl, 'JPEG', 0, 0, CARD_W, CARD_H, undefined, 'FAST');
