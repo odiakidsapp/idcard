@@ -934,7 +934,12 @@
             document.getElementById('sClass').value = s.class;
             document.getElementById('sRoll').value = s.roll;
             document.getElementById('sPhone').value = s.mobile || '';
+            
+            // --- NEW: Fix the edit placeholder state ---
+            document.getElementById('sDob').type = s.dob ? 'date' : 'text'; 
             document.getElementById('sDob').value = s.dob;
+            // ------------------------------------------
+
             document.getElementById('sBlood').value = s.bloodGroup;
             if (s.photoBase64) {
                 document.getElementById('preview').src = s.photoBase64;
@@ -957,7 +962,12 @@
             document.getElementById('sClass').value = '';
             document.getElementById('sRoll').value = '';
             document.getElementById('sPhone').value = '';
+            
             document.getElementById('sDob').value = '';
+            // --- NEW: Reset to text box to show placeholder again ---
+            document.getElementById('sDob').type = 'text'; 
+            // --------------------------------------------------------
+
             document.getElementById('sBlood').value = '';
             document.getElementById('preview').style.display = 'none';
             currentPhotoBlob = null;
