@@ -1023,8 +1023,17 @@ document.getElementById('verifyBtn').onclick = async () => {
             const imgObj = new Image(); imgObj.src = imgUrl;
             await new Promise(r => imgObj.onload=r);
 
+            // Downscale and convert to JPEG for a smaller file size
+            const tempCvs = document.createElement('canvas');
+            tempCvs.width = Math.round(CARD_W * 0.5);
+            tempCvs.height = Math.round(CARD_H * 0.5);
+            const tctx = tempCvs.getContext('2d');
+            tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+            tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
+            const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.6);
+
             if(i>0) verifyPdf.addPage([CARD_W, CARD_H], 'portrait');
-            verifyPdf.addImage(imgObj, 'PNG', 0, 0, CARD_W, CARD_H);
+            verifyPdf.addImage(jpegUrl, 'JPEG', 0, 0, CARD_W, CARD_H, undefined, 'FAST');
             
             // Add Watermark
             verifyPdf.saveGraphicsState();
@@ -1066,7 +1075,6 @@ document.getElementById('generateBtn').onclick = async () => {
     const { jsPDF } = window.jspdf;
     
     const verifyPdf = new jsPDF({ unit:'px', format:[CARD_W, CARD_H] });
-    const printPdf = new jsPDF({ unit:'px', format:[CARD_W, CARD_H] });
 
     const imgs = [];
 
@@ -1080,11 +1088,17 @@ document.getElementById('generateBtn').onclick = async () => {
         await new Promise(r => imgObj.onload=r);
         imgs.push(imgObj);
 
-        if(i>0) printPdf.addPage([CARD_W, CARD_H], 'portrait');
-        printPdf.addImage(imgObj, 'PNG', 0, 0, CARD_W, CARD_H);
+        // Downscale and convert to JPEG for a smaller file size in Verification PDF
+        const tempCvs = document.createElement('canvas');
+        tempCvs.width = Math.round(CARD_W * 0.5);
+        tempCvs.height = Math.round(CARD_H * 0.5);
+        const tctx = tempCvs.getContext('2d');
+        tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+        tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
+        const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.6);
 
         if(i>0) verifyPdf.addPage([CARD_W, CARD_H], 'portrait');
-        verifyPdf.addImage(imgObj, 'PNG', 0, 0, CARD_W, CARD_H);
+        verifyPdf.addImage(jpegUrl, 'JPEG', 0, 0, CARD_W, CARD_H, undefined, 'FAST');
         
         verifyPdf.saveGraphicsState();
         verifyPdf.setGState(new verifyPdf.GState({opacity: 0.3}));
