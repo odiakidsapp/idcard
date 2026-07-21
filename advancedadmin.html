@@ -11,10 +11,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
-  
-  <!-- Added Cropper.js for Photo Cropping -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; padding:20px; background:#f4f7f6; color:#222; }
@@ -40,6 +36,17 @@
     
     .detail-header { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: start; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .hm-sign-img { height: 50px; border: 1px solid #ddd; margin-top: 5px; background: white; padding: 2px; }
+
+    /* Stats Panel CSS */
+    .stats-panel { background: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-wrap: wrap; gap: 15px; }
+    .stat-box { background: #f8f9fa; border: 1px solid #eee; padding: 12px 15px; border-radius: 8px; text-align: center; flex: 1; min-width: 120px; }
+    .stat-box.primary { border-left: 4px solid #007bff; }
+    .stat-box.success { border-left: 4px solid #28a745; }
+    .stat-box.warning { border-left: 4px solid #ffc107; }
+    .stat-value { font-size: 24px; font-weight: bold; margin-bottom: 4px; color: #333; }
+    .stat-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; }
+    .class-stats { width: 100%; margin-top: 5px; padding-top: 15px; border-top: 1px solid #eee; }
+    .class-pill { display: inline-block; background: #eef2f5; border: 1px solid #dcdcdc; color: #333; padding: 5px 12px; border-radius: 20px; margin: 4px 4px 4px 0; font-size: 13px; }
 
     .status-badge { display:inline-block; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold; margin-left:5px; }
     .status-ok { background:#d4edda; color:#155724; }
@@ -112,6 +119,29 @@
         </div>
     </div>
 
+    <!-- NEW STATS PANEL -->
+    <div class="stats-panel" id="statsPanel">
+        <div class="stat-box primary">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-box success">
+            <div class="stat-value" id="statPrinted">0</div>
+            <div class="stat-label">Printed</div>
+        </div>
+        <div class="stat-box warning">
+            <div class="stat-value" id="statPending">0</div>
+            <div class="stat-label">Pending</div>
+        </div>
+        
+        <div class="class-stats">
+            <div style="font-size: 11px; color: #666; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Class-wise Breakdown:</div>
+            <div id="classStatsContainer">
+                <!-- Class pills will be injected here -->
+            </div>
+        </div>
+    </div>
+
     <div class="config-panel">
         <div>
             <label style="font-size:12px; font-weight:bold;">Card Language</label><br>
@@ -174,21 +204,6 @@
 </div>
 
 <canvas id="cardCanvas" style="display:none;"></canvas>
-
-<!-- CROP MODAL -->
-<div id="cropModal" class="modal" style="z-index: 2100;">
-    <div class="modal-content" style="max-width: 500px;">
-        <h3 style="margin-top: 0; color: #0b53a0;">Crop Student Photo</h3>
-        <p style="font-size: 12px; color: #666;">Drag to move. Scroll to zoom. The box matches the ID card photo ratio.</p>
-        <div style="max-height: 400px; width: 100%; overflow: hidden; text-align: center; background: #eee;">
-            <img id="cropImageTarget" src="" style="max-width: 100%; display: block;">
-        </div>
-        <div class="modal-btns">
-            <button class="btn btn-secondary" onclick="closeCropModal()">Cancel</button>
-            <button class="btn btn-success" id="saveCropBtn">💾 Save Crop</button>
-        </div>
-    </div>
-</div>
 
 <div id="editModal" class="modal">
     <div class="modal-content">
@@ -346,9 +361,29 @@ let currentSchoolStudents = [];
 // Added Language State
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
 
-// Cropper specific variables
-let currentCropper = null;
-let currentCropStudentId = null;
+// STATS LOGIC
+function updateStats() {
+    if(!currentSchoolStudents) return;
+    const total = currentSchoolStudents.length;
+    const printed = currentSchoolStudents.filter(s => s.isPrinted).length;
+    const pending = total - printed;
+    
+    const classCounts = {};
+    currentSchoolStudents.forEach(s => {
+        const c = s.class ? s.class.trim() : 'Unknown';
+        classCounts[c] = (classCounts[c] || 0) + 1;
+    });
+    
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statPrinted').textContent = printed;
+    document.getElementById('statPending').textContent = pending;
+    
+    const classHtml = Object.keys(classCounts).sort().map(c => 
+        `<span class="class-pill"><b>Class ${c}:</b> ${classCounts[c]}</span>`
+    ).join(' ');
+    
+    document.getElementById('classStatsContainer').innerHTML = classHtml || '<i>No class data</i>';
+}
 
 // Handle Language Switch & Auto Background Load
 async function changeLanguage() {
@@ -659,6 +694,7 @@ function openSchoolDetail(udise){
         });
 
         renderTable();
+        updateStats(); // Update stats panel when data is loaded
         
         if(s.count !== currentSchoolStudents.length) {
             schoolsMap[udise].count = currentSchoolStudents.length;
@@ -727,7 +763,6 @@ function renderTable(){
         <td>${s.mobile || s.phone || ''}</td> 
         <td>${printStatusBadge}</td>
         <td style="display: flex; gap: 5px;">
-            <button class="btn btn-warning" style="padding: 6px 10px;" onclick="openCropModal('${s.id}')" title="Crop Photo">✂</button>
             <button class="btn btn-primary" style="padding: 6px 10px;" onclick="openEditModal('${s.id}')" title="Edit Student">✎</button> 
             <button class="btn btn-danger" style="padding: 6px 10px;" onclick="del('${s.id}')" title="Delete">🗑</button>
         </td>`;
@@ -800,6 +835,7 @@ async function markSelectedPrinted(status) {
         });
 
         renderTable(); 
+        updateStats(); // Update stats panel
     } catch (e) {
         showMsg("Error updating print status: " + e.message);
     } finally {
@@ -808,87 +844,6 @@ async function markSelectedPrinted(status) {
         updateSelection();
     }
 }
-
-// CROPPER LOGIC
-function openCropModal(id) {
-    const s = currentSchoolStudents.find(x => x.id == id);
-    if(!s || !s.photoBase64) {
-        showMsg("No photo available to crop.");
-        return;
-    }
-    
-    currentCropStudentId = id;
-    const img = document.getElementById('cropImageTarget');
-    img.src = s.photoBase64;
-    
-    document.getElementById('cropModal').style.display = 'flex';
-    
-    if(currentCropper) {
-        currentCropper.destroy();
-        currentCropper = null;
-    }
-    
-    // Allow the modal to render before initializing cropper
-    setTimeout(() => {
-        currentCropper = new Cropper(img, {
-            aspectRatio: 187 / 225, // Matches the ID card photo width/height exactly
-            viewMode: 1,
-            dragMode: 'move',
-            autoCropArea: 0.9,
-            restore: false,
-            guides: true,
-            center: true,
-            highlight: false,
-            cropBoxMovable: true,
-            cropBoxResizable: true,
-            toggleDragModeOnDblclick: false,
-        });
-    }, 100);
-}
-
-function closeCropModal() {
-    document.getElementById('cropModal').style.display = 'none';
-    if(currentCropper) {
-        currentCropper.destroy();
-        currentCropper = null;
-    }
-}
-
-document.getElementById('saveCropBtn').onclick = async () => {
-    if(!currentCropper) return;
-    const btn = document.getElementById('saveCropBtn');
-    btn.disabled = true;
-    btn.textContent = "Saving...";
-    
-    try {
-        // Output canvas double the size for better quality print
-        const canvas = currentCropper.getCroppedCanvas({
-            width: 374, 
-            height: 450
-        });
-        
-        const newBase64 = canvas.toDataURL('image/jpeg', 0.9);
-        
-        // Save to Firebase
-        await db.collection('students').doc(currentCropStudentId.toString()).update({
-            photoBase64: newBase64,
-            lastModified: Date.now()
-        });
-        
-        // Update local state
-        const s = currentSchoolStudents.find(x => x.id == currentCropStudentId);
-        if(s) s.photoBase64 = newBase64;
-        
-        closeCropModal();
-        renderTable(); 
-        
-    } catch (e) {
-        showMsg("Error saving crop: " + e.message);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = "💾 Save Crop";
-    }
-};
 
 document.getElementById('fontInput').onchange = async e => {
     const f = e.target.files[0]; if(!f) return;
@@ -931,44 +886,6 @@ async function initializeFaceDetector(){
     window.assets.aiModel = 'failed'; document.getElementById('aiStatus').textContent = "⚠️ AI Failed (Using Basic Crop)";
   }
   updateSelection();
-}
-
-function removeWhiteBg(img) {
-    const c = document.createElement('canvas');
-    c.width = img.width; c.height = img.height;
-    const cx = c.getContext('2d');
-    cx.drawImage(img, 0, 0);
-    const imgData = cx.getImageData(0,0, c.width, c.height);
-    const d = imgData.data;
-
-    let cornerDark = 0;
-    const samplePx = [[0,0],[c.width-1,0],[0,c.height-1],[c.width-1,c.height-1]];
-    samplePx.forEach(([px,py]) => {
-        const idx = (py * c.width + px) * 4;
-        if((d[idx]+d[idx+1]+d[idx+2])/3 < 40) cornerDark++;
-    });
-    const hasDarkBg = cornerDark >= 2;
-
-    for(let i=0; i<d.length; i+=4) {
-        const r = d[i], g = d[i+1], b = d[i+2];
-        const bright = (r+g+b)/3;
-
-        if(hasDarkBg) {
-            if(bright < 40) {
-                d[i+3] = 0; 
-            } else if(bright < 90) {
-                d[i+3] = Math.round((bright - 40) / 50 * 255);
-            }
-        } else {
-            if(bright > 210) {
-                d[i+3] = 0;
-            } else if(bright > 150) {
-                d[i+3] = Math.max(0, 255 - (bright - 150) * 4);
-            }
-        }
-    }
-    cx.putImageData(imgData, 0, 0);
-    return c;
 }
 
 const canvas = document.getElementById('cardCanvas');
@@ -1297,6 +1214,7 @@ async function del(id){
     db.collection('students').doc(id.toString()).delete().then(() => {
         currentSchoolStudents = currentSchoolStudents.filter(x => x.id != id);
         renderTable(); 
+        updateStats(); // Update stats panel
         
         if(currentViewUdise && schoolsMap[currentViewUdise]) {
              schoolsMap[currentViewUdise].count = currentSchoolStudents.length;
@@ -1323,6 +1241,7 @@ document.getElementById('saveEditBtn').onclick = async () => {
         if(s) Object.assign(s, data);
         document.getElementById('editModal').style.display='none';
         renderTable();
+        updateStats(); // Update stats panel
     } catch(e) { showMsg("Error: "+e.message); }
 };
 
