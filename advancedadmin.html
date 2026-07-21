@@ -23,6 +23,7 @@
     .btn-success { background:#28a745; }
     .btn-danger { background:#dc3545; }
     .btn-warning { background:#ffc107; color:#222; }
+    .btn-info { background:#17a2b8; color:white; }
     .btn-secondary { background:#6c757d; }
     .btn-outline { background: transparent; border: 1px solid #ccc; color: #333; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -197,6 +198,7 @@
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button id="markPrintedBtn" class="btn btn-outline" onclick="markSelectedPrinted(true)" disabled>✔ Mark Printed</button>
             <button id="markUnprintedBtn" class="btn btn-outline" onclick="markSelectedPrinted(false)" disabled>✖ Mark Unprinted</button>
+            <button id="verifyBtn" class="btn btn-info" disabled>👀 Verification PDF</button>
             <button id="generateBtn" class="btn btn-success" disabled>🖨 Generate Selected</button>
         </div>
     </div>
@@ -785,6 +787,7 @@ function updateSelection(){
     document.getElementById('selectionCount').textContent = `${n} students selected`;
     
     const genBtn = document.getElementById('generateBtn');
+    const verifyBtn = document.getElementById('verifyBtn');
     const markPBtn = document.getElementById('markPrintedBtn');
     const markUBtn = document.getElementById('markUnprintedBtn');
     
@@ -793,12 +796,15 @@ function updateSelection(){
         markUBtn.disabled = false;
         if(window.assets.font && window.assets.template) {
             genBtn.disabled = false;
+            verifyBtn.disabled = false;
             genBtn.innerHTML = `🖨 Generate <b>${n}</b> Cards`;
         } else {
             genBtn.disabled = true;
+            verifyBtn.disabled = true;
         }
     } else {
         genBtn.disabled = true;
+        verifyBtn.disabled = true;
         genBtn.innerHTML = `🖨 Generate Selected`;
         markPBtn.disabled = true;
         markUBtn.disabled = true;
@@ -994,6 +1000,54 @@ document.getElementById('downloadRawBtn').onclick = async () => {
         XLSX.writeFile(wb, `ID_Cards_Database_Backup.xlsx`);
     } catch(e) { showMsg("Export error: " + e.message); }
     btn.disabled = false; btn.innerHTML = "💾 Backup";
+};
+
+// NEW VERIFICATION PDF FUNCTION
+document.getElementById('verifyBtn').onclick = async () => {
+    const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
+    const targets = currentSchoolStudents.filter(s => ids.includes(s.id.toString()));
+    const btn = document.getElementById('verifyBtn');
+    
+    btn.disabled = true; 
+    btn.textContent = "Creating PDF...";
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const verifyPdf = new jsPDF({ unit:'px', format:[CARD_W, CARD_H] });
+
+        for(let i=0; i<targets.length; i++) {
+            btn.textContent = `Drawing ${i+1}/${targets.length}...`;
+            const blob = await drawCard(targets[i]);
+            
+            const imgUrl = URL.createObjectURL(blob);
+            const imgObj = new Image(); imgObj.src = imgUrl;
+            await new Promise(r => imgObj.onload=r);
+
+            if(i>0) verifyPdf.addPage([CARD_W, CARD_H], 'portrait');
+            verifyPdf.addImage(imgObj, 'PNG', 0, 0, CARD_W, CARD_H);
+            
+            // Add Watermark
+            verifyPdf.saveGraphicsState();
+            verifyPdf.setGState(new verifyPdf.GState({opacity: 0.3}));
+            verifyPdf.setTextColor(255, 0, 0); verifyPdf.setFontSize(30);
+            for(let r=-50; r<CARD_H+50; r+=150) { 
+                for(let c=-50; c<CARD_W+50; c+=200) {
+                    verifyPdf.text("VERIFICATION ONLY", c, r, {angle:45}); 
+                }
+            }
+            verifyPdf.restoreGraphicsState();
+        }
+
+        btn.textContent = "Downloading...";
+        const safeName = (schoolsMap[currentViewUdise]?.name || 'School').replace(/[^a-zA-Z0-9]/g, '_');
+        verifyPdf.save(`${safeName}_Verification_Proof.pdf`);
+
+    } catch (error) {
+        showMsg("Error generating verification PDF: " + error.message);
+    } finally {
+        btn.disabled = false; 
+        updateSelection();
+    }
 };
 
 document.getElementById('generateBtn').onclick = async () => {
