@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Data Entry App</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brand: { 500: '#0056b3', 600: '#004494' } }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; }
+        
+        /* Toast Animations */
+        .toast-enter { transform: translateY(100%); opacity: 0; }
+        .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toast-exit { transform: translateY(0); opacity: 1; }
+        .toast-exit-active { transform: translateY(100%); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Hide number input arrows */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        
+        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="text-gray-800 pb-20">
+
+    <!-- Update Banner (Hidden by default) -->
+    <div id="updateBanner" class="hidden fixed top-0 inset-x-0 z-[60] bg-brand-500 text-white px-4 py-3 shadow-lg flex justify-between items-center transform transition-transform duration-300">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-cloud-arrow-down text-xl"></i>
+            <span class="text-sm font-medium">A new version is available!</span>
+        </div>
+        <button onclick="window.location.reload()" class="bg-white text-brand-500 px-4 py-1.5 rounded-full text-sm font-bold shadow hover:bg-gray-100 transition">Refresh Now</button>
+    </div>
+
+    <!-- App Navigation Header -->
+    <header class="bg-white/95 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 shadow-sm h-14 flex items-center">
+        <div class="w-full max-w-lg mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center gap-2 text-brand-600 font-black text-lg tracking-tight">
+                <i class="fas fa-id-badge text-xl"></i> AN ID CARDS
+            </div>
+            <div class="flex items-center gap-5 text-gray-500">
+                <a href="catalogue.html" class="hover:text-brand-500 transition transform hover:scale-110" title="View Catalog">
+                    <i class="fas fa-book-open text-lg"></i>
+                </a>
+                <a href="https://wa.me/917855800205" target="_blank" class="hover:text-[#25D366] transition transform hover:scale-110" title="WhatsApp Support">
+                    <i class="fab fa-whatsapp text-xl"></i>
+                </a>
+                <button onclick="shareApp()" class="hover:text-brand-500 transition transform hover:scale-110 focus:outline-none" title="Share App">
+                    <i class="fas fa-share-nodes text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="max-w-lg mx-auto p-4 pt-6">
+        
+        <!-- ================= SCHOOL REGISTRATION SECTION ================= -->
+        <div id="schoolSection" class="hidden animate-fade-in">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-brand-500 text-2xl">
+                    <i class="fas fa-school"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">School Registration</h2>
+            </div>
+            
+            <!-- Restore Card -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-dashed border-blue-300 mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Already added students? Restore data</label>
+                <input type="text" id="restoreUdiseInput" placeholder="Enter UDISE Number (11 digits)" maxlength="11" inputmode="numeric" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                <button class="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-4 rounded-xl transition flex justify-center items-center gap-2" id="restoreUdiseBtn">
+                    <i class="fas fa-cloud-download-alt"></i> Check & Restore Data
+                </button>
+                <div id="restoreStatus" class="text-sm mt-3 font-medium hidden"></div>
+            </div>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="flex-1 h-px bg-gray-300"></div>
+                <span class="text-gray-400 font-medium text-sm">OR CREATE NEW</span>
+                <div class="flex-1 h-px bg-gray-300"></div>
+            </div>
+
+            <!-- New School Card -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-800 mb-4">New School Details</h3>
+                <input type="text" id="newSchoolName" placeholder="Enter School Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                <input type="tel" id="newSchoolPhone" placeholder="School Contact Number" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                
+                <div class="flex gap-3 mb-3">
+                    <input type="text" id="newBlock" placeholder="Block" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                    <input type="text" id="newDistrict" placeholder="District" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                </div>
+                <div class="flex gap-3 mb-4">
+                    <input type="number" id="newPin" placeholder="Pin Code" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                    <input type="text" id="newUdise" placeholder="UDISE (11 digits) *" maxlength="11" inputmode="numeric" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                </div>
+
+                <button class="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-md" id="addSchoolBtn">Save School</button>
+            </div>
+        </div>
+
+        <!-- ================= ENTRY SECTION ================= -->
+        <div id="entrySection" class="hidden">
+            
+            <!-- School Header -->
+            <div class="glass-header sticky top-14 z-30 -mx-4 px-4 py-3 mb-5 shadow-sm border-b border-gray-200 flex justify-between items-center">
+                <div class="flex-1 truncate pr-2">
+                    <h3 id="currentSchoolHeader" class="m-0 font-bold text-gray-900 truncate">School Name</h3>
+                    <p id="currentSchoolSubHeader" class="text-xs text-gray-500 truncate">District</p>
+                </div>
+                <button onclick="openEditSchoolModal()" class="bg-gray-100 hover:bg-gray-200 text-brand-600 px-3 py-1.5 rounded-lg text-sm font-bold transition flex-shrink-0">
+                    <i class="fas fa-edit mr-1"></i> Edit
+                </button>
+            </div>
+
+            <!-- Form Card -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 id="formTitle" class="font-bold text-lg text-gray-800">Add Student</h4>
+                    <span class="bg-blue-100 text-brand-600 px-2 py-1 rounded text-xs font-bold"><i class="fas fa-user-plus"></i></span>
+                </div>
+                
+                <input type="hidden" id="editId">
+                <input type="text" id="sName" placeholder="Full Name (e.g. ଅବିନାଶ)" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                
+                <div class="flex gap-3 mb-3">
+                    <select id="sClass" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                        <option value="">Class</option>
+                        <option value="Nursery">Nursery</option>
+                        <option value="1">Class 1</option><option value="2">Class 2</option>
+                        <option value="3">Class 3</option><option value="4">Class 4</option>
+                        <option value="5">Class 5</option><option value="6">Class 6</option>
+                        <option value="7">Class 7</option><option value="8">Class 8</option>
+                        <option value="9">Class 9</option><option value="10">Class 10</option>
+                    </select>
+                    <input type="text" id="sRoll" placeholder="Roll No" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                </div>
+                
+                <input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+
+                <div class="flex gap-3 mb-4">
+                   <input type="text" id="sDob" placeholder="Date of Birth" onpointerdown="(this.type='date')" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                    <select id="sBlood" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 transition">
+                        <option value="">Blood Group</option>
+                        <option value="A+">A+</option><option value="A-">A-</option>
+                        <option value="B+">B+</option><option value="B-">B-</option>
+                        <option value="O+">O+</option><option value="O-">O-</option>
+                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                    </select>
+                </div>
+
+                <!-- Photo Area -->
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center mb-5">
+                    <div class="flex gap-3 justify-center mb-3">
+                        <button id="openCam" class="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-camera mr-2"></i> Camera</button>
+                        <input type="file" id="fileInput" accept="image/*" class="hidden">
+                        <button onclick="document.getElementById('fileInput').click()" class="flex-1 bg-white border border-brand-500 text-brand-600 hover:bg-blue-50 font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-image mr-2"></i> Gallery</button>
+                    </div>
+                    <img id="preview" src="" class="w-24 h-24 object-cover mx-auto rounded-xl shadow-md border-2 border-white hidden">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
+                    <button id="previewCardBtn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 rounded-xl shadow-sm transition"><i class="fas fa-eye mr-1"></i> Preview ID Card</button>
+                    <button id="cancelEdit" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-xl transition hidden">Cancel Edit</button>
+                </div>
+            </div>
+
+            <!-- Student List Header -->
+            <div class="flex justify-between items-end mb-3 px-1">
+                <div>
+                    <h3 class="font-bold text-gray-900 text-xl m-0">Student List</h3>
+                    <p class="text-xs text-gray-500 m-0" id="listCounter">Loading...</p>
+                </div>
+                <button id="manualSyncBtn" onclick="syncAllPending()" class="bg-blue-100 text-brand-600 hover:bg-blue-200 px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> Sync
+                </button>
+            </div>
+            
+            <!-- Student List -->
+            <div id="studentList" class="flex flex-col gap-3"></div>
+        </div>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Edit School Modal -->
+    <div id="editSchoolModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xl font-bold text-gray-900">Edit School</h3>
+                <button onclick="document.getElementById('editSchoolModal').style.display='none'" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <label class="block text-sm font-bold text-gray-700 mb-1">School Name</label>
+            <input type="text" id="editSchoolNameInput" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 outline-none">
+
+            <label class="block text-sm font-bold text-gray-700 mb-1">Contact Number</label>
+            <input type="tel" id="editSchoolPhoneInput" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 outline-none">
+            
+            <div class="flex gap-3 mb-4">
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Block</label>
+                    <input type="text" id="editSchoolBlock" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">District</label>
+                    <input type="text" id="editSchoolDistrict" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+            </div>
+
+            <div class="flex gap-3 mb-6">
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Pin Code</label>
+                    <input type="number" id="editSchoolPin" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">UDISE *</label>
+                    <input type="text" id="editSchoolUdise" maxlength="11" inputmode="numeric" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-3">
+                <button id="saveSchoolEditBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow transition">Save Changes</button>
+                <div class="my-2 border-t border-gray-200"></div>
+                <button onclick="hardResetApp()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition border border-red-200"><i class="fas fa-trash-alt mr-2"></i>Delete School (Reset App)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Camera Modal -->
+    <div id="cameraModal" class="hidden fixed inset-0 bg-black z-50 flex flex-col">
+        <video id="cameraVideo" class="flex-1 w-full h-full object-cover" autoplay playsinline></video>
+        <div class="bg-black/90 pb-8 pt-4 px-6 flex justify-between items-center absolute bottom-0 w-full">
+            <button onclick="closeCam()" class="text-white text-lg px-4 py-2 hover:bg-white/20 rounded-lg transition">Cancel</button>
+            <button id="snap" class="w-16 h-16 rounded-full bg-white border-4 border-gray-300 flex-shrink-0 active:scale-90 transition transform"></button>
+            <div class="w-16"></div> <!-- Spacer for flex alignment -->
+        </div>
+    </div>
+
+    <!-- ID Card Preview Modal -->
+    <div id="cardPreviewModal" class="hidden fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-[#eef2f5] rounded-2xl p-5 w-full max-w-sm text-center relative shadow-2xl">
+            <button onclick="document.getElementById('cardPreviewModal').style.display='none'" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition">&times;</button>
+            <h3 class="text-xl font-bold text-brand-600 mb-4">Card Preview</h3>
+            <img id="renderedPreviewImg" src="" class="w-full max-w-[300px] rounded-xl shadow-lg mx-auto block">
+            <p class="text-xs text-gray-500 mt-4">* Low-res preview to verify text and photo placement.</p>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="customConfirmModal" class="hidden fixed inset-0 bg-black/60 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl scale-95 transform transition-transform duration-200" id="confirmBox">
+            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Are you sure?</h3>
+            <p id="confirmMsg" class="text-gray-600 mb-6 text-sm"></p>
+            <div class="flex gap-3">
+                <button id="confirmCancelBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-xl font-bold transition">Cancel</button>
+                <button id="confirmOkBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fixed Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+
+    <script>
+        // ==========================================
+        // NEW UI UTILITIES (Tailwind Toasts, Modals, Share)
+        // ==========================================
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = type === 'error' ? 'bg-red-600' : 'bg-gray-900';
+            let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-red-400"></i>' : '<i class="fas fa-check-circle text-green-400"></i>';
+
+            toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
+            toast.innerHTML = `${icon} <span class="text-sm font-medium leading-snug">${msg}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Trigger entry animation
+            requestAnimationFrame(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-enter-active');
+            });
+
+            // Remove after 3s
+            setTimeout(() => {
+                toast.classList.remove('toast-enter-active');
+                toast.classList.add('toast-exit-active');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Custom Confirm returning Promise
+        function showConfirm(msg) {
+            return new Promise(resolve => {
+                const modal = document.getElementById('customConfirmModal');
+                const box = document.getElementById('confirmBox');
+                document.getElementById('confirmMsg').textContent = msg;
+                
+                modal.classList.remove('hidden');
+                setTimeout(() => box.classList.remove('scale-95'), 10);
+
+                const cleanup = () => {
+                    box.classList.add('scale-95');
+                    setTimeout(() => modal.classList.add('hidden'), 200);
+                };
+
+                document.getElementById('confirmOkBtn').onclick = () => { cleanup(); resolve(true); };
+                document.getElementById('confirmCancelBtn').onclick = () => { cleanup(); resolve(false); };
+            });
+        }
+
+        // Replace native alerts globally
+        window.alert = function(msg) { showToast(msg, 'error'); };
+
+        // Share API
+        async function shareApp() {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'AN ID CARDS - Data Entry',
+                        text: 'Install this app to collect student ID card data completely offline!',
+                        url: window.location.href
+                    });
+                } catch (err) {
+                    console.log('User cancelled share or error:', err);
+                }
+            } else {
+                // Fallback for desktop browsers without Web Share API
+                navigator.clipboard.writeText(window.location.href);
+                showToast("Link copied to clipboard!", "success");
+            }
+        }
+
+        // SW Updater Listener
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                document.getElementById('updateBanner').classList.remove('hidden');
+            });
+        }
+
+        // ==========================================
+        // CORE FIREBASE & INDEXEDDB LOGIC (Preserved)
+        // ==========================================
+        const firebaseConfig = {
+              apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+              authDomain: "idcard-60586.firebaseapp.com",
+              projectId: "idcard-60586",
+              storageBucket: "idcard-60586.firebasestorage.app",
+              messagingSenderId: "331979663377",
+              appId: "1:331979663377:web:026e537a7fcaca813129b0",
+              measurementId: "G-PXVV87C78S"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const firestore = firebase.firestore();
+
+        let db, currentSchool = null, currentSchoolData = null, students = [], currentPhotoBlob = null;
+        let visibleCount = 50; // Pagination State
+        window.assets = { template: null, fontLoaded: false };
+
+        const req = indexedDB.open('SchoolDataApp', 5);
+        req.onupgradeneeded = e => {
+            db = e.target.result;
+            if(!db.objectStoreNames.contains('schools')) db.createObjectStore('schools', {keyPath:'name'});
+            if(!db.objectStoreNames.contains('students')) {
+                const st = db.createObjectStore('students', {keyPath:'id'});
+                st.createIndex('schoolName', 'schoolName', {unique:false});
+            }
+        };
+        req.onsuccess = e => {
+            db = e.target.result;
+            loadSchools();
+            if (navigator.onLine) {
+                syncAllPending();
+                const pending = localStorage.getItem('pendingSchoolRename');
+                if (pending) {
+                    const { oldName, updates } = JSON.parse(pending);
+                    pushSchoolRenameToFirestore(oldName, updates);
+                }
+            }
+        };
+
+        const blobToBase64 = blob => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+        });
+
+        function compressImageToDataURL(imgElement) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const MAX_WIDTH = 380; 
+                let width = imgElement.width;
+                let height = imgElement.height;
+                if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+                canvas.width = width; canvas.height = height;
+                ctx.drawImage(imgElement, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.75));
+            });
+        }
+
+        function recompressBase64(dataUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(compressImageToDataURL(img));
+                img.onerror = reject;
+                img.src = dataUrl;
+            });
+        }
+
+        async function loadPreviewAssets() {
+            try {
+                const f = new FontFace('OdiaFont', await (await fetch('OdiaFont.ttf')).arrayBuffer());
+                await f.load(); document.fonts.add(f); window.assets.fontLoaded = true;
+            } catch(e) {}
+            try {
+                const img = new Image();
+                img.src = URL.createObjectURL(await (await fetch('background.png')).blob());
+                img.onload = () => window.assets.template = img;
+            } catch(e) {}
+        }
+        loadPreviewAssets();
+
+        window.addEventListener('online', () => { syncAllPending(); });
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') syncAllPending();
+        });
+
+        let isSyncing = false;
+
+        async function syncAllPending() {
+            if(!db || !navigator.onLine) return;
+            if(isSyncing) return;
+            isSyncing = true;
+            const btn = document.getElementById('manualSyncBtn');
+
+            const unsyncedIds = [];
+            await new Promise((resolve, reject) => {
+                const tx = db.transaction(['students'], 'readonly');
+                const cursorReq = tx.objectStore('students').openCursor();
+                cursorReq.onsuccess = e => {
+                    const cursor = e.target.result;
+                    if (cursor) {
+                        if (!cursor.value.synced) unsyncedIds.push(cursor.value.id);
+                        cursor.continue();
+                    } else resolve();
+                };
+            });
+
+            if (unsyncedIds.length === 0) {
+                if (btn) {
+                    btn.innerHTML = "<i class='fas fa-check'></i> All Synced";
+                    setTimeout(() => btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync", 2000);
+                }
+                isSyncing = false;
+                return;
+            }
+
+            try {
+                let successCount = 0, failCount = 0;
+                for (let i = 0; i < unsyncedIds.length; i++) {
+                    if (btn) btn.innerHTML = `<i class='fas fa-spinner fa-spin'></i> ${i + 1}/${unsyncedIds.length}`;
+                    try {
+                        const student = await new Promise((resolve, reject) => {
+                            const tx = db.transaction(['students'], 'readonly');
+                            const getReq = tx.objectStore('students').get(unsyncedIds[i]);
+                            getReq.onsuccess = () => resolve(getReq.result);
+                        });
+                        if (!student || student.synced) continue; 
+                        await syncToFirebase(student);
+                        successCount++;
+
+                        if (student.syncError) {
+                            delete student.syncError;
+                            const tx2 = db.transaction(['students'], 'readwrite');
+                            tx2.objectStore('students').put(student);
+                        }
+                    } catch (err) {
+                        failCount++;
+                        try {
+                            const tx3 = db.transaction(['students'], 'readwrite');
+                            const getReq2 = tx3.objectStore('students').get(unsyncedIds[i]);
+                            getReq2.onsuccess = () => {
+                                const rec = getReq2.result;
+                                if (rec) {
+                                    rec.syncError = (err && err.message) ? err.message : String(err);
+                                    tx3.objectStore('students').put(rec);
+                                }
+                            };
+                        } catch (e2) {}
+                    }
+                }
+
+                if (btn) {
+                    if (failCount === 0) btn.innerHTML = "<i class='fas fa-check'></i> Synced";
+                    else btn.innerHTML = `<i class='fas fa-exclamation-triangle'></i> ${failCount} failed`;
+                    setTimeout(() => btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync", 3000);
+                }
+                loadStudents(); 
+            } finally {
+                isSyncing = false;
+            }
+        }
+
+        function loadSchools() {
+            const tx = db.transaction(['schools'], 'readonly');
+            tx.objectStore('schools').getAll().onsuccess = e => {
+                const schools = e.target.result;
+                if(schools.length > 0) {
+                    enterSchool(schools[0]);
+                } else {
+                    document.getElementById('schoolSection').classList.remove('hidden');
+                    document.getElementById('entrySection').classList.add('hidden');
+                }
+            };
+        }
+
+        function performRestore(docs, schoolName, udise, statusEl) {
+            const first = docs[0].data;
+            const schoolObj = {
+                name: schoolName, phone: first.hmPhone || '', block: first.block || '',
+                district: first.district || '', pin: first.pin || '', udise: first.udise || udise,
+                hmSignature: first.hmSignature || '', createdAt: Date.now()
+            };
+
+            statusEl.className = 'text-sm mt-3 font-medium text-brand-600 block';
+            statusEl.textContent = `Restoring ${docs.length} student(s)...`;
+
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
+            tx.objectStore('schools').put(schoolObj);
+
+            const studentStore = tx.objectStore('students');
+            docs.forEach(({ id, data }) => {
+                const student = { ...data, id: Number(id), synced: true };
+                delete student.submittedAt;
+                studentStore.put(student);
+            });
+
+            tx.oncomplete = () => {
+                showToast(`Restored ${docs.length} students successfully!`);
+                setTimeout(() => enterSchool(schoolObj), 800);
+            };
+            tx.onerror = () => {
+                showToast("Failed saving locally.", "error");
+                document.getElementById('restoreUdiseBtn').disabled = false;
+            };
+        }
+
+        document.getElementById('restoreUdiseBtn').onclick = async () => {
+            const udise = document.getElementById('restoreUdiseInput').value.trim();
+            const statusEl = document.getElementById('restoreStatus');
+            const btn = document.getElementById('restoreUdiseBtn');
+
+            if (!udise) return alert("Please enter the UDISE Number.");
+            if (!/^\d{11}$/.test(udise)) return alert("UDISE must be exactly 11 digits.");
+            if (!navigator.onLine) return alert("Internet required to restore data.");
+
+            statusEl.className = 'text-sm mt-3 font-medium text-brand-600 block';
+            statusEl.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Searching...";
+            btn.disabled = true;
+
+            try {
+                const snapshot = await firestore.collection('students').where('udise', '==', udise).get();
+
+                if (snapshot.empty) {
+                    statusEl.className = 'text-sm mt-3 font-medium text-red-600 block';
+                    statusEl.textContent = "No records found for this UDISE.";
+                    btn.disabled = false;
+                    return;
+                }
+
+                const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+                const groups = {};
+                docs.forEach(d => {
+                    const name = d.data.schoolName || '(Unnamed School)';
+                    if (!groups[name]) groups[name] = [];
+                    groups[name].push(d);
+                });
+                const distinctNames = Object.keys(groups);
+
+                if (distinctNames.length === 1) {
+                    performRestore(docs, distinctNames[0], udise, statusEl);
+                    return;
+                }
+
+                statusEl.className = 'text-sm mt-3 font-medium text-amber-600 block';
+                statusEl.innerHTML = `Found <b>${distinctNames.length} different school names</b>. Please choose one:`;
+
+                const pickerDiv = document.createElement('div');
+                pickerDiv.className = "flex flex-col gap-2 mt-3";
+                distinctNames.forEach(name => {
+                    const optBtn = document.createElement('button');
+                    optBtn.className = 'bg-gray-100 hover:bg-gray-200 text-left p-3 rounded-lg text-sm text-gray-800 transition border border-gray-300';
+                    optBtn.innerHTML = `<b>${name}</b> <span class="text-gray-500 text-xs block">(${groups[name].length} students)</span>`;
+                    optBtn.onclick = () => {
+                        pickerDiv.remove();
+                        performRestore(groups[name], name, udise, statusEl);
+                    };
+                    pickerDiv.appendChild(optBtn);
+                });
+                statusEl.appendChild(pickerDiv);
+                btn.disabled = false;
+            } catch (err) {
+                statusEl.className = 'text-sm mt-3 font-medium text-red-600 block';
+                statusEl.textContent = "Server error. Check connection.";
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('addSchoolBtn').onclick = () => {
+            const name = document.getElementById('newSchoolName').value.trim();
+            const phone = document.getElementById('newSchoolPhone').value.trim();
+            const block = document.getElementById('newBlock').value.trim();
+            const district = document.getElementById('newDistrict').value.trim();
+            const pin = document.getElementById('newPin').value.trim();
+            const udise = document.getElementById('newUdise').value.trim();
+
+            if(!name) return alert("Enter School Name");
+            if(!udise) return alert("UDISE Number is mandatory.");
+            if(!/^\d{11}$/.test(udise)) return alert("UDISE must be exactly 11 digits.");
+            
+            const checkTx = db.transaction(['schools'], 'readonly');
+            checkTx.objectStore('schools').get(name).onsuccess = async (e) => {
+                if (e.target.result) {
+                    alert("A school with this exact name already exists.");
+                    return; 
+                }
+                
+                const btn = document.getElementById('addSchoolBtn');
+                btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Processing...";
+
+                const schoolObj = {
+                    name: name, phone: phone, block: block, district: district,
+                    pin: pin, udise: udise, hmSignature: '', createdAt: Date.now()
+                };
+
+                const tx = db.transaction(['schools'], 'readwrite');
+                tx.objectStore('schools').put(schoolObj);
+                tx.oncomplete = () => { 
+                    showToast("School created successfully!");
+                    enterSchool(schoolObj); 
+                    btn.innerHTML = "Save School";
+                };
+            };
+        };
+
+        async function hardResetApp() {
+            const checkTx = db.transaction(['students'], 'readonly');
+            checkTx.objectStore('students').getAll().onsuccess = async e => {
+                const unsynced = e.target.result.filter(s => !s.synced);
+                if (unsynced.length > 0) {
+                    alert(`WARNING: You have ${unsynced.length} unsynced students! Sync online before resetting.`);
+                    return;
+                }
+                
+                const confirmed = await showConfirm("This will delete the school and all student data from your phone. Are you completely sure?");
+                if(!confirmed) return;
+                
+                const tx = db.transaction(['schools', 'students'], 'readwrite');
+                tx.objectStore('schools').clear();
+                tx.objectStore('students').clear();
+                tx.oncomplete = () => { location.reload(); };
+            };
+        }
+
+        function enterSchool(schoolObj) {
+            currentSchool = schoolObj.name;
+            currentSchoolData = schoolObj;
+            document.getElementById('schoolSection').classList.add('hidden');
+            document.getElementById('entrySection').classList.remove('hidden');
+            updateSchoolHeader();
+            visibleCount = 50; // Reset pagination on entry
+            loadStudents();
+        }
+
+        function updateSchoolHeader() {
+            document.getElementById('currentSchoolHeader').textContent = currentSchoolData.name;
+            document.getElementById('currentSchoolSubHeader').textContent = `${currentSchoolData.phone || 'No Phone'} | ${currentSchoolData.block || ''}, ${currentSchoolData.district || ''}`;
+        }
+
+        function openEditSchoolModal() {
+            document.getElementById('editSchoolNameInput').value = currentSchoolData.name;
+            document.getElementById('editSchoolPhoneInput').value = currentSchoolData.phone || '';
+            document.getElementById('editSchoolBlock').value = currentSchoolData.block || '';
+            document.getElementById('editSchoolDistrict').value = currentSchoolData.district || '';
+            document.getElementById('editSchoolPin').value = currentSchoolData.pin || '';
+            document.getElementById('editSchoolUdise').value = currentSchoolData.udise || '';
+            document.getElementById('editSchoolModal').classList.remove('hidden');
+        }
+
+        async function pushSchoolRenameToFirestore(oldName, updates) {
+            if (!navigator.onLine) {
+                localStorage.setItem('pendingSchoolRename', JSON.stringify({ oldName, updates }));
+                return;
+            }
+            try {
+                const snap = await firestore.collection('students').where('schoolName', '==', oldName).get();
+                const docs = snap.docs;
+                const chunks = [];
+                for (let i = 0; i < docs.length; i += 400) chunks.push(docs.slice(i, i + 400));
+                for (const chunk of chunks) {
+                    const batch = firestore.batch();
+                    chunk.forEach(doc => batch.update(doc.ref, updates));
+                    await batch.commit();
+                }
+                localStorage.removeItem('pendingSchoolRename');
+            } catch (err) {
+                localStorage.setItem('pendingSchoolRename', JSON.stringify({ oldName, updates }));
+            }
+        }
+
+        document.getElementById('saveSchoolEditBtn').onclick = async () => {
+            const newName = document.getElementById('editSchoolNameInput').value.trim();
+            const newPhone = document.getElementById('editSchoolPhoneInput').value.trim();
+            const newBlock = document.getElementById('editSchoolBlock').value.trim();
+            const newDistrict = document.getElementById('editSchoolDistrict').value.trim();
+            const newPin = document.getElementById('editSchoolPin').value.trim();
+            const newUdise = document.getElementById('editSchoolUdise').value.trim();
+
+            if(!newName) return alert("Name cannot be empty");
+            if(!newUdise) return alert("UDISE Number is mandatory.");
+            if(!/^\d{11}$/.test(newUdise)) return alert("UDISE must be exactly 11 digits.");
+
+            const oldName = currentSchoolData.name;
+            const updatedSchool = { ...currentSchoolData, name: newName, phone: newPhone, block: newBlock, district: newDistrict, pin: newPin, udise: newUdise };
+
+            const firestoreUpdates = { schoolName: newName, hmPhone: newPhone, block: newBlock, district: newDistrict, pin: newPin, udise: newUdise, lastModified: Date.now() };
+            await pushSchoolRenameToFirestore(oldName, firestoreUpdates);
+
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
+            if(oldName !== newName) tx.objectStore('schools').delete(oldName);
+            tx.objectStore('schools').put(updatedSchool);
+
+            if(oldName !== newName) {
+                const stStore = tx.objectStore('students');
+                stStore.index('schoolName').getAll(oldName).onsuccess = (e) => {
+                    e.target.result.forEach(s => {
+                        s.schoolName = newName; s.hmSignature = updatedSchool.hmSignature;
+                        s.block = updatedSchool.block; s.district = updatedSchool.district;
+                        s.pin = updatedSchool.pin; s.udise = updatedSchool.udise; s.hmPhone = updatedSchool.phone;
+                        stStore.put(s); 
+                    });
+                };
+            }
+
+            tx.oncomplete = () => {
+                showToast("School Details Updated!");
+                currentSchool = newName;
+                currentSchoolData = updatedSchool;
+                updateSchoolHeader();
+                document.getElementById('editSchoolModal').classList.add('hidden');
+                loadStudents();
+                loadSchools();
+            };
+        };
+
+        function loadStudents() {
+            const tx = db.transaction(['students'], 'readonly');
+            tx.objectStore('students').index('schoolName').getAll(currentSchool).onsuccess = e => {
+                students = e.target.result.sort((a,b) => b.id - a.id);
+                renderList();
+            };
+        }
+
+        // Pagination Logic
+        function renderList() {
+            const list = document.getElementById('studentList');
+            list.innerHTML = '';
+            
+            document.getElementById('listCounter').textContent = `Total: ${students.length}`;
+            
+            const visibleStudents = students.slice(0, visibleCount);
+
+            visibleStudents.forEach((s, index) => {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3';
+                
+                let photoHtml = s.photoBase64 
+                    ? `<img src="${s.photoBase64}" class="w-12 h-12 rounded-full object-cover shadow-sm flex-shrink-0">` 
+                    : `<div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-xl flex-shrink-0"><i class="fas fa-user"></i></div>`;
+
+                let statusHtml = s.synced 
+                    ? `<span class="text-green-500 font-bold text-[10px] bg-green-50 px-1.5 py-0.5 rounded"><i class="fas fa-cloud-check"></i> Synced</span>`
+                    : `<span class="text-amber-500 font-bold text-[10px] bg-amber-50 px-1.5 py-0.5 rounded"><i class="fas fa-clock"></i> Pending</span>`;
+                
+                if(!s.photoBase64) statusHtml += `<div class="text-red-500 font-bold text-[10px] mt-0.5"><i class="fas fa-camera"></i> No Photo</div>`;
+                if(s.syncError) statusHtml += `<div class="text-red-500 font-bold text-[10px] mt-0.5 line-clamp-1 truncate w-32" title="${s.syncError}"><i class="fas fa-exclamation-triangle"></i> Error</div>`;
+
+                div.innerHTML = `
+                    <div class="text-brand-500 font-black text-sm w-6 text-center">#${students.length - index}</div>
+                    ${photoHtml}
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-gray-900 text-sm truncate">${s.name}</div>
+                        <div class="text-xs text-gray-500">Cls: ${s.class} | Roll: ${s.roll}</div>
+                        <div class="mt-1">${statusHtml}</div>
+                    </div>
+                    <div class="flex flex-col gap-2 flex-shrink-0">
+                        <button onclick="editStudent(${s.id})" class="bg-blue-50 text-brand-600 p-2 rounded-lg hover:bg-blue-100 transition"><i class="fas fa-pen"></i></button>
+                        <button onclick="deleteStudent(${s.id})" class="bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-100 transition"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            if (students.length > visibleCount) {
+                const btnWrapper = document.createElement('div');
+                btnWrapper.className = "text-center mt-2";
+                btnWrapper.innerHTML = `<button onclick="loadMore()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2 px-6 rounded-full text-sm shadow-sm transition">Load 50 More <i class="fas fa-chevron-down ml-1"></i></button>`;
+                list.appendChild(btnWrapper);
+            }
+        }
+
+        window.loadMore = function() {
+            visibleCount += 50;
+            renderList();
+        }
+
+        // --- PREVIEW LOGIC ---
+        window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
+        function toOdiaDigits(str){ if (str===undefined||str===null) return ''; return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); }
+
+        function removeWhiteBg(img) {
+            const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+            const cx = c.getContext('2d'); cx.drawImage(img, 0, 0);
+            const imgData = cx.getImageData(0,0, c.width, c.height); const d = imgData.data;
+            for(let i=0; i<d.length; i+=4) {
+                const bright = (d[i]+d[i+1]+d[i+2])/3;
+                if(bright > 210) d[i+3] = 0; 
+                else if(bright > 150) d[i+3] = Math.max(0, 255 - (bright - 150) * 4);
+            }
+            cx.putImageData(imgData, 0, 0); return c;
+        }
+
+        document.getElementById('previewCardBtn').onclick = async () => {
+            if(!window.assets.template || !window.assets.fontLoaded) {
+                return alert("Template/Font loading. Please wait or check internet.");
+            }
+
+            const name = document.getElementById('sName').value.trim();
+            const cls = document.getElementById('sClass').value;
+            const roll = document.getElementById('sRoll').value.trim();
+            if(!name || !cls || !roll) return alert('Name, Class, and Roll required to preview.');
+
+            const id = document.getElementById('editId').value;
+            let base64 = null;
+            if(currentPhotoBlob) base64 = await blobToBase64(currentPhotoBlob);
+            else if(id) base64 = students.find(x => x.id == id).photoBase64;
+            if (!base64) return alert("Add a photo to preview the card.");
+
+            const CARD_W = 638, CARD_H = 1012;
+            const cvs = document.createElement('canvas');
+            cvs.width = CARD_W; cvs.height = CARD_H;
+            const ctx = cvs.getContext('2d');
+
+            ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
+
+            const centerHeadX = 121 + (611 - 121) / 2;
+            ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
+            let fs = 45; ctx.font = `bold ${fs}px OdiaFont`;
+            while (ctx.measureText(currentSchoolData.name).width > 490 && fs > 10) { fs--; ctx.font = `bold ${fs}px OdiaFont`; }
+            ctx.fillText(currentSchoolData.name, centerHeadX, 55);
+            
+            ctx.font = '30px OdiaFont'; 
+            let addr = [];
+            if(currentSchoolData.block) addr.push(currentSchoolData.block);
+            if(currentSchoolData.district) addr.push(currentSchoolData.district);
+            let addrTxt = addr.join(', ');
+            if(currentSchoolData.pin) addrTxt += ' - ' + toOdiaDigits(currentSchoolData.pin);
+            ctx.fillText(addrTxt, centerHeadX, 94);
+
+            if(currentSchoolData.udise) {
+                ctx.font = '26px OdiaFont'; 
+                ctx.fillText('UDISE- ' + toOdiaDigits(currentSchoolData.udise), centerHeadX, 130);
+            }
+
+            if(currentSchoolData.hmSignature) {
+                const signImg = new Image(); signImg.src = currentSchoolData.hmSignature;
+                await new Promise(r => signImg.onload=r);
+                const cleanSign = removeWhiteBg(signImg);
+                const ratio = Math.min(180 / cleanSign.width, 60 / cleanSign.height);
+                ctx.drawImage(cleanSign, 434, 850, cleanSign.width * ratio, cleanSign.height * ratio);
+            }
+
+            const photo = new Image(); photo.src = base64;
+            await new Promise(r => photo.onload=r);
+            const px = 222, py = 250, pw = 187, ph = 225, border = 3;
+            ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
+            const srcRatio = photo.width / photo.height; const destRatio = pw / ph;
+            let sx=0, sy=0, sw=photo.width, sh=photo.height;
+            if(srcRatio > destRatio) { sw = photo.height * destRatio; sx = (photo.width - sw)/2; } 
+            else { sh = photo.width / destRatio; sy = (photo.height - sh)/2; }
+            ctx.drawImage(photo, sx, sy, sw, sh, px, py, pw, ph);
+
+            ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.font = `38px OdiaFont`;
+            const tx = 227;
+            let dob = document.getElementById('sDob').value || '';
+            try { const [y,m,d] = dob.split('-'); if(y&&m&&d) dob = `${d}/${m}/${y}`; } catch(e){}
+            
+            ctx.fillText(name, tx, 543);
+            ctx.fillText(toOdiaDigits(cls), tx, 613);
+            ctx.fillText(toOdiaDigits(dob), tx, 685);
+            ctx.fillText(toOdiaDigits(roll), tx, 756);
+            ctx.fillText(toOdiaDigits(document.getElementById('sPhone').value), tx, 827);
+            
+            const blood = document.getElementById('sBlood').value;
+            if(blood){
+                ctx.fillStyle = 'white'; ctx.font = `23px OdiaFont`;
+                ctx.fillText(blood, 480, 383);
+            }
+
+            ctx.save();
+            ctx.translate(CARD_W/2, CARD_H/2);
+            ctx.rotate(-Math.PI / 4);
+            ctx.font = 'bold 70px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            const diag = Math.sqrt(CARD_W*CARD_W + CARD_H*CARD_H);
+            for(let x = -diag; x <= diag; x += 350) {
+                for(let y = -diag; y <= diag; y += 150) {
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.25)';
+                    ctx.fillText('PREVIEW ONLY', x, y);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.fillText('PREVIEW ONLY', x+2, y+2);
+                }
+            }
+            ctx.restore();
+
+            document.getElementById('renderedPreviewImg').src = cvs.toDataURL('image/png');
+            document.getElementById('cardPreviewModal').classList.remove('hidden');
+        };
+
+        // --- SAVE / EDIT ---
+        document.getElementById('saveBtn').onclick = async () => {
+            const id = document.getElementById('editId').value;
+            const name = document.getElementById('sName').value;
+            const cls = document.getElementById('sClass').value;
+            const roll = document.getElementById('sRoll').value;
+            const phone = document.getElementById('sPhone').value;
+            const dob = document.getElementById('sDob').value;
+            const blood = document.getElementById('sBlood').value;
+
+            if(!name || !cls || !roll) return alert('Name, Class, and Roll are required.');
+            
+            let base64 = null;
+            if(currentPhotoBlob) {
+                base64 = await blobToBase64(currentPhotoBlob);
+            } else if(id) {
+                const old = students.find(x => x.id == id);
+                base64 = old.photoBase64 || null;
+            }
+
+            const student = {
+                id: id ? Number(id) : Date.now(),
+                schoolName: currentSchool,
+                hmSignature: currentSchoolData.hmSignature || '',
+                block: currentSchoolData.block || '',
+                district: currentSchoolData.district || '',
+                pin: currentSchoolData.pin || '',
+                udise: currentSchoolData.udise || '',
+                hmPhone: currentSchoolData.phone || '',
+                name, class: cls, roll, dob, bloodGroup: blood,
+                mobile: phone,
+                photoBase64: base64,
+                photoName: `${Date.now()}.jpg`,
+                synced: false,
+                lastModified: Date.now(),
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            const tx = db.transaction(['students'], 'readwrite');
+            tx.objectStore('students').put(student);
+            tx.oncomplete = () => {
+                showToast(id ? "Student Updated!" : "Student Saved!");
+                resetForm();
+                visibleCount = 50; // Jump to top on save
+                loadStudents();
+                syncToFirebase(student);
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            };
+        };
+
+        function editStudent(id) {
+            const s = students.find(x => x.id === id);
+            if(!s) return;
+            document.getElementById('editId').value = s.id;
+            document.getElementById('sName').value = s.name;
+            document.getElementById('sClass').value = s.class;
+            document.getElementById('sRoll').value = s.roll;
+            document.getElementById('sPhone').value = s.mobile || '';
+            document.getElementById('sDob').type = s.dob ? 'date' : 'text'; 
+            document.getElementById('sDob').value = s.dob;
+            document.getElementById('sBlood').value = s.bloodGroup;
+            
+            if (s.photoBase64) {
+                document.getElementById('preview').src = s.photoBase64;
+                document.getElementById('preview').classList.remove('hidden');
+            } else {
+                document.getElementById('preview').src = '';
+                document.getElementById('preview').classList.add('hidden');
+            }
+            
+            document.getElementById('formTitle').innerHTML = 'Edit Student <i class="fas fa-pen text-sm text-gray-400 ml-1"></i>';
+            document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save mr-1"></i> Update Student';
+            document.getElementById('cancelEdit').classList.remove('hidden');
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        document.getElementById('cancelEdit').onclick = resetForm;
+
+        function resetForm() {
+            document.getElementById('editId').value = '';
+            document.getElementById('sName').value = '';
+            document.getElementById('sClass').value = '';
+            document.getElementById('sRoll').value = '';
+            document.getElementById('sPhone').value = '';
+            document.getElementById('sDob').value = '';
+            document.getElementById('sDob').type = 'text'; 
+            document.getElementById('sBlood').value = '';
+            document.getElementById('preview').classList.add('hidden');
+            currentPhotoBlob = null;
+            document.getElementById('formTitle').innerHTML = 'Add Student';
+            document.getElementById('saveBtn').innerHTML = 'Save Student';
+            document.getElementById('cancelEdit').classList.add('hidden');
+        }
+
+        async function deleteStudent(id) {
+            const confirmed = await showConfirm("Are you sure you want to delete this student?");
+            if(!confirmed) return;
+            const tx = db.transaction(['students'], 'readwrite');
+            tx.objectStore('students').delete(id);
+            tx.oncomplete = () => {
+                showToast("Student deleted", "info");
+                firestore.collection('students').doc(String(id)).delete().catch(e=>console.log(e));
+                loadStudents();
+            };
+        }
+
+        // Camera Logic
+        document.getElementById('openCam').onclick = async () => {
+            document.getElementById('cameraModal').classList.remove('hidden');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                document.getElementById('cameraVideo').srcObject = stream;
+            } catch(e) {
+                showToast("Camera access denied or unavailable", "error");
+                closeCam();
+            }
+        };
+
+        document.getElementById('snap').onclick = () => {
+            const vid = document.getElementById('cameraVideo');
+            if(!vid.videoWidth) return;
+            
+            const img = new Image();
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = vid.videoWidth; 
+            tempCanvas.height = vid.videoHeight;
+            tempCanvas.getContext('2d').drawImage(vid, 0, 0);
+            
+            img.src = tempCanvas.toDataURL('image/jpeg');
+            img.onload = async () => {
+                const compressedBase64 = await compressImageToDataURL(img);
+                document.getElementById('preview').src = compressedBase64;
+                document.getElementById('preview').classList.remove('hidden');
+                
+                const response = await fetch(compressedBase64);
+                currentPhotoBlob = await response.blob();
+                closeCam();
+            };
+        };
+
+        function closeCam() {
+            const s = document.getElementById('cameraVideo').srcObject;
+            if(s) s.getTracks().forEach(t=>t.stop());
+            document.getElementById('cameraModal').classList.add('hidden');
+        }
+
+        document.getElementById('fileInput').onchange = e => {
+            const file = e.target.files[0];
+            if (file) {
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                img.onload = async () => {
+                    const compressedBase64 = await compressImageToDataURL(img);
+                    document.getElementById('preview').src = compressedBase64;
+                    document.getElementById('preview').classList.remove('hidden');
+                    
+                    const response = await fetch(compressedBase64);
+                    currentPhotoBlob = await response.blob();
+                    URL.revokeObjectURL(img.src);
+                };
+            }
+        };
+
+        const FIRESTORE_SAFE_LIMIT = 900 * 1024;
+
+        async function syncToFirebase(student) {
+            try {
+                let payloadSize = new Blob([JSON.stringify(student)]).size;
+                if (payloadSize > FIRESTORE_SAFE_LIMIT && student.photoBase64) {
+                    const shrunk = await recompressBase64(student.photoBase64);
+                    student.photoBase64 = shrunk;
+
+                    await new Promise((resolve, reject) => {
+                        const tx = db.transaction(['students'], 'readwrite');
+                        tx.objectStore('students').put(student);
+                        tx.oncomplete = resolve;
+                        tx.onerror = reject;
+                    });
+                }
+
+                await firestore.collection('students').doc(String(student.id)).set(student);
+
+                student.synced = true;
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction(['students'], 'readwrite');
+                    tx.objectStore('students').put(student);
+                    tx.oncomplete = resolve;
+                    tx.onerror = reject;
+                });
+                loadStudents();
+            } catch (err) {
+                console.error(`Sync failed:`, err);
+                throw err;
+            }
+        }
+    </script>
+</body>
+</html>
