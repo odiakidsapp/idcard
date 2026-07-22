@@ -442,10 +442,17 @@
                 await f.load(); document.fonts.add(f); window.assets.fontLoaded = true;
             } catch(e) {}
             try {
-                const img = new Image();
-                img.src = URL.createObjectURL(await (await fetch('background.png')).blob());
-                img.onload = () => window.assets.template = img;
-            } catch(e) {}
+                // Fetch as blob and use object URL — this ensures the image is treated
+                // as same-origin so drawImage() doesn't taint the canvas
+                const blob = await (await fetch('background.png')).blob();
+                const objectUrl = URL.createObjectURL(blob);
+                await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => { window.assets.template = img; resolve(); };
+                    img.onerror = reject;
+                    img.src = objectUrl;
+                });
+            } catch(e) { console.log('Template load failed:', e); }
         }
         loadPreviewAssets();
 
@@ -901,13 +908,7 @@
                 ctx.fillText('UDISE- ' + toOdiaDigits(currentSchoolData.udise), centerHeadX, 130);
             }
 
-            if(currentSchoolData.hmSignature) {
-                const signImg = new Image(); signImg.src = currentSchoolData.hmSignature;
-                await new Promise(r => signImg.onload=r);
-                const cleanSign = removeWhiteBg(signImg);
-                const ratio = Math.min(180 / cleanSign.width, 60 / cleanSign.height);
-                ctx.drawImage(cleanSign, 434, 850, cleanSign.width * ratio, cleanSign.height * ratio);
-            }
+
 
             const photo = new Image(); photo.src = base64;
             await new Promise(r => photo.onload=r);
@@ -954,8 +955,13 @@
             }
             ctx.restore();
 
-            document.getElementById('renderedPreviewImg').src = cvs.toDataURL('image/png');
-            document.getElementById('cardPreviewModal').classList.remove('hidden');
+            try {
+                document.getElementById('renderedPreviewImg').src = cvs.toDataURL('image/png');
+                document.getElementById('cardPreviewModal').classList.remove('hidden');
+            } catch(e) {
+                console.error('Canvas export error:', e);
+                alert('Preview failed: The background image could not be read. Make sure background.png is in the same folder as this HTML file and reload the page.');
+            }
         };
 
         // --- SAVE / EDIT ---
