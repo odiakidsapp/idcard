@@ -1,7 +1,7 @@
 {
-  "name": "Student Data App",
-  "short_name": "StudentData",
-  "description": "Offline Student Data Entry",
+  "name": "ID Card",
+  "short_name": "Id_Card",
+  "description": "Student Data Entry",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
