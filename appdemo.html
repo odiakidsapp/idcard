@@ -442,13 +442,22 @@
                 await f.load(); document.fonts.add(f); window.assets.fontLoaded = true;
             } catch(e) {}
             try {
-                // Fetch as blob and use object URL — this ensures the image is treated
-                // as same-origin so drawImage() doesn't taint the canvas
+                // Fetch blob → draw into an offscreen canvas.
+                // Storing as a canvas (not an img) means it is always same-origin
+                // and will never taint any canvas it is drawn into, even on repeated clicks.
                 const blob = await (await fetch('background.png')).blob();
                 const objectUrl = URL.createObjectURL(blob);
                 await new Promise((resolve, reject) => {
                     const img = new Image();
-                    img.onload = () => { window.assets.template = img; resolve(); };
+                    img.onload = () => {
+                        const offscreen = document.createElement('canvas');
+                        offscreen.width = img.naturalWidth;
+                        offscreen.height = img.naturalHeight;
+                        offscreen.getContext('2d').drawImage(img, 0, 0);
+                        URL.revokeObjectURL(objectUrl);
+                        window.assets.template = offscreen;
+                        resolve();
+                    };
                     img.onerror = reject;
                     img.src = objectUrl;
                 });
