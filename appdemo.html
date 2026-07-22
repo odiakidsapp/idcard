@@ -181,7 +181,6 @@
 
                 <div class="flex flex-col gap-2">
                     <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
-                    <button id="previewCardBtn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 rounded-xl shadow-sm transition"><i class="fas fa-eye mr-1"></i> Preview ID Card</button>
                     <button id="cancelEdit" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-xl transition hidden">Cancel Edit</button>
                 </div>
             </div>
@@ -258,15 +257,6 @@
         </div>
     </div>
 
-    <!-- ID Card Preview Modal -->
-    <div id="cardPreviewModal" class="hidden fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-[#eef2f5] rounded-2xl p-5 w-full max-w-sm text-center relative shadow-2xl">
-            <button onclick="document.getElementById('cardPreviewModal').style.display='none'" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition">&times;</button>
-            <h3 class="text-xl font-bold text-brand-600 mb-4">Card Preview</h3>
-            <img id="renderedPreviewImg" src="" class="w-full max-w-[300px] rounded-xl shadow-lg mx-auto block">
-            <p class="text-xs text-gray-500 mt-4">* Low-res preview to verify text and photo placement.</p>
-        </div>
-    </div>
 
     <!-- Custom Confirm Modal -->
     <div id="customConfirmModal" class="hidden fixed inset-0 bg-black/60 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -382,7 +372,6 @@
 
         let db, currentSchool = null, currentSchoolData = null, students = [], currentPhotoBlob = null;
         let visibleCount = 50; // Pagination State
-        window.assets = { template: null, fontLoaded: false };
 
         const req = indexedDB.open('SchoolDataApp', 5);
         req.onupgradeneeded = e => {
@@ -435,35 +424,6 @@
                 img.src = dataUrl;
             });
         }
-
-        async function loadPreviewAssets() {
-            try {
-                const f = new FontFace('OdiaFont', await (await fetch('OdiaFont.ttf')).arrayBuffer());
-                await f.load(); document.fonts.add(f); window.assets.fontLoaded = true;
-            } catch(e) {}
-            try {
-                // Fetch blob → draw into an offscreen canvas.
-                // Storing as a canvas (not an img) means it is always same-origin
-                // and will never taint any canvas it is drawn into, even on repeated clicks.
-                const blob = await (await fetch('background.png')).blob();
-                const objectUrl = URL.createObjectURL(blob);
-                await new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const offscreen = document.createElement('canvas');
-                        offscreen.width = img.naturalWidth;
-                        offscreen.height = img.naturalHeight;
-                        offscreen.getContext('2d').drawImage(img, 0, 0);
-                        URL.revokeObjectURL(objectUrl);
-                        window.assets.template = offscreen;
-                        resolve();
-                    };
-                    img.onerror = reject;
-                    img.src = objectUrl;
-                });
-            } catch(e) { console.log('Template load failed:', e); }
-        }
-        loadPreviewAssets();
 
         window.addEventListener('online', () => { syncAllPending(); });
         document.addEventListener('visibilitychange', () => {
@@ -858,120 +818,6 @@
             visibleCount += 50;
             renderList();
         }
-
-        // --- PREVIEW LOGIC ---
-        window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
-        function toOdiaDigits(str){ if (str===undefined||str===null) return ''; return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); }
-
-        function removeWhiteBg(img) {
-            const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
-            const cx = c.getContext('2d'); cx.drawImage(img, 0, 0);
-            const imgData = cx.getImageData(0,0, c.width, c.height); const d = imgData.data;
-            for(let i=0; i<d.length; i+=4) {
-                const bright = (d[i]+d[i+1]+d[i+2])/3;
-                if(bright > 210) d[i+3] = 0; 
-                else if(bright > 150) d[i+3] = Math.max(0, 255 - (bright - 150) * 4);
-            }
-            cx.putImageData(imgData, 0, 0); return c;
-        }
-
-        document.getElementById('previewCardBtn').onclick = async () => {
-            if(!window.assets.template || !window.assets.fontLoaded) {
-                return alert("Template/Font loading. Please wait or check internet.");
-            }
-
-            const name = document.getElementById('sName').value.trim();
-            const cls = document.getElementById('sClass').value;
-            const roll = document.getElementById('sRoll').value.trim();
-            if(!name || !cls || !roll) return alert('Name, Class, and Roll required to preview.');
-
-            const id = document.getElementById('editId').value;
-            let base64 = null;
-            if(currentPhotoBlob) base64 = await blobToBase64(currentPhotoBlob);
-            else if(id) base64 = students.find(x => x.id == id).photoBase64;
-            if (!base64) return alert("Add a photo to preview the card.");
-
-            const CARD_W = 638, CARD_H = 1012;
-            const cvs = document.createElement('canvas');
-            cvs.width = CARD_W; cvs.height = CARD_H;
-            const ctx = cvs.getContext('2d');
-
-            ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
-
-            const centerHeadX = 121 + (611 - 121) / 2;
-            ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
-            let fs = 45; ctx.font = `bold ${fs}px OdiaFont`;
-            while (ctx.measureText(currentSchoolData.name).width > 490 && fs > 10) { fs--; ctx.font = `bold ${fs}px OdiaFont`; }
-            ctx.fillText(currentSchoolData.name, centerHeadX, 55);
-            
-            ctx.font = '30px OdiaFont'; 
-            let addr = [];
-            if(currentSchoolData.block) addr.push(currentSchoolData.block);
-            if(currentSchoolData.district) addr.push(currentSchoolData.district);
-            let addrTxt = addr.join(', ');
-            if(currentSchoolData.pin) addrTxt += ' - ' + toOdiaDigits(currentSchoolData.pin);
-            ctx.fillText(addrTxt, centerHeadX, 94);
-
-            if(currentSchoolData.udise) {
-                ctx.font = '26px OdiaFont'; 
-                ctx.fillText('UDISE- ' + toOdiaDigits(currentSchoolData.udise), centerHeadX, 130);
-            }
-
-
-
-            const photo = new Image(); photo.src = base64;
-            await new Promise(r => photo.onload=r);
-            const px = 222, py = 250, pw = 187, ph = 225, border = 3;
-            ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
-            const srcRatio = photo.width / photo.height; const destRatio = pw / ph;
-            let sx=0, sy=0, sw=photo.width, sh=photo.height;
-            if(srcRatio > destRatio) { sw = photo.height * destRatio; sx = (photo.width - sw)/2; } 
-            else { sh = photo.width / destRatio; sy = (photo.height - sh)/2; }
-            ctx.drawImage(photo, sx, sy, sw, sh, px, py, pw, ph);
-
-            ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.font = `38px OdiaFont`;
-            const tx = 227;
-            let dob = document.getElementById('sDob').value || '';
-            try { const [y,m,d] = dob.split('-'); if(y&&m&&d) dob = `${d}/${m}/${y}`; } catch(e){}
-            
-            ctx.fillText(name, tx, 543);
-            ctx.fillText(toOdiaDigits(cls), tx, 613);
-            ctx.fillText(toOdiaDigits(dob), tx, 685);
-            ctx.fillText(toOdiaDigits(roll), tx, 756);
-            ctx.fillText(toOdiaDigits(document.getElementById('sPhone').value), tx, 827);
-            
-            const blood = document.getElementById('sBlood').value;
-            if(blood){
-                ctx.fillStyle = 'white'; ctx.font = `23px OdiaFont`;
-                ctx.fillText(blood, 480, 383);
-            }
-
-            ctx.save();
-            ctx.translate(CARD_W/2, CARD_H/2);
-            ctx.rotate(-Math.PI / 4);
-            ctx.font = 'bold 70px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            const diag = Math.sqrt(CARD_W*CARD_W + CARD_H*CARD_H);
-            for(let x = -diag; x <= diag; x += 350) {
-                for(let y = -diag; y <= diag; y += 150) {
-                    ctx.fillStyle = 'rgba(255, 0, 0, 0.25)';
-                    ctx.fillText('PREVIEW ONLY', x, y);
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                    ctx.fillText('PREVIEW ONLY', x+2, y+2);
-                }
-            }
-            ctx.restore();
-
-            try {
-                document.getElementById('renderedPreviewImg').src = cvs.toDataURL('image/png');
-                document.getElementById('cardPreviewModal').classList.remove('hidden');
-            } catch(e) {
-                console.error('Canvas export error:', e);
-                alert('Preview failed: The background image could not be read. Make sure background.png is in the same folder as this HTML file and reload the page.');
-            }
-        };
 
         // --- SAVE / EDIT ---
         document.getElementById('saveBtn').onclick = async () => {
