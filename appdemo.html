@@ -151,72 +151,6 @@
                 </button>
             </div>
 
-            <!-- Form Card (Hidden by Default) -->
-            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 mb-6 hidden animate-fade-in relative" id="addStudentFormContainer">
-                <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
-                    <h4 id="formTitle" class="font-bold text-lg text-gray-800">Add Student</h4>
-                    <div class="flex gap-2">
-                        <button id="deleteInEditBtn" onclick="deleteFromEdit()" class="hidden text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 w-8 h-8 rounded-full flex items-center justify-center transition" title="Delete Student"><i class="fas fa-trash"></i></button>
-                        <button onclick="resetForm()" class="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center transition" title="Close"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>
-                
-                <input type="hidden" id="editId">
-                <input type="text" id="sName" placeholder="Full Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
-                
-                <div class="flex gap-3 mb-3">
-                    <select id="sClass" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
-                        <option value="">Class</option>
-                        <option value="Shishuvatika">Shishuvatika</option>
-                        <option value="1">Class 1</option>
-                        <option value="2">Class 2</option>
-                        <option value="3">Class 3</option>
-                        <option value="4">Class 4</option>
-                        <option value="5">Class 5</option>
-                        <option value="6">Class 6</option>
-                        <option value="7">Class 7</option>
-                        <option value="8">Class 8</option>
-                        <option value="9">Class 9</option>
-                        <option value="10">Class 10</option>
-                    </select>
-                    <input type="text" id="sRoll" placeholder="Roll No" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
-                </div>
-                
-                <input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
-
-                <div class="flex gap-3 mb-4">
-                   <input type="text" id="sDob" placeholder="Date of Birth" onpointerdown="(this.type='date')" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
-                    <select id="sBlood" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
-                        <option value="">Blood Group</option>
-                        <option value="A+">A+</option><option value="A-">A-</option>
-                        <option value="B+">B+</option><option value="B-">B-</option>
-                        <option value="O+">O+</option><option value="O-">O-</option>
-                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                    </select>
-                </div>
-
-                <!-- Photo Area -->
-                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center mb-5 relative">
-                    <div class="flex gap-3 justify-center mb-3">
-                        <button id="openCam" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-camera mr-2"></i> Camera</button>
-                        <input type="file" id="fileInput" accept="image/*" class="hidden">
-                        <button onclick="document.getElementById('fileInput').click()" class="flex-1 bg-white border border-blue-500 text-blue-600 hover:bg-blue-50 font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-image mr-2"></i> Gallery</button>
-                    </div>
-                    
-                    <div class="relative inline-block">
-                        <img id="preview" src="" class="w-24 h-32 object-cover mx-auto rounded-xl shadow-md border-2 border-white hidden">
-                        <button id="removePhotoBtn" onclick="removePhoto()" class="hidden absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-red-600">
-                            <i class="fas fa-times text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
-                    <button onclick="resetForm()" id="cancelEditBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition hidden">Cancel Edit</button>
-                </div>
-            </div>
-
             <!-- Stats Dashboard -->
             <div class="grid grid-cols-3 gap-2 mb-4">
                 <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
@@ -275,6 +209,76 @@
     </div>
 
     <!-- ================= MODALS ================= -->
+
+    <!-- Add/Edit Student Modal -->
+    <div id="addStudentModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl p-5 relative" id="addStudentFormContainer">
+            
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                <h4 id="formTitle" class="font-bold text-lg text-gray-800">Add Student</h4>
+                <div class="flex gap-2">
+                    <button id="deleteInEditBtn" onclick="deleteFromEdit()" class="hidden text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 w-8 h-8 rounded-full flex items-center justify-center transition" title="Delete Student"><i class="fas fa-trash"></i></button>
+                    <button onclick="resetForm()" class="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center transition" title="Close"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            
+            <input type="hidden" id="editId">
+            <input type="text" id="sName" placeholder="Full Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            
+            <div class="flex gap-3 mb-3">
+                <select id="sClass" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <option value="">Class</option>
+                    <option value="Shishuvatika">Shishuvatika</option>
+                    <option value="1">Class 1</option>
+                    <option value="2">Class 2</option>
+                    <option value="3">Class 3</option>
+                    <option value="4">Class 4</option>
+                    <option value="5">Class 5</option>
+                    <option value="6">Class 6</option>
+                    <option value="7">Class 7</option>
+                    <option value="8">Class 8</option>
+                    <option value="9">Class 9</option>
+                    <option value="10">Class 10</option>
+                </select>
+                <input type="text" id="sRoll" placeholder="Roll No" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+            
+            <input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+
+            <div class="flex gap-3 mb-4">
+               <input type="text" id="sDob" placeholder="Date of Birth" onpointerdown="(this.type='date')" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <select id="sBlood" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <option value="">Blood Group</option>
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                </select>
+            </div>
+
+            <!-- Photo Area -->
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center mb-5 relative">
+                <div class="flex gap-3 justify-center mb-3">
+                    <button id="openCam" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-camera mr-2"></i> Camera</button>
+                    <input type="file" id="fileInput" accept="image/*" class="hidden">
+                    <button onclick="document.getElementById('fileInput').click()" class="flex-1 bg-white border border-blue-500 text-blue-600 hover:bg-blue-50 font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-image mr-2"></i> Gallery</button>
+                </div>
+                
+                <div class="relative inline-block">
+                    <img id="preview" src="" class="w-24 h-32 object-cover mx-auto rounded-xl shadow-md border-2 border-white hidden">
+                    <button id="removePhotoBtn" onclick="removePhoto()" class="hidden absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-red-600">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
+                <button onclick="resetForm()" id="cancelEditBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition hidden">Cancel</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Edit School Modal -->
     <div id="editSchoolModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
@@ -566,11 +570,7 @@
             document.getElementById('saveBtn').innerHTML = 'Save Student';
             document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
             
-            document.getElementById('addStudentFormContainer').classList.remove('hidden');
-            document.getElementById('schoolSubHeader').classList.add('hidden'); 
-            document.getElementById('inlineAddBtn').classList.add('hidden'); 
-            
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            document.getElementById('addStudentModal').classList.remove('hidden');
         }
 
         // ==========================================
@@ -1178,9 +1178,6 @@
             document.getElementById('schoolSection').classList.add('hidden');
             document.getElementById('entrySection').classList.remove('hidden');
             
-            // Show inline Add button
-            document.getElementById('inlineAddBtn').classList.remove('hidden');
-
             updateSchoolHeader();
             visibleCount = 50; 
             
@@ -1298,7 +1295,6 @@
             const tx = db.transaction(['students'], 'readonly');
             tx.objectStore('students').index('schoolName').getAll(currentSchool).onsuccess = e => {
                 
-                // Modified to sort by lastModified instead of just ID so edited students jump to top
                 students = e.target.result.sort((a,b) => {
                     const timeB = b.lastModified || b.id;
                     const timeA = a.lastModified || a.id;
@@ -1409,7 +1405,6 @@
 
                 const serialNumber = filteredStudents.length - index;
 
-                // NEW UI: Single Edit button on the right
                 div.innerHTML = `
                     <div class="p-3 flex items-center gap-2">
                         <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0 cursor-pointer" onclick="toggleDetails(${s.id})">#${serialNumber}</div>
@@ -1502,10 +1497,9 @@
             tx.objectStore('students').put(student);
             tx.oncomplete = () => {
                 showToast(id ? "Student Updated!" : "Student Saved!");
-                resetForm(); // Will handle un-hiding everything
+                resetForm(); 
                 
-                // Only clear filters if we added a NEW student. 
-                // If editing, keep the current class/search filter active.
+                // Only clear filters if we added a NEW student
                 if (!id) {
                     document.getElementById('searchInput').value = '';
                     document.getElementById('filterClass').value = 'ALL';
@@ -1519,10 +1513,6 @@
                 
                 btn.innerHTML = origText;
                 btn.disabled = false;
-                
-                const listHeader = document.getElementById('listCounter');
-                const yOffset = listHeader.getBoundingClientRect().top + window.scrollY - 100;
-                window.scrollTo({top: yOffset, behavior: 'smooth'});
             };
             tx.onerror = () => {
                 btn.innerHTML = origText;
@@ -1577,17 +1567,8 @@
             saveBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
             
             document.getElementById('deleteInEditBtn').classList.remove('hidden');
-            document.getElementById('cancelEditBtn').classList.remove('hidden');
             
-            const formContainer = document.getElementById('addStudentFormContainer');
-            formContainer.classList.remove('hidden');
-            
-            // Hide the sticky school header & inline Add button to maximize screen real estate
-            document.getElementById('schoolSubHeader').classList.add('hidden');
-            document.getElementById('inlineAddBtn').classList.add('hidden');
-            
-            const yOffset = formContainer.getBoundingClientRect().top + window.scrollY - 70; 
-            window.scrollTo({top: yOffset, behavior: 'smooth'});
+            document.getElementById('addStudentModal').classList.remove('hidden');
         }
 
         window.deleteFromEdit = function() {
@@ -1615,13 +1596,9 @@
             saveBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
             
             document.getElementById('deleteInEditBtn').classList.add('hidden');
-            document.getElementById('cancelEditBtn').classList.add('hidden');
             
             if (hideForm) {
-                document.getElementById('addStudentFormContainer').classList.add('hidden');
-                document.getElementById('schoolSubHeader').classList.remove('hidden'); 
-                const inlineBtn = document.getElementById('inlineAddBtn');
-                if (inlineBtn) inlineBtn.classList.remove('hidden');
+                document.getElementById('addStudentModal').classList.add('hidden');
             }
         }
 
@@ -1645,7 +1622,7 @@
 
             tx.oncomplete = () => {
                 showToast("Moved to Recycle Bin", "info");
-                resetForm(); // Will handle un-hiding everything
+                resetForm(); 
 
                 loadStudents();
                 loadRecycleBin();
