@@ -124,7 +124,7 @@
     <div class="stats-panel" id="statsPanel">
         <div class="stat-box primary">
             <div class="stat-value" id="statTotal">0</div>
-            <div class="stat-label">Total Students</div>
+            <div class="stat-label">Total Ready</div>
         </div>
         <div class="stat-box success">
             <div class="stat-value" id="statPrinted">0</div>
@@ -132,11 +132,11 @@
         </div>
         <div class="stat-box warning">
             <div class="stat-value" id="statPending">0</div>
-            <div class="stat-label">Pending</div>
+            <div class="stat-label">Ready to Print</div>
         </div>
         
         <div class="class-stats">
-            <div style="font-size: 11px; color: #666; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Class-wise Breakdown:</div>
+            <div style="font-size: 11px; color: #666; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Class-wise Breakdown (Ready only):</div>
             <div id="classStatsContainer">
                 <!-- Class pills will be injected here -->
             </div>
@@ -313,7 +313,7 @@ function toOdiaClass(str) {
     if (window.assets.language === 'english') return str; // Bypass conversion for English
     
     let s = String(str).toLowerCase().trim();
-    if (s.includes('nursery') || s.includes('nursary') || s.includes('ଶିଶୁ ବାଟିକା')) return 'ଶିଶୁ ବାଟିକା';
+    if (s.includes('nursery') || s.includes('nursary') || s.includes('ଶିଶୁ ବାଟିକା') || s.includes('shishuvatika')) return 'ଶିଶୁ ବାଟିକା';
     if (s === '1' || s === 'class 1' || s === 'class-1') return 'ପ୍ରଥମ';
     if (s === '2' || s === 'class 2' || s === 'class-2') return 'ଦ୍ଵିତୀୟ';
     if (s === '3' || s === 'class 3' || s === 'class-3') return 'ତୃତୀୟ';
@@ -517,6 +517,10 @@ function mergeStudentIntoSchoolsMap(d) {
     const sName = d.schoolName;
     const udise = d.udise || (sName ? `NO_UDISE:${sName}` : null);
     if (!udise) return; 
+    
+    // ONLY COUNT FINALISED STUDENTS IN THE DASHBOARD
+    if(d.finalised === false) return; 
+
     const missingUdise = !d.udise;
 
     if (!schoolsMap[udise]) {
@@ -595,7 +599,7 @@ function renderDashboard(){
     
     const udises = Object.keys(schoolsMap).sort((a, b) => schoolsMap[b].latestActivity - schoolsMap[a].latestActivity);
     
-    if(udises.length === 0){ grid.innerHTML = '<p>No schools found. Try Quick Sync.</p>'; return; }
+    if(udises.length === 0){ grid.innerHTML = '<p>No finalised schools found. Try Quick Sync.</p>'; return; }
     
     udises.forEach(udise => {
         const s = schoolsMap[udise];
@@ -618,12 +622,13 @@ function renderDashboard(){
             missingUdiseWarning = `<div style="background:#f8d7da; color:#721c24; font-size:11px; padding:6px 8px; border-radius:6px; margin-top:6px;">⚠️ No UDISE recorded for this school (from before UDISE was required). Tap Edit School to add it.</div>`;
         }
 
-        // Removed student count from here as requested
+        // Only showing count for FINALISED students now
         div.innerHTML = `
             <div class="school-card-content" onclick="openSchoolDetail('${escapeHtml(udise)}')">
                 <h3 style="margin:0 0 5px 0">${escapeHtml(s.name)}</h3>
                 <div class="school-meta">📋 UDISE: ${s.missingUdise ? '<span style="color:#dc3545;">Not set</span>' : escapeHtml(udise)}</div>
                 <div class="school-meta">${loc}</div>
+                <div class="school-meta" style="margin-top:8px; font-weight:bold; color:#28a745;">✅ ${s.count} Ready to Print</div>
                 ${typoWarning}
                 ${missingUdiseWarning}
             </div>
@@ -682,8 +687,11 @@ function openSchoolDetail(udise){
         qs.forEach(doc => {
             const data = doc.data();
             if (udise.startsWith('NO_UDISE:') && data.udise) return;
-            currentSchoolStudents.push(data);
-            if(data.class) classes.add(data.class);
+            // FILTER OUT NON-FINALISED STUDENTS HERE TOO
+            if (data.finalised !== false) {
+                currentSchoolStudents.push(data);
+                if(data.class) classes.add(data.class);
+            }
         });
         currentSchoolStudents.sort((a,b) => b.id - a.id);
         
@@ -757,7 +765,7 @@ function renderTable(){
         
         const printStatusBadge = s.isPrinted 
             ? `<span class="badge-printed">Printed</span>` 
-            : `<span class="badge-unprinted">Pending</span>`;
+            : `<span class="badge-unprinted">Ready to Print</span>`;
         
         tr.innerHTML = `<td><input type="checkbox" class="sel" value="${s.id}"></td><td>${i+1}</td>
         <td><img class="thumb" src="${s.photoBase64 || ''}" crossorigin="anonymous"></td>
