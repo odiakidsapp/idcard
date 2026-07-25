@@ -348,7 +348,8 @@
     </div>
 
     <!-- Cropper Modal (Only for Gallery Uploads) -->
-    <div id="cropperModal" class="hidden fixed inset-0 bg-black/90 z-[70] flex flex-col items-center justify-center p-4">
+    <!-- FIXED: Z-index changed from 70 to 200 so it appears above the edit modal (which is z-[100]) -->
+    <div id="cropperModal" class="hidden fixed inset-0 bg-black/90 z-[200] flex flex-col items-center justify-center p-4">
         <div class="w-full max-w-md bg-white rounded-xl overflow-hidden shadow-2xl flex flex-col">
             <div class="p-3 border-b flex justify-between items-center bg-gray-50">
                 <h3 class="font-bold text-gray-800">Crop Photo</h3>
@@ -1405,6 +1406,7 @@
 
                 const serialNumber = filteredStudents.length - index;
 
+                // NEW UI: Single Edit button on the right
                 div.innerHTML = `
                     <div class="p-3 flex items-center gap-2">
                         <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0 cursor-pointer" onclick="toggleDetails(${s.id})">#${serialNumber}</div>
@@ -1499,7 +1501,7 @@
                 showToast(id ? "Student Updated!" : "Student Saved!");
                 resetForm(); 
                 
-                // Only clear filters if we added a NEW student
+                // Only clear filters if we added a NEW student. 
                 if (!id) {
                     document.getElementById('searchInput').value = '';
                     document.getElementById('filterClass').value = 'ALL';
