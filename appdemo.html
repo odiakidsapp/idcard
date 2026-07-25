@@ -1297,7 +1297,13 @@
         function loadStudents() {
             const tx = db.transaction(['students'], 'readonly');
             tx.objectStore('students').index('schoolName').getAll(currentSchool).onsuccess = e => {
-                students = e.target.result.sort((a,b) => b.id - a.id);
+                
+                // Modified to sort by lastModified instead of just ID so edited students jump to top
+                students = e.target.result.sort((a,b) => {
+                    const timeB = b.lastModified || b.id;
+                    const timeA = a.lastModified || a.id;
+                    return timeB - timeA;
+                });
                 
                 // Set default class if missing (to ensure stats/filters work)
                 students.forEach(s => {
@@ -1498,8 +1504,12 @@
                 showToast(id ? "Student Updated!" : "Student Saved!");
                 resetForm(); // Will handle un-hiding everything
                 
-                document.getElementById('searchInput').value = '';
-                document.getElementById('filterClass').value = 'ALL';
+                // Only clear filters if we added a NEW student. 
+                // If editing, keep the current class/search filter active.
+                if (!id) {
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('filterClass').value = 'ALL';
+                }
                 
                 loadStudents();
                 
