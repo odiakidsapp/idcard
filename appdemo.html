@@ -213,7 +213,7 @@
 
                 <div class="flex flex-col gap-2">
                     <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
-                    <button onclick="resetForm()" id="cancelEditBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
+                    <button onclick="resetForm()" id="cancelEditBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition hidden">Cancel Edit</button>
                 </div>
             </div>
 
@@ -248,6 +248,11 @@
                 </div>
             </div>
 
+            <!-- Add Student Button (Inline Above List) -->
+            <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
+                <i class="fas fa-user-plus"></i> <span>Add New Student Manually</span>
+            </button>
+
             <!-- Student List Header -->
             <div class="flex justify-between items-end mb-3 px-1">
                 <div>
@@ -268,11 +273,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Floating Action Button (FAB) -->
-    <button onclick="openAddForm()" id="fabAddBtn" class="hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-[0_4px_15px_rgba(37,99,235,0.4)] flex items-center justify-center text-2xl hover:bg-blue-700 hover:scale-105 transition-transform duration-200 z-50">
-        <i class="fas fa-plus"></i>
-    </button>
 
     <!-- ================= MODALS ================= -->
 
@@ -561,14 +561,14 @@
         }
 
         window.openAddForm = function() {
-            resetForm(false); // Reset inputs but keep form visible
+            resetForm(false); 
             document.getElementById('formTitle').innerHTML = 'Add New Student';
             document.getElementById('saveBtn').innerHTML = 'Save Student';
             document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
             
             document.getElementById('addStudentFormContainer').classList.remove('hidden');
-            document.getElementById('schoolSubHeader').classList.add('hidden'); // Hide school header to save space
-            document.getElementById('fabAddBtn').classList.add('hidden'); // Hide FAB
+            document.getElementById('schoolSubHeader').classList.add('hidden'); 
+            document.getElementById('inlineAddBtn').classList.add('hidden'); 
             
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
@@ -1004,7 +1004,6 @@
                 } else {
                     document.getElementById('schoolSection').classList.remove('hidden');
                     document.getElementById('entrySection').classList.add('hidden');
-                    document.getElementById('fabAddBtn').classList.add('hidden');
                 }
             };
         }
@@ -1179,8 +1178,8 @@
             document.getElementById('schoolSection').classList.add('hidden');
             document.getElementById('entrySection').classList.remove('hidden');
             
-            // Show FAB
-            document.getElementById('fabAddBtn').classList.remove('hidden');
+            // Show inline Add button
+            document.getElementById('inlineAddBtn').classList.remove('hidden');
 
             updateSchoolHeader();
             visibleCount = 50; 
@@ -1568,13 +1567,14 @@
             saveBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
             
             document.getElementById('deleteInEditBtn').classList.remove('hidden');
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
             
             const formContainer = document.getElementById('addStudentFormContainer');
             formContainer.classList.remove('hidden');
             
-            // Hide the sticky school header & FAB to maximize screen real estate
+            // Hide the sticky school header & inline Add button to maximize screen real estate
             document.getElementById('schoolSubHeader').classList.add('hidden');
-            document.getElementById('fabAddBtn').classList.add('hidden');
+            document.getElementById('inlineAddBtn').classList.add('hidden');
             
             const yOffset = formContainer.getBoundingClientRect().top + window.scrollY - 70; 
             window.scrollTo({top: yOffset, behavior: 'smooth'});
@@ -1605,12 +1605,13 @@
             saveBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
             
             document.getElementById('deleteInEditBtn').classList.add('hidden');
+            document.getElementById('cancelEditBtn').classList.add('hidden');
             
             if (hideForm) {
                 document.getElementById('addStudentFormContainer').classList.add('hidden');
                 document.getElementById('schoolSubHeader').classList.remove('hidden'); 
-                const fab = document.getElementById('fabAddBtn');
-                if (fab) fab.classList.remove('hidden');
+                const inlineBtn = document.getElementById('inlineAddBtn');
+                if (inlineBtn) inlineBtn.classList.remove('hidden');
             }
         }
 
