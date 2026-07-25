@@ -136,7 +136,7 @@
         <div id="entrySection" class="hidden">
             
             <!-- School Header -->
-            <div class="glass-header sticky top-14 z-30 -mx-4 px-4 py-3 mb-5 shadow-sm border-b border-gray-200 flex justify-between items-center" id="schoolSubHeader">
+            <div class="glass-header sticky top-14 z-30 -mx-4 px-4 py-3 mb-5 shadow-sm border-b border-gray-200 flex justify-between items-center transition-all duration-300" id="schoolSubHeader">
                 <div class="flex-1 truncate pr-2">
                     <h3 id="currentSchoolHeader" class="m-0 font-bold text-gray-900 truncate">School Name</h3>
                     <p id="currentSchoolSubHeader" class="text-xs text-gray-500 truncate">District</p>
@@ -361,11 +361,12 @@
                 </div>
                 <button onclick="closeRecycleBin()" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
             </div>
+            <div class="px-4 py-2 bg-red-50 border-b border-red-100 flex justify-between items-center text-sm">
+                <span class="text-red-600 font-medium">Items keep for 30 days.</span>
+                <button onclick="emptyRecycleBin()" class="text-red-700 font-bold hover:underline">Empty Bin</button>
+            </div>
             <div class="p-4 overflow-y-auto flex-1 bg-gray-50" id="recycleBinList">
                 <!-- Deleted items will go here -->
-            </div>
-            <div class="p-4 border-t border-gray-200 text-xs text-gray-500 text-center">
-                Items are kept for 30 days before permanent deletion.
             </div>
         </div>
     </div>
@@ -541,16 +542,19 @@
             const form = document.getElementById('addStudentFormContainer');
             const btnText = document.querySelector('#toggleFormBtn span');
             const btnIcon = document.querySelector('#toggleFormBtn i');
+            const subHeader = document.getElementById('schoolSubHeader');
             
             if (form.classList.contains('hidden')) {
                 form.classList.remove('hidden');
                 btnText.textContent = "Close Form";
                 btnIcon.className = "fas fa-times";
+                subHeader.classList.add('hidden'); // Hide school header to save space
                 resetForm(); 
             } else {
                 form.classList.add('hidden');
                 btnText.textContent = "Add New Student Manually";
                 btnIcon.className = "fas fa-user-plus";
+                subHeader.classList.remove('hidden'); // Show school header back
             }
         }
 
@@ -955,7 +959,6 @@
                 const student = { ...data, id: Number(id), synced: true };
                 delete student.submittedAt;
 
-                // Load active into active store, and soft-deleted into recycle bin
                 if (!data.deleted) {
                     if(student.finalised === undefined) student.finalised = true;
                     studentStore.put(student);
@@ -1212,6 +1215,12 @@
             const tx = db.transaction(['students'], 'readonly');
             tx.objectStore('students').index('schoolName').getAll(currentSchool).onsuccess = e => {
                 students = e.target.result.sort((a,b) => b.id - a.id);
+                
+                // Set default class if missing (to ensure stats/filters work)
+                students.forEach(s => {
+                    if (s.finalised === undefined) s.finalised = true; 
+                });
+
                 updateStats();
                 populateClassFilter();
                 applyFilters(); 
@@ -1311,7 +1320,6 @@
 
                 const serialNumber = filteredStudents.length - index;
 
-                // Restructured to match new UI layout (Delete removed from dropdown, Edit on main tile)
                 div.innerHTML = `
                     <div class="p-3 flex items-center gap-2">
                         <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0 cursor-pointer" onclick="toggleDetails(${s.id})">#${serialNumber}</div>
@@ -1408,6 +1416,7 @@
                 document.getElementById('addStudentFormContainer').classList.add('hidden');
                 document.querySelector('#toggleFormBtn span').textContent = "Add New Student Manually";
                 document.querySelector('#toggleFormBtn i').className = "fas fa-user-plus";
+                document.getElementById('schoolSubHeader').classList.remove('hidden'); // Show header back
                 
                 document.getElementById('searchInput').value = '';
                 document.getElementById('filterClass').value = 'ALL';
@@ -1477,7 +1486,6 @@
             saveBtn.classList.replace('bg-green-600', 'bg-blue-600');
             saveBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
             
-            // Show Delete Button inside Edit Form
             document.getElementById('deleteInEditBtn').classList.remove('hidden');
             document.getElementById('cancelEdit').classList.remove('hidden');
             
@@ -1485,6 +1493,9 @@
             formContainer.classList.remove('hidden');
             document.querySelector('#toggleFormBtn span').textContent = "Close Form";
             document.querySelector('#toggleFormBtn i').className = "fas fa-times";
+            
+            // Hide the sticky school header so it doesn't overlap the form/delete button
+            document.getElementById('schoolSubHeader').classList.add('hidden');
             
             const yOffset = formContainer.getBoundingClientRect().top + window.scrollY - 70; 
             window.scrollTo({top: yOffset, behavior: 'smooth'});
@@ -1515,13 +1526,13 @@
             saveBtn.classList.replace('bg-blue-600', 'bg-green-600');
             saveBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
             
-            // Hide Delete Button inside Edit Form
             document.getElementById('deleteInEditBtn').classList.add('hidden');
             document.getElementById('cancelEdit').classList.add('hidden');
+            document.getElementById('schoolSubHeader').classList.remove('hidden'); // Show header back
         }
 
         // ==========================================
-        // RECYCLE BIN LOGIC (Soft Delete)
+        // RECYCLE BIN LOGIC (Soft Delete & Hard Delete)
         // ==========================================
         window.deleteStudent = async function(id) {
             const confirmed = await showConfirm("Move this student to the Recycle Bin? You can restore them within 30 days.", "Delete Student?", "Yes, Move to Bin");
@@ -1540,10 +1551,11 @@
 
             tx.oncomplete = () => {
                 showToast("Moved to Recycle Bin", "info");
-                resetForm(); // Reset form in case user deleted from inside the edit view
+                resetForm(); 
                 document.getElementById('addStudentFormContainer').classList.add('hidden');
                 document.querySelector('#toggleFormBtn span').textContent = "Add New Student Manually";
                 document.querySelector('#toggleFormBtn i').className = "fas fa-user-plus";
+                document.getElementById('schoolSubHeader').classList.remove('hidden');
 
                 loadStudents();
                 loadRecycleBin();
@@ -1585,15 +1597,18 @@
                 const daysLeft = Math.max(0, 30 - daysPassed);
 
                 const div = document.createElement('div');
-                div.className = 'bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-2 flex items-center justify-between';
+                div.className = 'bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-2 flex items-center justify-between gap-2';
                 
                 div.innerHTML = `
-                    <div class="flex-1 min-w-0 pr-3">
+                    <div class="flex-1 min-w-0 pr-1">
                         <div class="font-bold text-gray-800 text-sm truncate line-through opacity-70">${s.name}</div>
                         <div class="text-xs text-red-500 font-medium"><i class="fas fa-history"></i> ${daysLeft} days left</div>
                     </div>
                     <button onclick="restoreStudent(${s.id})" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex-shrink-0 shadow-sm">
                         Restore
+                    </button>
+                    <button onclick="hardDeleteStudent(${s.id})" class="bg-red-50 hover:bg-red-100 text-red-500 px-2 py-1.5 rounded-lg text-sm transition flex-shrink-0 shadow-sm" title="Delete Permanently">
+                        <i class="fas fa-trash"></i>
                     </button>
                 `;
                 list.appendChild(div);
@@ -1621,6 +1636,42 @@
                     syncToFirebase(student, 'students').then(() => loadStudents()).catch(console.error);
                 }
             };
+        }
+
+        window.hardDeleteStudent = async function(id) {
+            const confirmed = await showConfirm("Are you sure you want to permanently delete this student? This action CANNOT be undone.", "Permanent Delete", "Delete Forever");
+            if(!confirmed) return;
+
+            const tx = db.transaction(['deleted_students'], 'readwrite');
+            tx.objectStore('deleted_students').delete(id);
+            tx.oncomplete = () => {
+                showToast("Student deleted permanently", "info");
+                loadRecycleBin();
+                if(navigator.onLine) {
+                    firestore.collection('students').doc(String(id)).delete().catch(console.error);
+                }
+            };
+        }
+
+        window.emptyRecycleBin = async function() {
+            if(deletedStudents.length === 0) return;
+            const confirmed = await showConfirm(`Are you sure you want to permanently delete ALL ${deletedStudents.length} students in the Recycle Bin?`, "Empty Bin", "Empty Bin");
+            if(!confirmed) return;
+
+            const tx = db.transaction(['deleted_students'], 'readwrite');
+            const store = tx.objectStore('deleted_students');
+            
+            deletedStudents.forEach(s => {
+                store.delete(s.id);
+                if(navigator.onLine) {
+                    firestore.collection('students').doc(String(s.id)).delete().catch(console.error);
+                }
+            });
+
+            tx.oncomplete = () => {
+                showToast("Recycle bin emptied", "success");
+                loadRecycleBin();
+            }
         }
 
         function cleanupRecycleBin() {
