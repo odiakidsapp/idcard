@@ -154,7 +154,7 @@
                 </div>
                 
                 <input type="hidden" id="editId">
-                <input type="text" id="sName" placeholder="Full Name (e.g. ଅବିନାଶ)" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <input type="text" id="sName" placeholder="Full Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 
                 <div class="flex gap-3 mb-3">
                     <select id="sClass" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
@@ -313,10 +313,11 @@
             <video id="cameraVideo" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline></video>
             
             <!-- Target Overlay mask -->
-            <div class="pointer-events-none absolute z-10 w-[70vw] max-w-[280px] aspect-[3/4] border-2 border-dashed border-white/80 rounded-xl flex flex-col items-center justify-center mb-16 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]">
-                 <svg class="w-3/5 h-3/5 text-white/50 mb-6" viewBox="0 0 100 120" fill="none" stroke="currentColor" stroke-width="2">
-                     <ellipse cx="50" cy="40" rx="20" ry="26" />
-                     <path d="M 20 120 C 20 95, 30 80, 50 80 C 70 80, 80 95, 80 120" />
+            <div id="cameraOverlay" class="pointer-events-none absolute z-10 w-[70vw] max-w-[280px] aspect-[3/4] border-2 border-dashed border-white/80 rounded-xl flex flex-col items-center justify-end pb-8 mb-16 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]">
+                 <!-- Adjusted SVG to fit border nicely -->
+                 <svg class="w-[85%] h-[85%] text-white/60 mb-2" viewBox="0 0 100 120" fill="none" stroke="currentColor" stroke-width="2.5">
+                     <ellipse cx="50" cy="45" rx="28" ry="34" />
+                     <path d="M 10 120 C 10 90, 20 80, 50 80 C 80 80, 90 90, 90 120" />
                  </svg>
                  <div class="absolute top-4 text-white font-bold tracking-widest text-center w-full uppercase text-xs drop-shadow-md">Align Face Here</div>
             </div>
@@ -499,7 +500,7 @@
         let visibleCount = 50; 
         let cropper = null;
 
-        const req = indexedDB.open('SchoolDataApp', 6); // Increment version for new store
+        const req = indexedDB.open('SchoolDataApp', 6); 
         req.onupgradeneeded = e => {
             db = e.target.result;
             if(!db.objectStoreNames.contains('schools')) db.createObjectStore('schools', {keyPath:'name'});
@@ -515,7 +516,7 @@
         
         req.onsuccess = e => {
             db = e.target.result;
-            cleanupRecycleBin(); // Run cleanup on load
+            cleanupRecycleBin(); 
             loadSchools();
             updateOnlineStatus();
             if (navigator.onLine) {
@@ -619,33 +620,43 @@
         };
 
         document.getElementById('snap').onclick = async () => {
-            const vid = document.getElementById('cameraVideo');
-            if(!vid.videoWidth) return;
+            const video = document.getElementById('cameraVideo');
+            if(!video.videoWidth) return;
             
-            const vidWidth = vid.videoWidth;
-            const vidHeight = vid.videoHeight;
-            const targetRatio = 3 / 4;
-            const currentRatio = vidWidth / vidHeight;
+            const overlay = document.getElementById('cameraOverlay');
             
-            let cropWidth = vidWidth;
-            let cropHeight = vidHeight;
-            let startX = 0;
-            let startY = 0;
-
-            if (currentRatio > targetRatio) {
-                cropWidth = vidHeight * targetRatio;
-                startX = (vidWidth - cropWidth) / 2;
-            } else {
-                cropHeight = vidWidth / targetRatio;
-                startY = (vidHeight - cropHeight) / 2;
-            }
+            // Getting accurate dimensions of the visual video bounding box and actual video
+            const vidW = video.videoWidth;
+            const vidH = video.videoHeight;
+            const rectW = video.clientWidth;
+            const rectH = video.clientHeight;
+            
+            // object-fit: cover scaling logic
+            const scale = Math.max(rectW / vidW, rectH / vidH);
+            const renderW = vidW * scale;
+            const renderH = vidH * scale;
+            
+            const offsetX = (rectW - renderW) / 2;
+            const offsetY = (rectH - renderH) / 2;
+            
+            const overlayRect = overlay.getBoundingClientRect();
+            const videoRect = video.getBoundingClientRect();
+            
+            const overlayLeft = overlayRect.left - videoRect.left;
+            const overlayTop = overlayRect.top - videoRect.top;
+            
+            // Crop relative to original video size
+            const cropX = (overlayLeft - offsetX) / scale;
+            const cropY = (overlayTop - offsetY) / scale;
+            const cropW = overlayRect.width / scale;
+            const cropH = overlayRect.height / scale;
 
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = 300; 
             tempCanvas.height = 400;
             const ctx = tempCanvas.getContext('2d');
             
-            ctx.drawImage(vid, startX, startY, cropWidth, cropHeight, 0, 0, 300, 400);
+            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, 300, 400);
             const imgData = tempCanvas.toDataURL('image/jpeg', 0.8);
             
             setPreviewImage(imgData);
@@ -692,13 +703,13 @@
         // ==========================================
         // SYNC LOGIC
         // ==========================================
+        let isSyncing = false;
         async function syncAllPending() {
             if(!db || !navigator.onLine) return;
             if(isSyncing) return;
             isSyncing = true;
             const btn = document.getElementById('manualSyncBtn');
 
-            // Find unsynced active students
             const unsyncedIds = [];
             await new Promise((resolve) => {
                 const tx = db.transaction(['students'], 'readonly');
@@ -712,7 +723,6 @@
                 };
             });
 
-            // Find unsynced deleted students (in recycle bin)
             await new Promise((resolve) => {
                 const tx = db.transaction(['deleted_students'], 'readonly');
                 const cursorReq = tx.objectStore('deleted_students').openCursor();
@@ -724,7 +734,6 @@
                     } else resolve();
                 };
             });
-
 
             if (unsyncedIds.length === 0) {
                 if (btn) {
@@ -819,10 +828,8 @@
                     });
                 }
 
-                // Push to Firestore
                 await firestore.collection('students').doc(String(student.id)).set(student);
 
-                // Update local sync status
                 student.synced = true;
                 await new Promise((resolve, reject) => {
                     const tx = db.transaction([storeName], 'readwrite');
@@ -871,10 +878,9 @@
             let restoreCount = 0;
             
             docs.forEach(({ id, data }) => {
-                // Only restore students that are NOT marked as deleted
                 if (!data.deleted) {
                     const student = { ...data, id: Number(id), synced: true };
-                    delete student.submittedAt; // Don't overwrite server timestamp locally
+                    delete student.submittedAt;
                     studentStore.put(student);
                     restoreCount++;
                 }
@@ -1086,7 +1092,6 @@
             tx.objectStore('schools').put(updatedSchool);
 
             if(oldName !== newName) {
-                // Update active students
                 const stStore = tx.objectStore('students');
                 stStore.index('schoolName').getAll(oldName).onsuccess = (e) => {
                     e.target.result.forEach(s => {
@@ -1097,7 +1102,6 @@
                     });
                 };
                 
-                // Update deleted students
                 const delStore = tx.objectStore('deleted_students');
                 delStore.index('schoolName').getAll(oldName).onsuccess = (e) => {
                     e.target.result.forEach(s => {
@@ -1128,7 +1132,6 @@
         function loadStudents() {
             const tx = db.transaction(['students'], 'readonly');
             tx.objectStore('students').index('schoolName').getAll(currentSchool).onsuccess = e => {
-                // Sort by ID descending (newest first)
                 students = e.target.result.sort((a,b) => b.id - a.id);
                 updateStats();
                 populateClassFilter();
@@ -1236,8 +1239,6 @@
                 
                 if(s.syncError) statusHtml += `<div class="text-red-500 font-bold text-[10px] mt-1 line-clamp-1 truncate w-full" title="${s.syncError}"><i class="fas fa-exclamation-triangle"></i> ${s.syncError}</div>`;
 
-                // Calculate Serial Number (Since it's sorted newest first, the bottom should be 1)
-                // If you want 1 to be the top item, just use: index + 1
                 const serialNumber = filteredStudents.length - index;
 
                 div.innerHTML = `
@@ -1341,7 +1342,7 @@
                 loadStudents();
                 
                 if (navigator.onLine) {
-                    syncToFirebase(student);
+                    syncToFirebase(student).then(() => loadStudents()).catch(console.error);
                 }
                 
                 btn.innerHTML = origText;
@@ -1416,20 +1417,15 @@
             const confirmed = await showConfirm("Move this student to the Recycle Bin? You can restore them within 30 days.", "Delete Student?", "Yes, Move to Bin");
             if(!confirmed) return;
             
-            // Get student
             const student = students.find(s => s.id === id);
             if(!student) return;
 
-            // Mark as deleted with timestamp
             student.deleted = true;
             student.deletedAt = Date.now();
-            student.synced = false; // Needs to sync this update to cloud
+            student.synced = false; 
 
             const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
-            
-            // Remove from active store
             tx.objectStore('students').delete(id);
-            // Add to deleted store
             tx.objectStore('deleted_students').put(student);
 
             tx.oncomplete = () => {
@@ -1437,7 +1433,7 @@
                 loadStudents();
                 loadRecycleBin();
                 if(navigator.onLine) {
-                    syncToFirebase(student, 'deleted_students');
+                    syncToFirebase(student, 'deleted_students').then(() => loadStudents()).catch(console.error);
                 }
             };
         }
@@ -1455,7 +1451,7 @@
             if(!db || !currentSchool) return;
             const tx = db.transaction(['deleted_students'], 'readonly');
             tx.objectStore('deleted_students').index('schoolName').getAll(currentSchool).onsuccess = e => {
-                deletedStudents = e.target.result.sort((a,b) => b.deletedAt - a.deletedAt); // Newest deleted first
+                deletedStudents = e.target.result.sort((a,b) => b.deletedAt - a.deletedAt);
                 renderRecycleBin();
             };
         }
@@ -1470,7 +1466,6 @@
             }
 
             deletedStudents.forEach(s => {
-                // Calculate days left
                 const daysPassed = Math.floor((Date.now() - s.deletedAt) / (1000 * 60 * 60 * 24));
                 const daysLeft = Math.max(0, 30 - daysPassed);
 
@@ -1494,17 +1489,13 @@
             const student = deletedStudents.find(s => s.id === id);
             if(!student) return;
 
-            // Remove deleted flags
             delete student.deleted;
             delete student.deletedAt;
-            student.synced = false; // Needs to sync restoration
+            student.synced = false; 
             student.lastModified = Date.now();
 
             const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
-            
-            // Add back to active store
             tx.objectStore('students').put(student);
-            // Remove from deleted store
             tx.objectStore('deleted_students').delete(id);
 
             tx.oncomplete = () => {
@@ -1512,12 +1503,11 @@
                 loadStudents();
                 loadRecycleBin();
                 if(navigator.onLine) {
-                    syncToFirebase(student, 'students');
+                    syncToFirebase(student, 'students').then(() => loadStudents()).catch(console.error);
                 }
             };
         }
 
-        // Auto-cleanup deleted items older than 30 days
         function cleanupRecycleBin() {
             const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
             const now = Date.now();
@@ -1530,9 +1520,7 @@
                 if (cursor) {
                     const student = cursor.value;
                     if (student.deletedAt && (now - student.deletedAt > THIRTY_DAYS_MS)) {
-                        // Hard delete local
                         cursor.delete();
-                        // Attempt hard delete on Firestore if online
                         if(navigator.onLine) {
                              firestore.collection('students').doc(String(student.id)).delete().catch(console.error);
                         }
