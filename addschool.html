@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Excel Import Portal - AN ID CARDS</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+    <!-- SheetJS for Excel Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; }
+        
+        /* Toast Animations */
+        .toast-enter { transform: translateY(100%); opacity: 0; }
+        .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toast-exit { transform: translateY(0); opacity: 1; }
+        .toast-exit-active { transform: translateY(100%); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Hide number input arrows */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        
+        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+
+        /* Modal Slide Up Animation */
+        .slide-up-enter { transform: translateY(100%); }
+        .slide-up-enter-active { transform: translateY(0); transition: transform 0.3s ease-out; }
+        .slide-up-exit { transform: translateY(0); }
+        .slide-up-exit-active { transform: translateY(100%); transition: transform 0.3s ease-in; }
+    </style>
+</head>
+<body class="text-gray-800 pb-20">
+
+    <!-- App Navigation Header -->
+    <header class="bg-white/95 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 shadow-sm h-14 flex items-center">
+        <div class="w-full max-w-lg mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center gap-2 text-blue-600 font-black text-lg tracking-tight" id="headerTitle">
+                <i class="fas fa-file-excel text-xl"></i> DATA PORTAL
+            </div>
+            <div class="flex items-center gap-4 text-gray-500">
+                <a href="index.html" class="hover:text-blue-500 transition text-sm font-bold bg-blue-50 px-3 py-1 rounded-lg">
+                    App
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="max-w-lg mx-auto p-4 pt-6">
+        
+        <!-- ================= UPLOAD MODE ================= -->
+        <div id="uploadSection" class="animate-fade-in">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-500 text-2xl">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">Upload Excel</h2>
+                <p class="text-sm text-gray-500 mt-1">Upload a student list to generate a shareable link for photo collection.</p>
+            </div>
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6 text-center">
+                <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
+                <button onclick="document.getElementById('excelInput').click()" class="w-full bg-blue-50 border-2 border-dashed border-blue-300 hover:bg-blue-100 hover:border-blue-400 text-blue-600 font-bold py-8 px-4 rounded-xl transition flex flex-col justify-center items-center gap-3">
+                    <i class="fas fa-file-import text-3xl"></i>
+                    <span>Tap to Select Excel File</span>
+                </button>
+                <div class="text-left mt-4 text-xs text-gray-500 space-y-1">
+                    <p class="font-bold text-gray-700">Supported Columns (Auto-detected):</p>
+                    <p>• Name / Student Name</p>
+                    <p>• Class / Grade / Std</p>
+                    <p>• Roll No / SN</p>
+                    <p>• DOB / Date of Birth</p>
+                    <p>• Mobile / Phone / Contact</p>
+                </div>
+            </div>
+
+            <!-- Share Link Container (Hidden initially) -->
+            <div id="shareContainer" class="hidden bg-green-50 p-5 rounded-2xl shadow-sm border border-green-200 text-center animate-fade-in">
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 text-green-600 text-xl">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3 class="font-bold text-green-800 mb-2">Upload Successful!</h3>
+                <p class="text-sm text-green-700 mb-4">Share this link with teachers/operators to collect photos and edit details.</p>
+                
+                <div class="flex items-center gap-2 bg-white border border-green-300 rounded-lg p-2 mb-3">
+                    <input type="text" id="shareUrl" readonly class="flex-1 bg-transparent text-sm text-gray-600 outline-none truncate" value="">
+                    <button onclick="copyShareLink()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm font-bold transition">Copy</button>
+                </div>
+                
+                <button onclick="openShareLink()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-md">
+                    Open Viewer Now <i class="fas fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= VIEWER / EDITOR MODE ================= -->
+        <div id="viewerSection" class="hidden">
+            <div class="flex justify-between items-end mb-4 px-1">
+                <div>
+                    <h2 class="font-bold text-gray-900 text-xl m-0" id="batchTitle">Batch Viewer</h2>
+                    <p class="text-xs text-gray-500 m-0" id="batchCounter">Loading students...</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs font-bold text-gray-400">PHOTOS DONE</div>
+                    <div class="text-lg font-black text-green-600" id="photoProgress">0 / 0</div>
+                </div>
+            </div>
+
+            <!-- Student List -->
+            <div id="studentList" class="flex flex-col gap-3">
+                <!-- Cards injected here via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= EDIT MODAL ================= -->
+    <div id="editModal" class="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-lg sm:rounded-2xl rounded-t-2xl p-5 slide-up-enter shadow-2xl max-h-[90vh] overflow-y-auto" id="editModalContent">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xl font-bold text-gray-900">Update Student</h3>
+                <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+
+            <input type="hidden" id="editId">
+            <input type="hidden" id="editBatchId">
+            
+            <label class="block text-xs font-bold text-gray-500 mb-1 ml-1">Full Name</label>
+            <input type="text" id="sName" placeholder="Full Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            
+            <div class="flex gap-3 mb-3">
+                <div class="w-1/2">
+                    <label class="block text-xs font-bold text-gray-500 mb-1 ml-1">Class</label>
+                    <input type="text" id="sClass" placeholder="Class" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+                <div class="w-1/2">
+                    <label class="block text-xs font-bold text-gray-500 mb-1 ml-1">Roll No</label>
+                    <input type="text" id="sRoll" placeholder="Roll No" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+            </div>
+            
+            <label class="block text-xs font-bold text-gray-500 mb-1 ml-1">Mobile Number</label>
+            <input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+
+            <label class="block text-xs font-bold text-gray-500 mb-1 ml-1">Date of Birth</label>
+            <input type="text" id="sDob" placeholder="DD/MM/YYYY or Date" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+
+            <!-- Photo Area -->
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 text-center mb-6 relative">
+                <div class="flex gap-3 justify-center mb-3">
+                    <button id="openCam" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-md"><i class="fas fa-camera text-xl mb-1 block"></i> Take Photo</button>
+                </div>
+                
+                <div class="relative inline-block w-full">
+                    <img id="preview" src="" class="w-32 h-40 object-cover mx-auto rounded-xl shadow-lg border-4 border-white hidden">
+                    <button id="removePhotoBtn" onclick="removePhoto()" class="hidden absolute top-2 right-1/2 transform translate-x-[4.5rem] bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-red-600">
+                        <i class="fas fa-trash text-sm"></i>
+                    </button>
+                </div>
+                <p id="noPhotoText" class="text-sm text-blue-400 font-medium mt-2">No photo captured yet</p>
+            </div>
+
+            <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg flex justify-center items-center gap-2">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+
+    <!-- Fullscreen Camera Modal -->
+    <div id="cameraModal" class="hidden fixed inset-0 bg-black z-[150] flex flex-col">
+        <div class="relative flex-1 w-full h-full overflow-hidden flex items-center justify-center bg-black">
+            <video id="cameraVideo" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline></video>
+            
+            <!-- Target Overlay mask: Darkens outside, keeps center clear, 3:4 aspect ratio -->
+            <div id="cameraOverlay" class="pointer-events-none absolute z-10 w-[70vw] max-w-[280px] aspect-[3/4] border-2 border-dashed border-white/80 rounded-xl flex flex-col items-center justify-end pb-8 mb-16 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]">
+                 <svg class="w-[85%] h-[85%] text-white/60 mb-2" viewBox="0 0 100 120" fill="none" stroke="currentColor" stroke-width="2.5">
+                     <ellipse cx="50" cy="45" rx="28" ry="34" />
+                     <path d="M 10 120 C 10 90, 20 80, 50 80 C 80 80, 90 90, 90 120" />
+                 </svg>
+                 <div class="absolute top-4 text-white font-bold tracking-widest text-center w-full uppercase text-xs drop-shadow-md">Align Face Here</div>
+            </div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="bg-black/90 pb-8 pt-4 px-6 flex justify-between items-center absolute bottom-0 w-full z-20">
+            <button onclick="closeCam()" class="text-white text-lg px-4 py-2 hover:bg-white/20 rounded-lg transition">Cancel</button>
+            <button id="snap" class="w-16 h-16 rounded-full bg-white border-4 border-gray-300 flex-shrink-0 active:scale-90 transition transform"></button>
+            <div class="w-16"></div> <!-- Spacer -->
+        </div>
+    </div>
+
+    <!-- Fixed Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+
+    <script>
+        // ==========================================
+        // UI UTILITIES
+        // ==========================================
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let bgClass = type === 'error' ? 'bg-red-600' : 'bg-gray-900';
+            let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-red-400"></i>' : '<i class="fas fa-check-circle text-green-400"></i>';
+
+            toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
+            toast.innerHTML = `${icon} <span class="text-sm font-medium leading-snug">${msg}</span>`;
+            
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-enter-active');
+            });
+            setTimeout(() => {
+                toast.classList.remove('toast-enter-active');
+                toast.classList.add('toast-exit-active');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ==========================================
+        // FIREBASE SETUP
+        // ==========================================
+        const firebaseConfig = {
+              apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+              authDomain: "idcard-60586.firebaseapp.com",
+              projectId: "idcard-60586",
+              storageBucket: "idcard-60586.firebasestorage.app",
+              messagingSenderId: "331979663377",
+              appId: "1:331979663377:web:026e537a7fcaca813129b0",
+              measurementId: "G-PXVV87C78S"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const firestore = firebase.firestore();
+
+        // App State
+        let currentBatchId = null;
+        let batchStudents = [];
+        let currentPhotoBase64 = null;
+
+        // Routing Logic
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const batchParam = urlParams.get('batch');
+            
+            if (batchParam) {
+                currentBatchId = batchParam;
+                document.getElementById('uploadSection').classList.add('hidden');
+                document.getElementById('viewerSection').classList.remove('hidden');
+                document.getElementById('headerTitle').innerHTML = `<i class="fas fa-users text-xl"></i> BATCH: ${currentBatchId}`;
+                loadBatchFromFirebase(currentBatchId);
+            }
+        };
+
+        // ==========================================
+        // UPLOAD MODE LOGIC
+        // ==========================================
+        document.getElementById('excelInput').addEventListener('change', handleExcelUpload);
+
+        function handleExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showToast("Reading Excel file...", "info");
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.SheetNames[0];
+                    const excelRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+                    
+                    if(excelRows.length === 0) return showToast("Excel file is empty", "error");
+
+                    // Resilient Parsing Logic: Handles spaces, casing, and common variations
+                    const parsedStudents = excelRows.map(row => {
+                        let s = { name: '', class: '', roll: '', dob: '', mobile: '' };
+                        
+                        for (let key in row) {
+                            let val = row[key] !== undefined ? String(row[key]).trim() : '';
+                            // Normalize key: lowercase and remove all spaces/special characters
+                            let normKey = key.toLowerCase().replace(/[^a-z0-9]/g, ''); 
+                            
+                            if (['name', 'studentname', 'fullname', 'student'].includes(normKey)) s.name = val;
+                            else if (['class', 'grade', 'std', 'standard'].includes(normKey)) s.class = val;
+                            else if (['roll', 'rollno', 'rollnumber', 'sn', 'rollnum'].includes(normKey)) s.roll = val;
+                            else if (['dob', 'dateofbirth', 'birthdate'].includes(normKey)) s.dob = val;
+                            else if (['mobile', 'mobileno', 'mob', 'phone', 'phonenumber', 'contact', 'contactno', 'whatsapp'].includes(normKey)) s.mobile = val;
+                        }
+                        return s;
+                    }).filter(s => s.name); // Keep only rows where a name was successfully mapped
+
+                    if(parsedStudents.length === 0) {
+                        const foundKeys = Object.keys(excelRows[0] || {}).join(", ");
+                        return showToast(`Could not find Name column. Found headers: ${foundKeys}`, "error");
+                    }
+                    
+                    uploadBatchToFirebase(parsedStudents);
+                } catch(error) {
+                    showToast("Error parsing Excel file", "error");
+                    console.error(error);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function uploadBatchToFirebase(studentsData) {
+            const batchId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            showToast(`Uploading ${studentsData.length} students...`, "info");
+            
+            try {
+                const batch = firestore.batch();
+                
+                studentsData.forEach((s, index) => {
+                    const docRef = firestore.collection('portal_students').doc();
+                    batch.set(docRef, {
+                        ...s,
+                        batchId: batchId,
+                        photoBase64: null,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        order: index
+                    });
+                });
+
+                await batch.commit();
+                
+                showToast("Upload complete!", "success");
+                
+                // Show Share Box - Safely get the base URL whether on server or local file
+                const baseUrl = window.location.href.split('?')[0];
+                const shareUrl = `${baseUrl}?batch=${batchId}`;
+                
+                document.getElementById('shareUrl').value = shareUrl;
+                document.getElementById('shareContainer').classList.remove('hidden');
+                
+            } catch (err) {
+                console.error(err);
+                showToast("Error uploading to cloud.", "error");
+            }
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('shareUrl');
+            input.select();
+            document.execCommand('copy');
+            showToast("Link copied!");
+        }
+
+        function openShareLink() {
+            window.location.href = document.getElementById('shareUrl').value;
+        }
+
+        // ==========================================
+        // VIEWER / EDITOR LOGIC
+        // ==========================================
+        async function loadBatchFromFirebase(batchId) {
+            try {
+                firestore.collection('portal_students')
+                    .where('batchId', '==', batchId)
+                    .orderBy('order')
+                    .onSnapshot((snapshot) => {
+                        batchStudents = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        renderViewerList();
+                    });
+            } catch(e) {
+                console.error(e);
+                showToast("Error loading batch.", "error");
+            }
+        }
+
+        function renderViewerList() {
+            const list = document.getElementById('studentList');
+            list.innerHTML = '';
+            
+            let photoCount = 0;
+            
+            batchStudents.forEach((s, index) => {
+                if (s.photoBase64) photoCount++;
+
+                const div = document.createElement('div');
+                div.className = 'bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition';
+                div.onclick = () => openEditModal(s.id);
+                
+                let photoIndicator = s.photoBase64 
+                    ? `<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-green-400 p-0.5"><img src="${s.photoBase64}" class="w-full h-full rounded-full object-cover"></div>`
+                    : `<div class="w-12 h-12 rounded-full bg-red-50 flex flex-col items-center justify-center text-red-400 border border-red-200"><i class="fas fa-camera mb-0.5"></i><span class="text-[8px] font-bold">MISSING</span></div>`;
+
+                let details = [];
+                if(s.class) details.push(`Cls: ${s.class}`);
+                if(s.roll) details.push(`Roll: ${s.roll}`);
+                
+                div.innerHTML = `
+                    <div class="text-gray-400 font-bold text-xs w-5 text-center">${index + 1}</div>
+                    ${photoIndicator}
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-gray-900 text-sm truncate">${s.name}</div>
+                        <div class="text-xs text-gray-500 mt-0.5">${details.join(' | ') || 'No details'}</div>
+                    </div>
+                    <div class="text-blue-500 bg-blue-50 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-chevron-right text-sm"></i>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            document.getElementById('batchCounter').textContent = `Total Students: ${batchStudents.length}`;
+            document.getElementById('photoProgress').textContent = `${photoCount} / ${batchStudents.length}`;
+            
+            if(photoCount === batchStudents.length && batchStudents.length > 0) {
+                document.getElementById('photoProgress').className = "text-lg font-black text-green-500";
+            } else {
+                document.getElementById('photoProgress').className = "text-lg font-black text-amber-500";
+            }
+        }
+
+        function openEditModal(id) {
+            const s = batchStudents.find(x => x.id === id);
+            if(!s) return;
+            
+            document.getElementById('editId').value = s.id;
+            document.getElementById('editBatchId').value = s.batchId;
+            document.getElementById('sName').value = s.name || '';
+            document.getElementById('sClass').value = s.class || '';
+            document.getElementById('sRoll').value = s.roll || '';
+            document.getElementById('sPhone').value = s.mobile || '';
+            document.getElementById('sDob').value = s.dob || '';
+            
+            if (s.photoBase64) {
+                setPreviewImage(s.photoBase64);
+            } else {
+                removePhoto();
+            }
+            
+            const modal = document.getElementById('editModal');
+            const content = document.getElementById('editModalContent');
+            modal.classList.remove('hidden');
+            
+            // Animation
+            content.classList.remove('slide-up-enter-active');
+            content.classList.add('slide-up-enter');
+            requestAnimationFrame(() => {
+                content.classList.remove('slide-up-enter');
+                content.classList.add('slide-up-enter-active');
+            });
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editModal');
+            const content = document.getElementById('editModalContent');
+            
+            content.classList.remove('slide-up-enter-active');
+            content.classList.add('slide-up-exit-active');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                content.classList.remove('slide-up-exit-active');
+            }, 250);
+        }
+
+        document.getElementById('saveBtn').onclick = async () => {
+            const id = document.getElementById('editId').value;
+            const name = document.getElementById('sName').value.trim();
+            const cls = document.getElementById('sClass').value.trim();
+            const roll = document.getElementById('sRoll').value.trim();
+            const phone = document.getElementById('sPhone').value.trim();
+            const dob = document.getElementById('sDob').value.trim();
+
+            if(!name) return showToast('Name is required', 'error');
+            
+            const btn = document.getElementById('saveBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin mr-2'></i> Saving...";
+            btn.disabled = true;
+
+            try {
+                await firestore.collection('portal_students').doc(id).update({
+                    name: name,
+                    class: cls,
+                    roll: roll,
+                    mobile: phone,
+                    dob: dob,
+                    photoBase64: currentPhotoBase64,
+                    lastModified: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                showToast("Saved successfully!");
+                closeEditModal();
+            } catch(e) {
+                console.error(e);
+                showToast("Failed to save changes", "error");
+            } finally {
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        };
+
+        // ==========================================
+        // CAMERA LOGIC
+        // ==========================================
+        document.getElementById('openCam').onclick = async () => {
+            document.getElementById('cameraModal').classList.remove('hidden');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                document.getElementById('cameraVideo').srcObject = stream;
+            } catch(e) {
+                showToast("Camera access denied or unavailable", "error");
+                closeCam();
+            }
+        };
+
+        document.getElementById('snap').onclick = async () => {
+            const video = document.getElementById('cameraVideo');
+            if(!video.videoWidth) return;
+            
+            const overlay = document.getElementById('cameraOverlay');
+            
+            const vidW = video.videoWidth;
+            const vidH = video.videoHeight;
+            const rectW = video.clientWidth;
+            const rectH = video.clientHeight;
+            
+            const scale = Math.max(rectW / vidW, rectH / vidH);
+            const renderW = vidW * scale;
+            const renderH = vidH * scale;
+            
+            const offsetX = (rectW - renderW) / 2;
+            const offsetY = (rectH - renderH) / 2;
+            
+            const overlayRect = overlay.getBoundingClientRect();
+            const videoRect = video.getBoundingClientRect();
+            
+            const overlayLeft = overlayRect.left - videoRect.left;
+            const overlayTop = overlayRect.top - videoRect.top;
+            
+            const cropX = (overlayLeft - offsetX) / scale;
+            const cropY = (overlayTop - offsetY) / scale;
+            const cropW = overlayRect.width / scale;
+            const cropH = overlayRect.height / scale;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 300; 
+            tempCanvas.height = 400;
+            const ctx = tempCanvas.getContext('2d');
+            
+            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, 300, 400);
+            const imgData = tempCanvas.toDataURL('image/jpeg', 0.75); // 0.75 quality compression
+            
+            setPreviewImage(imgData);
+            closeCam();
+        };
+
+        function closeCam() {
+            const s = document.getElementById('cameraVideo').srcObject;
+            if(s) s.getTracks().forEach(t=>t.stop());
+            document.getElementById('cameraModal').classList.add('hidden');
+        }
+
+        function setPreviewImage(src) {
+            currentPhotoBase64 = src;
+            const preview = document.getElementById('preview');
+            const removeBtn = document.getElementById('removePhotoBtn');
+            const noPhotoText = document.getElementById('noPhotoText');
+            
+            preview.src = src;
+            preview.classList.remove('hidden');
+            removeBtn.classList.remove('hidden');
+            noPhotoText.classList.add('hidden');
+        }
+
+        window.removePhoto = function() {
+            currentPhotoBase64 = null;
+            document.getElementById('preview').src = '';
+            document.getElementById('preview').classList.add('hidden');
+            document.getElementById('removePhotoBtn').classList.add('hidden');
+            document.getElementById('noPhotoText').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
