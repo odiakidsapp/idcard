@@ -155,6 +155,7 @@
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6 hidden animate-fade-in" id="addStudentFormContainer">
                 <div class="flex justify-between items-center mb-4">
                     <h4 id="formTitle" class="font-bold text-lg text-gray-800">Add Student</h4>
+                    <button id="deleteInEditBtn" onclick="deleteFromEdit()" class="hidden text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition" title="Delete Student"><i class="fas fa-trash"></i></button>
                 </div>
                 
                 <input type="hidden" id="editId">
@@ -1310,6 +1311,7 @@
 
                 const serialNumber = filteredStudents.length - index;
 
+                // Restructured to match new UI layout (Delete removed from dropdown, Edit on main tile)
                 div.innerHTML = `
                     <div class="p-3 flex items-center gap-2">
                         <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0 cursor-pointer" onclick="toggleDetails(${s.id})">#${serialNumber}</div>
@@ -1323,9 +1325,8 @@
                             <div class="text-xs text-gray-600 font-medium mt-1">Class: <span class="text-gray-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-gray-300">|</span> Roll: <span class="text-gray-800">${s.roll}</span></div>
                             <div class="mt-1">${statusHtml}</div>
                         </div>
-                        <div class="flex flex-col gap-1.5 flex-shrink-0 pl-1 border-l border-gray-100">
-                            <button onclick="editStudent(${s.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg transition shadow-sm text-xs"><i class="fas fa-pen"></i></button>
-                            <button onclick="deleteStudent(${s.id})" class="text-red-600 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition shadow-sm text-xs"><i class="fas fa-trash"></i></button>
+                        <div class="flex-shrink-0 pl-2">
+                            <button onclick="editStudent(${s.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-10 h-10 rounded-full transition shadow-sm flex items-center justify-center text-sm"><i class="fas fa-pen"></i></button>
                         </div>
                     </div>
                     
@@ -1475,6 +1476,9 @@
             saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> Update Student';
             saveBtn.classList.replace('bg-green-600', 'bg-blue-600');
             saveBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+            
+            // Show Delete Button inside Edit Form
+            document.getElementById('deleteInEditBtn').classList.remove('hidden');
             document.getElementById('cancelEdit').classList.remove('hidden');
             
             const formContainer = document.getElementById('addStudentFormContainer');
@@ -1484,6 +1488,12 @@
             
             const yOffset = formContainer.getBoundingClientRect().top + window.scrollY - 70; 
             window.scrollTo({top: yOffset, behavior: 'smooth'});
+        }
+
+        window.deleteFromEdit = function() {
+            const id = document.getElementById('editId').value;
+            if(!id) return;
+            deleteStudent(Number(id));
         }
 
         document.getElementById('cancelEdit').onclick = resetForm;
@@ -1504,6 +1514,9 @@
             saveBtn.innerHTML = 'Save Student';
             saveBtn.classList.replace('bg-blue-600', 'bg-green-600');
             saveBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+            
+            // Hide Delete Button inside Edit Form
+            document.getElementById('deleteInEditBtn').classList.add('hidden');
             document.getElementById('cancelEdit').classList.add('hidden');
         }
 
@@ -1527,6 +1540,11 @@
 
             tx.oncomplete = () => {
                 showToast("Moved to Recycle Bin", "info");
+                resetForm(); // Reset form in case user deleted from inside the edit view
+                document.getElementById('addStudentFormContainer').classList.add('hidden');
+                document.querySelector('#toggleFormBtn span').textContent = "Add New Student Manually";
+                document.querySelector('#toggleFormBtn i').className = "fas fa-user-plus";
+
                 loadStudents();
                 loadRecycleBin();
                 if(navigator.onLine) {
