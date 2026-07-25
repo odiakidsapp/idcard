@@ -52,7 +52,7 @@
 
     <!-- Offline Banner -->
     <div id="offlineBanner" class="hidden fixed top-0 inset-x-0 z-[70] bg-red-500 text-white px-4 py-2 shadow-md flex justify-center items-center text-sm font-bold transition-transform duration-300 transform -translate-y-full">
-        <i class="fas fa-wifi-slash mr-2"></i> You are offline. Data will be saved locally.
+        <i class="fas fa-wifi-slash mr-2"></i> You are offline. Changes saved locally.
     </div>
 
     <!-- Update Banner -->
@@ -138,7 +138,12 @@
             <!-- School Header -->
             <div class="glass-header sticky top-14 z-30 -mx-4 px-4 py-3 mb-5 shadow-sm border-b border-gray-200 flex justify-between items-center transition-all duration-300" id="schoolSubHeader">
                 <div class="flex-1 truncate pr-2">
-                    <h3 id="currentSchoolHeader" class="m-0 font-bold text-gray-900 truncate">School Name</h3>
+                    <h3 class="m-0 font-bold text-gray-900 truncate flex items-center">
+                        <span id="currentSchoolHeader">School Name</span>
+                        <span id="liveIndicator" class="hidden text-green-500 text-[10px] ml-2 font-black tracking-wide" title="Live Sync Active">
+                            <i class="fas fa-circle text-[8px] mr-1 animate-pulse"></i>LIVE
+                        </span>
+                    </h3>
                     <p id="currentSchoolSubHeader" class="text-xs text-gray-500 truncate">District</p>
                 </div>
                 <button onclick="openEditSchoolModal()" class="bg-gray-100 hover:bg-gray-200 text-blue-600 px-3 py-1.5 rounded-lg text-sm font-bold transition flex-shrink-0">
@@ -515,6 +520,9 @@
             }
         }
 
+        // Live Sync State
+        let unsubscribeRealtime = null;
+
         function updateOnlineStatus() {
             const banner = document.getElementById('offlineBanner');
             const header = document.getElementById('mainHeader');
@@ -529,8 +537,19 @@
                 }, 10);
             }
         }
-        window.addEventListener('online', () => { updateOnlineStatus(); syncAllPending(); });
-        window.addEventListener('offline', updateOnlineStatus);
+        
+        window.addEventListener('online', () => { 
+            updateOnlineStatus(); 
+            syncAllPending(); 
+            setupRealtimeListener(); 
+        });
+        
+        window.addEventListener('offline', () => {
+            updateOnlineStatus();
+            if(unsubscribeRealtime) { unsubscribeRealtime(); unsubscribeRealtime = null; }
+            const liveIndicator = document.getElementById('liveIndicator');
+            if(liveIndicator) liveIndicator.classList.add('hidden');
+        });
         
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -608,6 +627,62 @@
                 }
             }
         };
+
+        // ==========================================
+        // REALTIME SYNC LISTENER
+        // ==========================================
+        function setupRealtimeListener() {
+            if(!currentSchoolData || !currentSchoolData.udise || !navigator.onLine) return;
+            
+            if(unsubscribeRealtime) unsubscribeRealtime();
+
+            const liveIndicator = document.getElementById('liveIndicator');
+            if(liveIndicator) liveIndicator.classList.remove('hidden');
+
+            unsubscribeRealtime = firestore.collection('students')
+                .where('udise', '==', currentSchoolData.udise)
+                .onSnapshot(snapshot => {
+                    const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
+                    const studentStore = tx.objectStore('students');
+                    const deletedStore = tx.objectStore('deleted_students');
+                    let hasUpdates = false;
+
+                    snapshot.docChanges().forEach(change => {
+                        const data = change.doc.data();
+                        const student = { ...data, id: Number(change.doc.id), synced: true };
+                        delete student.submittedAt;
+
+                        if(student.finalised === undefined) student.finalised = true;
+
+                        if (change.type === 'added' || change.type === 'modified') {
+                            if (!data.deleted) {
+                                studentStore.put(student);
+                                deletedStore.delete(student.id);
+                            } else {
+                                studentStore.delete(student.id);
+                                deletedStore.put(student);
+                            }
+                            hasUpdates = true;
+                        }
+                        if (change.type === 'removed') {
+                            studentStore.delete(student.id);
+                            deletedStore.delete(student.id);
+                            hasUpdates = true;
+                        }
+                    });
+
+                    tx.oncomplete = () => {
+                        if (hasUpdates) {
+                            loadStudents();
+                            loadRecycleBin();
+                        }
+                    };
+                }, error => {
+                    console.error("Live sync error:", error);
+                    if(liveIndicator) liveIndicator.classList.add('hidden');
+                });
+        }
+
 
         // ==========================================
         // IMAGE PROCESSING (CROPPER & CAMERA)
@@ -780,7 +855,6 @@
         // ==========================================
         // SYNC LOGIC
         // ==========================================
-        let isSyncing = false;
         async function syncAllPending() {
             if(!db || !navigator.onLine) return;
             if(isSyncing) return;
@@ -1091,6 +1165,8 @@
                 const confirmed = await showConfirm("Logging out will clear the current school and local data from this device. Are you sure?", "Logout?", "Yes, Logout");
                 if(!confirmed) return;
                 
+                if(unsubscribeRealtime) unsubscribeRealtime();
+
                 const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
                 tx.objectStore('schools').clear();
                 tx.objectStore('students').clear();
@@ -1106,6 +1182,9 @@
             document.getElementById('entrySection').classList.remove('hidden');
             updateSchoolHeader();
             visibleCount = 50; 
+            
+            setupRealtimeListener();
+            
             loadStudents();
             loadRecycleBin();
         }
@@ -1203,6 +1282,9 @@
                 document.getElementById('editSchoolModal').classList.add('hidden');
                 btn.innerHTML = origText;
                 btn.disabled = false;
+                
+                setupRealtimeListener(); 
+                
                 loadStudents();
                 loadSchools();
             };
