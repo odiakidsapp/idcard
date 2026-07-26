@@ -851,10 +851,8 @@ function renderDashboard(){
              variationsHtml = `<div class="variation-item" style="color:#888; font-style:italic;">No students added yet.</div>`;
         }
 
-        let missingUdiseWarning = '';
-        if (s.missingUdise) {
-            missingUdiseWarning = `<div style="background:#f8d7da; color:#721c24; font-size:11px; padding:6px 10px; border-radius:6px; margin-top:10px; display:flex; gap:6px; align-items:start;"><i class="fas fa-exclamation-triangle" style="margin-top:2px;"></i> No UDISE. Tap Master Profile to add it.</div>`;
-        }
+        let missingUdiseWarning = s.missingUdise 
+            ? `<div style="background:#f8d7da; color:#721c24; font-size:11px; padding:6px 10px; border-radius:6px; margin-top:10px; display:flex; gap:6px; align-items:start;"><i class="fas fa-exclamation-triangle" style="margin-top:2px;"></i> No UDISE. Tap Master Profile to add it.</div>` : '';
         
         let pendingBadge = s.pendingCount > 0 ? `<div style="margin-top:6px; font-weight:800; color:#856404; background: #ffeeba; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-clock mr-1"></i> ${s.pendingCount} Pending Review</div>` : '';
 
