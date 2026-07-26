@@ -135,7 +135,6 @@
         </div>
     </div>
 
-    <!-- EXPANDED STATS PANEL -->
     <div class="stats-panel" id="statsPanel">
         <div class="stat-box primary">
             <div class="stat-value" id="statTotal">0</div>
@@ -183,7 +182,6 @@
         </div>
     </div>
 
-    <!-- Filter Bar -->
     <div class="filter-bar">
         <div style="display: flex; align-items: center; gap: 8px;">
             <label style="font-size:13px; font-weight:bold; color: #444;">Data Status:</label>
@@ -326,7 +324,6 @@
             <button class="btn btn-primary" id="saveSchoolBtn">Save Master Profile</button>
         </div>
 
-        <!-- DANGER ZONE -->
         <div class="danger-zone">
             <h4 style="margin: 0 0 10px 0; color: #dc3545; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Danger Zone (Delete Data)</h4>
             <div id="deleteOptionsContainer" style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -344,7 +341,6 @@
     </div>
 </div>
 
-<!-- Custom Alert/Confirm Modal -->
 <div id="customAlertModal" class="modal" style="z-index: 9999;">
     <div class="modal-content" style="text-align:center; max-width: 350px;">
         <div id="customAlertIcon" style="font-size: 40px; color: #007bff; margin-bottom: 10px;">ℹ️</div>
@@ -369,7 +365,6 @@ const SIGN_POS = { x: 434, y: 850, maxW: 180, maxH: 80 };
 
 window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
 
-// Class Normalizer for robust mapping across Admin & App
 function normalizeClass(cls) {
     if (!cls) return "";
     const c = String(cls).toLowerCase().replace(/[\s\-\.]/g, '');
@@ -387,7 +382,6 @@ function normalizeClass(cls) {
     return cls; 
 }
 
-// True, strict source detection
 function getStudentSource(d) {
     if (d.source) return d.source;
     if (d.batchId || d.isExcel) return 'excel';
@@ -425,13 +419,11 @@ function escapeHtml(s){
     return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); 
 }
 
-// Essential for passing variables into onclick safely
 function escapeJs(s){
     if(!s) return '';
     return (s+'').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
 }
 
-// Custom Alert UI
 function showMsg(msg, isConfirm = false, isDanger = false) {
     return new Promise(resolve => {
         document.getElementById('customAlertMsg').innerHTML = msg;
@@ -461,13 +453,13 @@ function showMsg(msg, isConfirm = false, isDanger = false) {
     });
 }
 
-// Database Core Variables
 let db = null;
 let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
 let lastSyncId = Number(localStorage.getItem('adminLastSyncId')) || 0;
 let currentSchoolStudents = [];
 let activeUdise = null;
 let activeSource = null; 
+let currentViewUdise = null; // Adding this to avoid error in saveSchoolBtn logic
 
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
 
@@ -640,7 +632,6 @@ async function rebuildSchoolsMap() {
             }
         });
 
-        // Pull Master School overrides
         const schoolQs = await db.collection('schools').get();
         schoolQs.forEach(doc => {
             const d = doc.data();
@@ -859,6 +850,7 @@ function showDashboard(){
     document.getElementById('dashboardView').classList.remove('hidden');
     activeUdise = null;
     activeSource = null;
+    currentViewUdise = null;
     renderDashboard();
 }
 
@@ -911,6 +903,7 @@ function openSchoolDetail(udise, src){
     
     activeUdise = udise;
     activeSource = src;
+    currentViewUdise = udise;
     
     document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
     
@@ -1201,6 +1194,7 @@ document.getElementById('fontInput').onchange = async e => {
     document.getElementById('fontStatus').textContent = 'Manual Load';
     updateSelection();
 };
+
 document.getElementById('templateInput').onchange = e => {
     const f = e.target.files[0]; if(!f) return;
     const img = new Image(); img.src = URL.createObjectURL(f);
@@ -1239,15 +1233,16 @@ const ctx = canvas.getContext('2d');
 
 async function drawCard(s) {
     canvas.width = CARD_W; canvas.height = CARD_H;
-    ctx.clearRect(0,0,CARD_W,CARD_H);
-
-    // FIX: Force a solid white background so transparent pixels don't print as black
-    ctx.fillStyle = '#ffffff';
+    
+    // FIX APPLIED HERE: Fill with solid white instead of clearRect. 
+    // This stops transparent PNGs (like cut-out HM signatures) from rendering with black backgrounds.
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, CARD_W, CARD_H);
 
     ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
 
-    const sm = schoolsMap[activeUdise];
+    const targetUdise = activeUdise || s.udise || ('NO_UDISE:' + s.schoolName);
+    const sm = schoolsMap[targetUdise];
 
     if(window.assets.mode === 'auto') {
         const centerHeadX = SCHOOL_NAME_POS.x + (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) / 2;
@@ -1367,7 +1362,7 @@ document.getElementById('verifyBtn').onclick = async () => {
             tempCvs.width = CARD_W;
             tempCvs.height = CARD_H;
             const tctx = tempCvs.getContext('2d');
-            tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+            tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
             tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
             const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.90);
 
@@ -1427,7 +1422,7 @@ document.getElementById('generateBtn').onclick = async () => {
         tempCvs.width = CARD_W;
         tempCvs.height = CARD_H;
         const tctx = tempCvs.getContext('2d');
-        tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+        tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
         tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
         const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.90);
 
@@ -1454,7 +1449,7 @@ document.getElementById('generateBtn').onclick = async () => {
     for(let i=0; i<imgs.length; i+=10) {
         const chunk = imgs.slice(i, i+10);
         
-        pctx.fillStyle='#ffffff'; pctx.fillRect(0,0,A4_W,A4_H);
+        pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
         chunk.forEach((img, idx) => {
             const c = idx % 5; const r = Math.floor(idx/5);
             const x = startX_Gaps + c*(CARD_W+GAP_X);
@@ -1465,7 +1460,7 @@ document.getElementById('generateBtn').onclick = async () => {
         const pBlobGaps = await new Promise(r => pageCvs.toBlob(r, 'image/jpeg', 0.9));
         folderA4WithGaps.file(`A4_Print_Sheet_${Math.floor(i/10)+1}.jpg`, pBlobGaps);
 
-        pctx.fillStyle='#ffffff'; pctx.fillRect(0,0,A4_W,A4_H);
+        pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
         chunk.forEach((img, idx) => {
             const c = idx % 5; const r = Math.floor(idx/5);
             const x = startX_NoGaps + c*CARD_W;
@@ -1554,6 +1549,10 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         let w = img.width, h = img.height;
         if(w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
         canvas.width = w; canvas.height = h;
+        
+        // FIX APPLIED HERE: Fill solid white before drawing the signature to remove transparency issues
+        cx.fillStyle = '#FFFFFF';
+        cx.fillRect(0, 0, w, h);
         cx.drawImage(img, 0, 0, w, h);
         
         const compressedBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
@@ -1769,10 +1768,6 @@ document.getElementById('previewEditBtn').onclick = async () => {
     cvs.width = CARD_W; cvs.height = CARD_H;
     const pctx = cvs.getContext('2d');
     
-    // Fill white
-    pctx.fillStyle = '#ffffff';
-    pctx.fillRect(0, 0, CARD_W, CARD_H);
-
     const img = new Image(); img.src = URL.createObjectURL(blob);
     await new Promise(r => img.onload = r);
     pctx.drawImage(img, 0, 0);
