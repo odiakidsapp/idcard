@@ -907,8 +907,11 @@ function openUdiseSelector(udise) {
 
     const variations = Object.keys(s.nameCounts || {});
 
-    // If there's only 0 or 1 variation, skip the selector and just open it
-    if(variations.length <= 1) {
+    // FIX: If there is exactly one variation, lock directly into it to prevent mixups.
+    if(variations.length === 1) {
+        openSchoolDetail(udise, variations[0]);
+        return;
+    } else if (variations.length === 0) {
         openSchoolDetail(udise, 'all');
         return;
     }
@@ -950,17 +953,17 @@ function openUdiseSelector(udise) {
 
 let currentViewUdise = null;
 
-function openSchoolDetail(udise, specificSchoolName = 'all'){
+function openSchoolDetail(udise, specificVariationName = 'all'){
     let s = schoolsMap[udise];
     if(!s) return;
     
     currentViewUdise = udise;
-    forcedSchoolNameFilter = specificSchoolName;
+    forcedSchoolNameFilter = specificVariationName;
     
     document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
     
     // Header logic: If user picked a specific source, show that in header, otherwise show Master Name
-    const displayName = (specificSchoolName === 'all') ? (s.name || 'Unnamed School') : specificSchoolName;
+    const displayName = (specificVariationName === 'all') ? (s.name || 'Unnamed School') : specificVariationName;
     document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas fa-school" style="color:#007bff; margin-right:8px;"></i>${escapeHtml(displayName)}`;
     
     document.getElementById('viewAddress').innerHTML = `<i class="fas fa-map-marker-alt" style="color:#dc3545"></i> ${s.block}, ${s.district} - ${s.pin}`;
