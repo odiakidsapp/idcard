@@ -63,16 +63,14 @@
         <button onclick="window.location.reload()" class="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow hover:bg-gray-100 transition">Refresh Now</button>
     </div>
 
-    <!-- App Navigation Header (Unified) -->
+    <!-- App Navigation Header -->
     <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white sticky top-0 z-50 shadow-md transition-all duration-300" id="mainHeader">
         <div class="w-full max-w-lg mx-auto px-4 py-3 flex justify-between items-center">
             
-            <!-- Left: Hamburger Icon -->
             <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
                 <i class="fas fa-bars text-xl"></i>
             </button>
 
-            <!-- Center: School Profile & Live Indicator -->
             <div class="flex-1 min-w-0 px-3 text-center flex flex-col items-center justify-center">
                 <div class="flex items-center justify-center gap-2 mb-0.5 w-full">
                     <h3 id="currentSchoolHeader" class="m-0 font-bold text-lg truncate flex items-center justify-center">ID Cards Pro</h3>
@@ -83,12 +81,10 @@
                 <p id="currentSchoolSubHeader" class="text-blue-100 text-xs truncate w-full text-center">Data Entry Portal</p>
             </div>
 
-            <!-- Right: Edit School Button (Hidden by default, shown when school is loaded) -->
             <button id="editSchoolBtn" onclick="openEditSchoolModal()" class="hidden bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Edit School">
                 <i class="fas fa-pen text-xs"></i>
             </button>
             
-            <!-- Spacer to balance header before school is loaded -->
             <div id="headerSpacer" class="w-9 h-9 flex-shrink-0"></div>
 
         </div>
@@ -203,7 +199,7 @@
                 </div>
             </div>
 
-            <!-- Add Student Button (Inline Above List) -->
+            <!-- Add Student Button -->
             <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
                 <i class="fas fa-user-plus"></i> <span>Add New Student Manually</span>
             </button>
@@ -318,7 +314,7 @@
     <div id="editSchoolModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl p-6">
             <div class="flex justify-between items-center mb-5">
-                <h3 class="text-xl font-bold text-gray-900">Edit School Info</h3>
+                <h3 class="text-xl font-bold text-gray-900">Edit School</h3>
                 <button onclick="document.getElementById('editSchoolModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
             </div>
             
@@ -442,14 +438,12 @@
             const overlay = document.getElementById('sidebarOverlay');
             
             if (sidebar.classList.contains('-translate-x-full')) {
-                // Open
                 overlay.classList.remove('hidden');
                 setTimeout(() => {
                     overlay.classList.remove('opacity-0');
                     sidebar.classList.remove('-translate-x-full');
                 }, 10);
             } else {
-                // Close
                 overlay.classList.add('opacity-0');
                 sidebar.classList.add('-translate-x-full');
                 setTimeout(() => {
@@ -702,7 +696,11 @@
 
                     snapshot.docChanges().forEach(change => {
                         const data = change.doc.data();
-                        const student = { ...data, id: Number(change.doc.id), synced: true };
+                        
+                        // Preserve the source from Firestore so live sync doesn't overwrite it
+                        const actualSource = getStudentSource(data);
+                        
+                        const student = { ...data, id: Number(change.doc.id), synced: true, source: actualSource };
                         delete student.submittedAt;
 
                         if(student.finalised === undefined) student.finalised = true;
@@ -1070,12 +1068,11 @@
 
         function performRestore(docs, schoolName, udise, source, statusEl) {
             
-            // Generate a unique local ID based on UDISE + SOURCE
             const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
             
             const schoolObj = {
-                name: localId, // Required unique key for IndexedDB
-                realSchoolName: schoolName, // The actual display name
+                name: localId, 
+                realSchoolName: schoolName, 
                 source: source,
                 phone: docs[0].data.hmPhone || '', 
                 block: docs[0].data.block || '',
@@ -1091,7 +1088,6 @@
 
             const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
             
-            // Delete old entry if exists and put new one
             tx.objectStore('schools').delete(localId);
             tx.objectStore('schools').put(schoolObj);
 
@@ -1100,7 +1096,9 @@
             let restoreCount = 0;
             
             docs.forEach(({ id, data }) => {
-                const student = { ...data, id: Number(id), synced: true };
+                // 🚨 CRITICAL FIX: We must permanently inject the source tag before setting synced:true, 
+                // so the app NEVER forgets if this was Excel or Manual data!
+                const student = { ...data, id: Number(id), synced: true, source: source };
                 delete student.submittedAt;
 
                 if (!data.deleted) {
@@ -1290,7 +1288,6 @@
         }
 
         function enterSchool(schoolObj) {
-            // Setup backward compatibility for old school objects that didn't have realSchoolName
             currentSchool = schoolObj.name;
             currentSchoolData = schoolObj;
             if (!currentSchoolData.realSchoolName) currentSchoolData.realSchoolName = currentSchoolData.name;
@@ -1361,7 +1358,6 @@
 
             const firestoreUpdates = { name: newName, phone: newPhone, block: newBlock, district: newDistrict, pin: newPin, udise: newUdise, lastModified: Date.now() };
             
-            // Push to Schools Database directly
             if(navigator.onLine) {
                  firestore.collection('schools').doc(newUdise).set(firestoreUpdates, {merge:true}).catch(e => console.log(e));
                  if(currentSchoolData.udise !== newUdise) {
@@ -1372,20 +1368,19 @@
             const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
             tx.objectStore('schools').put(updatedSchool);
 
-            // Update local students that belong strictly to this batch
             const targetUdise = currentSchoolData.udise;
             const targetSource = currentSchoolData.source;
             
             const stStore = tx.objectStore('students');
             stStore.getAll().onsuccess = (e) => {
                 e.target.result.forEach(s => {
-                    // Legacy safety OR strict udise+source matching
                     if( (!s.udise && s.schoolName === currentSchoolData.name) || 
                         (s.udise === targetUdise && getStudentSource(s) === targetSource)) {
                         
                         s.schoolName = newName; 
                         s.block = newBlock; s.district = newDistrict;
                         s.pin = newPin; s.udise = newUdise; s.hmPhone = newPhone;
+                        s.source = targetSource; 
                         stStore.put(s); 
                         
                         if(navigator.onLine) {
@@ -1406,6 +1401,7 @@
                         s.schoolName = newName; 
                         s.block = newBlock; s.district = newDistrict;
                         s.pin = newPin; s.udise = newUdise; s.hmPhone = newPhone;
+                        s.source = targetSource;
                         delStore.put(s); 
                     }
                 });
@@ -1436,9 +1432,7 @@
                 
                 let all = e.target.result;
                 
-                // FILTER STRICTLY BY UDISE AND SOURCE
                 students = all.filter(s => {
-                    // Legacy backward compat
                     if (!targetUdise || !s.udise) {
                         return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
                     }
@@ -1544,7 +1538,6 @@
 
                 const serialNumber = filteredStudents.length - index;
 
-                // Horizontal Row layout with safe gap between Pen and Trash icons
                 div.innerHTML = `
                     <div class="p-3 flex items-center gap-2">
                         <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0">#${serialNumber}</div>
@@ -1777,7 +1770,6 @@
                 
                 let all = e.target.result;
                 
-                // FILTER STRICTLY BY UDISE AND SOURCE
                 deletedStudents = all.filter(s => {
                     if (!targetUdise || !s.udise) return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
                     return s.udise === targetUdise && getStudentSource(s) === targetSource;
