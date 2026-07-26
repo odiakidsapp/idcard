@@ -231,6 +231,20 @@
 
     <!-- ================= MODALS ================= -->
 
+    <!-- UDISE Selector Modal -->
+    <div id="udiseSelectorModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <h3 class="text-xl font-bold text-blue-800 mb-2">Multiple Entries Found</h3>
+            <p class="text-sm text-gray-600 mb-5">This UDISE contains entries from different sources. Which batch would you like to load?</p>
+            
+            <div id="udiseSelectorList" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1 pb-4">
+                <!-- Dynamically populated -->
+            </div>
+            
+            <button onclick="document.getElementById('udiseSelectorModal').classList.add('hidden')" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
+        </div>
+    </div>
+
     <!-- Add/Edit Student Modal -->
     <div id="addStudentModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl p-5 relative" id="addStudentFormContainer">
@@ -487,6 +501,17 @@
             return dateStr;
         }
 
+        function escapeHtml(s){ 
+            if(!s) return '';
+            return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); 
+        }
+
+        function getVariationName(d) {
+            const isExcel = d.source === 'excel' || d.batchId || d.isExcel || (d.synced === undefined && d.photoName === undefined && d.source !== 'manual');
+            const prefix = isExcel ? '[Excel Upload] ' : '[Manual App] ';
+            return prefix + (d.schoolName || 'Unknown School');
+        }
+
         // ==========================================
         // UI UTILITIES
         // ==========================================
@@ -624,6 +649,7 @@
         let currentPhotoBlob = null;
         let visibleCount = 50; 
         let cropper = null;
+        let forcedSchoolNameFilter = 'all'; // Local variable to track active filter
 
         const req = indexedDB.open('SchoolDataApp', 6); 
         req.onupgradeneeded = e => {
@@ -1114,31 +1140,39 @@
                 }
 
                 const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+                
+                // Use Variation Name for grouping
                 const groups = {};
                 docs.forEach(d => {
-                    const name = d.data.schoolName || '(Unnamed School)';
-                    if (!groups[name]) groups[name] = [];
-                    groups[name].push(d);
+                    const varName = getVariationName(d.data);
+                    if (!groups[varName]) groups[varName] = [];
+                    groups[varName].push(d);
                 });
+                
                 const distinctNames = Object.keys(groups);
 
                 if (distinctNames.length === 1) {
-                    performRestore(groups[distinctNames[0]], distinctNames[0], udise, statusEl);
+                    // Extract the raw school name from the first document in the group to save as the School Profile name
+                    const rawName = groups[distinctNames[0]][0].data.schoolName || '(Unnamed School)';
+                    performRestore(groups[distinctNames[0]], rawName, udise, statusEl);
                     return;
                 }
 
+                // If multiple variations, let the user pick which batch to load locally
                 statusEl.className = 'text-sm mt-3 font-medium text-amber-600 block';
-                statusEl.innerHTML = `Found <b>${distinctNames.length} different school names</b>. Please choose one:`;
+                statusEl.innerHTML = `Found <b>${distinctNames.length} different sources</b> for this UDISE. Which batch do you want to manage?`;
 
                 const pickerDiv = document.createElement('div');
                 pickerDiv.className = "flex flex-col gap-2 mt-3";
-                distinctNames.forEach(name => {
+                
+                distinctNames.forEach(varName => {
                     const optBtn = document.createElement('button');
                     optBtn.className = 'bg-gray-100 hover:bg-gray-200 text-left p-3 rounded-lg text-sm text-gray-800 transition border border-gray-300';
-                    optBtn.innerHTML = `<b>${name}</b> <span class="text-gray-500 text-xs block">(${groups[name].length} students)</span>`;
+                    optBtn.innerHTML = `<b>${escapeHtml(varName)}</b> <span class="text-gray-500 text-xs block">(${groups[varName].length} students)</span>`;
                     optBtn.onclick = () => {
                         pickerDiv.remove();
-                        performRestore(groups[name], name, udise, statusEl);
+                        const rawName = groups[varName][0].data.schoolName || '(Unnamed School)';
+                        performRestore(groups[varName], rawName, udise, statusEl);
                     };
                     pickerDiv.appendChild(optBtn);
                 });
@@ -1370,8 +1404,13 @@
         }
 
         function updateStats() {
-            const total = students.length;
-            const completed = students.filter(s => s.finalised).length;
+            let filteredList = students;
+            if (forcedSchoolNameFilter !== 'all') {
+                filteredList = filteredList.filter(s => getVariationName(s) === forcedSchoolNameFilter);
+            }
+
+            const total = filteredList.length;
+            const completed = filteredList.filter(s => s.finalised).length;
             const pending = total - completed;
 
             document.getElementById('statTotal').textContent = total;
@@ -1383,11 +1422,16 @@
             const classSelect = document.getElementById('filterClass');
             const currentVal = classSelect.value;
             
-            const classes = [...new Set(students.map(s => normalizeClass(s.class)))].filter(Boolean).sort();
+            let filteredList = students;
+            if (forcedSchoolNameFilter !== 'all') {
+                filteredList = filteredList.filter(s => getVariationName(s) === forcedSchoolNameFilter);
+            }
+            
+            const classes = [...new Set(filteredList.map(s => normalizeClass(s.class)))].filter(Boolean).sort();
             
             let optionsHtml = '<option value="ALL">All Classes</option>';
             classes.forEach(c => {
-                const count = students.filter(s => normalizeClass(s.class) === c).length;
+                const count = filteredList.filter(s => normalizeClass(s.class) === c).length;
                 optionsHtml += `<option value="${c}">${c} (${count})</option>`;
             });
             
@@ -1405,7 +1449,14 @@
                 const matchesSearch = s.name.toLowerCase().includes(searchTerm) || 
                                       (s.roll && s.roll.toLowerCase().includes(searchTerm));
                 const matchesClass = classFilter === 'ALL' || normalizeClass(s.class) === classFilter;
-                return matchesSearch && matchesClass;
+                
+                // Enforce the forced variation filter
+                let matchesSource = true;
+                if (forcedSchoolNameFilter !== 'all') {
+                    matchesSource = getVariationName(s) === forcedSchoolNameFilter;
+                }
+                
+                return matchesSearch && matchesClass && matchesSource;
             });
 
             visibleCount = 50; 
@@ -1452,7 +1503,6 @@
 
                 const serialNumber = filteredStudents.length - index;
 
-                // Horizontal Row layout with safe gap between Pen and Trash icons
                 div.innerHTML = `
                     <div class="p-3 flex items-center gap-2">
                         <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0">#${serialNumber}</div>
@@ -1461,9 +1511,9 @@
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
-                                <div class="font-bold text-gray-900 text-sm truncate pr-2">${s.name}</div>
+                                <div class="font-bold text-gray-900 text-sm truncate pr-2">${escapeHtml(s.name)}</div>
                             </div>
-                            <div class="text-xs text-gray-600 font-medium mt-1">Class: <span class="text-gray-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-gray-300">|</span> Roll: <span class="text-gray-800">${s.roll}</span></div>
+                            <div class="text-xs text-gray-600 font-medium mt-1">Class: <span class="text-gray-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-gray-300">|</span> Roll: <span class="text-gray-800">${escapeHtml(s.roll)}</span></div>
                             <div class="mt-1">${statusHtml}</div>
                         </div>
                         <div class="flex-shrink-0 pl-1 flex items-center gap-3 border-l border-gray-100 ml-1 pl-3">
@@ -1490,7 +1540,7 @@
 
         // --- SAVE / EDIT ---
         document.getElementById('saveBtn').onclick = async () => {
-            const id = document.getElementById('editId').value;
+            const idStr = document.getElementById('editId').value;
             const name = document.getElementById('sName').value.trim();
             const cls = document.getElementById('sClass').value;
             const roll = document.getElementById('sRoll').value.trim();
@@ -1504,17 +1554,29 @@
             const origText = btn.innerHTML;
             btn.innerHTML = "<i class='fas fa-spinner fa-spin mr-2'></i> Saving...";
             btn.disabled = true;
+            
+            const id = idStr ? Number(idStr) : Date.now();
+
+            let existingData = {};
+            if(idStr) {
+                existingData = students.find(x => x.id === id) || {};
+            }
+
+            let finalSource = 'manual';
+            if (existingData.source) finalSource = existingData.source;
+            else if (existingData.batchId) finalSource = 'excel';
+            else if (idStr && existingData.synced === undefined && existingData.photoName === undefined) finalSource = 'excel';
 
             let base64 = null;
             if(currentPhotoBlob) {
                 base64 = await blobToBase64(currentPhotoBlob);
-            } else if(id) {
-                const old = students.find(x => x.id == id);
-                base64 = old.photoBase64 || null;
+            } else if(idStr) {
+                base64 = existingData.photoBase64 || null;
             }
 
             const student = {
-                id: id ? Number(id) : Date.now(),
+                ...existingData,
+                id: id,
                 schoolName: currentSchool,
                 hmSignature: currentSchoolData.hmSignature || '',
                 block: currentSchoolData.block || '',
@@ -1525,20 +1587,21 @@
                 name, class: cls, roll, dob, bloodGroup: blood,
                 mobile: phone,
                 photoBase64: base64,
-                photoName: `${Date.now()}.jpg`,
+                photoName: existingData.photoName || `${Date.now()}.jpg`,
                 finalised: true, 
                 synced: false,   
                 lastModified: Date.now(),
-                submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                source: finalSource
             };
 
             const tx = db.transaction(['students'], 'readwrite');
             tx.objectStore('students').put(student);
             tx.oncomplete = () => {
-                showToast(id ? "Student Updated!" : "Student Saved!");
+                showToast(idStr ? "Student Updated!" : "Student Saved!");
                 resetForm(); 
                 
-                if (!id) {
+                if (!idStr) {
                     document.getElementById('searchInput').value = '';
                     document.getElementById('filterClass').value = 'ALL';
                 }
@@ -1695,7 +1758,7 @@
                 
                 div.innerHTML = `
                     <div class="flex-1 min-w-0 pr-1">
-                        <div class="font-bold text-gray-800 text-sm truncate line-through opacity-70">${s.name}</div>
+                        <div class="font-bold text-gray-800 text-sm truncate line-through opacity-70">${escapeHtml(s.name)}</div>
                         <div class="text-xs text-red-500 font-medium"><i class="fas fa-history"></i> ${daysLeft} days left</div>
                     </div>
                     <button onclick="restoreStudent(${s.id})" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex-shrink-0 shadow-sm">
