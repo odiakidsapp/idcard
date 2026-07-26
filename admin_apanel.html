@@ -85,6 +85,10 @@
     .modal-btns { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
     .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
     .danger-zone { margin-top: 30px; padding-top: 20px; border-top: 2px dashed #ffcdd2; display: flex; flex-direction: column; gap: 10px;}
+    
+    /* Variation List */
+    .variation-item { font-size: 13px; color: #444; border-bottom: 1px solid #eee; padding: 6px 0; display: flex; justify-content: space-between; align-items: center;}
+    .variation-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -590,11 +594,18 @@ async function rebuildSchoolsMap() {
             if (d.schoolName) newMap[groupKey].rawNameCounts[d.schoolName] = (newMap[groupKey].rawNameCounts[d.schoolName] || 0) + 1;
             if (d.finalised !== false) newMap[groupKey].completedCount++; else newMap[groupKey].pendingCount++;
             
-            newMap[groupKey].latestActivity = Math.max(newMap[groupKey].latestActivity, d.lastModified || d.id || 0);
-            maxId = Math.max(maxId, d.lastModified || d.id || 0);
+            let docTime = 0;
+            if (d.lastModified) docTime = Number(d.lastModified) || 0;
+            else if (d.createdAt && d.createdAt.toMillis) docTime = d.createdAt.toMillis();
+            else if (d.submittedAt && d.submittedAt.toMillis) docTime = d.submittedAt.toMillis();
+            else if (typeof d.id === 'number') docTime = d.id;
+
+            if (!isNaN(docTime)) {
+                 newMap[groupKey].latestActivity = Math.max(newMap[groupKey].latestActivity, docTime);
+                 maxId = Math.max(maxId, docTime);
+            }
         });
 
-        // Pull Master School overrides where applicable
         const schoolQs = await db.collection('schools').get();
         schoolQs.forEach(doc => {
             const d = doc.data();
@@ -645,19 +656,58 @@ async function quickSync() {
     try {
         let hasChanges = false;
         let maxId = lastSyncId;
-
-        const studentQs = await db.collection('students').where('lastModified', '>', lastSyncId).get();
         const updatedGroups = new Set();
         
-        studentQs.forEach(doc => {
+        const schoolQs = await db.collection('schools').where('lastModified', '>', lastSyncId).get();
+        schoolQs.forEach(doc => {
             const d = doc.data();
-            const udise = d.udise || (d.schoolName ? `NO_UDISE:${d.schoolName}` : 'UNKNOWN');
-            if(udise !== 'UNKNOWN') {
-                const source = getStudentSource(d);
-                updatedGroups.add(`${udise}_${source}`);
-            }
-            maxId = Math.max(maxId, d.lastModified || d.id || 0);
+            let udise = doc.id;
+            let source = d.source || 'manual';
+            const idParts = doc.id.split('_');
+            if(idParts.length > 1 && (idParts[1] === 'manual' || idParts[1] === 'excel')) { udise = idParts[0]; source = idParts[1]; }
+            
+            const groupKey = `${udise}_${source}`;
+            if(!schoolsMap[groupKey]) schoolsMap[groupKey] = { completedCount:0, pendingCount:0, rawNameCounts:{}, missingUdise:false };
+            
+            Object.assign(schoolsMap[groupKey], {
+                name: d.name, block: d.block, district: d.district, pin: d.pin,
+                udise: udise, source: source, phone: d.phone || d.hmPhone, signature: d.hmSignature,
+                latestActivity: Math.max(schoolsMap[groupKey].latestActivity || 0, d.lastModified || 0)
+            });
             hasChanges = true;
+        });
+
+        const queries = [db.collection('students').where('lastModified', '>', lastSyncId).get()];
+        if (lastSyncId > 0) {
+            const syncDate = new Date(lastSyncId);
+            queries.push(db.collection('students').where('createdAt', '>', syncDate).get());
+            queries.push(db.collection('students').where('submittedAt', '>', syncDate).get());
+        }
+
+        const results = await Promise.allSettled(queries);
+        
+        results.forEach(res => {
+            if(res.status === 'fulfilled' && res.value) {
+                res.value.forEach(doc => {
+                    const d = doc.data();
+                    const udise = d.udise || (d.schoolName ? `NO_UDISE:${d.schoolName}` : 'UNKNOWN');
+                    if(udise !== 'UNKNOWN') {
+                        const source = getStudentSource(d);
+                        updatedGroups.add(`${udise}_${source}`);
+                    }
+                    
+                    let docTime = 0;
+                    if(d.lastModified) docTime = Number(d.lastModified) || 0;
+                    else if(d.createdAt && d.createdAt.toMillis) docTime = d.createdAt.toMillis();
+                    else if(d.submittedAt && d.submittedAt.toMillis) docTime = d.submittedAt.toMillis();
+                    else if(typeof d.id === 'number') docTime = d.id;
+                    
+                    if(!isNaN(docTime)) {
+                        maxId = Math.max(maxId, docTime);
+                        hasChanges = true;
+                    }
+                });
+            }
         });
 
         for(let groupKey of updatedGroups) {
@@ -711,7 +761,6 @@ async function quickSync() {
 function renderDashboard(){
     const grid = document.getElementById('schoolGrid');
     grid.innerHTML = '';
-    
     const keys = Object.keys(schoolsMap).sort((a, b) => schoolsMap[b].latestActivity - schoolsMap[a].latestActivity);
     
     if(keys.length === 0){ 
@@ -1528,7 +1577,8 @@ async function deleteEntireSchool() {
         }
         
         try { await db.collection('schools').doc(`${s.udise}_${s.source}`).delete(); } catch(e) {}
-        
+        try { await window.storage.ref(`school_signatures/${s.udise}_${s.source}_signature.png`).delete(); } catch(e) {}
+
         delete schoolsMap[groupKey];
         localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         
