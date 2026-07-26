@@ -1241,11 +1241,13 @@ async function drawCard(s) {
     canvas.width = CARD_W; canvas.height = CARD_H;
     ctx.clearRect(0,0,CARD_W,CARD_H);
 
+    // FIX: Force a solid white background so transparent pixels don't print as black
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, CARD_W, CARD_H);
+
     ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
 
-    // Guaranteed to use Master School Details for printing
-    const targetUdise = activeUdise || s.udise || ('NO_UDISE:' + s.schoolName);
-    const sm = schoolsMap[targetUdise];
+    const sm = schoolsMap[activeUdise];
 
     if(window.assets.mode === 'auto') {
         const centerHeadX = SCHOOL_NAME_POS.x + (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) / 2;
@@ -1365,7 +1367,7 @@ document.getElementById('verifyBtn').onclick = async () => {
             tempCvs.width = CARD_W;
             tempCvs.height = CARD_H;
             const tctx = tempCvs.getContext('2d');
-            tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+            tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
             tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
             const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.90);
 
@@ -1425,7 +1427,7 @@ document.getElementById('generateBtn').onclick = async () => {
         tempCvs.width = CARD_W;
         tempCvs.height = CARD_H;
         const tctx = tempCvs.getContext('2d');
-        tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+        tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
         tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
         const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.90);
 
@@ -1452,7 +1454,7 @@ document.getElementById('generateBtn').onclick = async () => {
     for(let i=0; i<imgs.length; i+=10) {
         const chunk = imgs.slice(i, i+10);
         
-        pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
+        pctx.fillStyle='#ffffff'; pctx.fillRect(0,0,A4_W,A4_H);
         chunk.forEach((img, idx) => {
             const c = idx % 5; const r = Math.floor(idx/5);
             const x = startX_Gaps + c*(CARD_W+GAP_X);
@@ -1463,7 +1465,7 @@ document.getElementById('generateBtn').onclick = async () => {
         const pBlobGaps = await new Promise(r => pageCvs.toBlob(r, 'image/jpeg', 0.9));
         folderA4WithGaps.file(`A4_Print_Sheet_${Math.floor(i/10)+1}.jpg`, pBlobGaps);
 
-        pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
+        pctx.fillStyle='#ffffff'; pctx.fillRect(0,0,A4_W,A4_H);
         chunk.forEach((img, idx) => {
             const c = idx % 5; const r = Math.floor(idx/5);
             const x = startX_NoGaps + c*CARD_W;
@@ -1552,7 +1554,6 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         let w = img.width, h = img.height;
         if(w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
         canvas.width = w; canvas.height = h;
-        cx.clearRect(0, 0, w, h);
         cx.drawImage(img, 0, 0, w, h);
         
         const compressedBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
@@ -1768,6 +1769,10 @@ document.getElementById('previewEditBtn').onclick = async () => {
     cvs.width = CARD_W; cvs.height = CARD_H;
     const pctx = cvs.getContext('2d');
     
+    // Fill white
+    pctx.fillStyle = '#ffffff';
+    pctx.fillRect(0, 0, CARD_W, CARD_H);
+
     const img = new Image(); img.src = URL.createObjectURL(blob);
     await new Promise(r => img.onload = r);
     pctx.drawImage(img, 0, 0);
