@@ -780,6 +780,7 @@ async function quickSync() {
             let comp = 0, pend = 0;
             let counts = {};
             let rawCounts = {};
+            
             snap.forEach(doc => { 
                 const d = doc.data();
                 const varName = getVariationName(d);
@@ -907,11 +908,8 @@ function openUdiseSelector(udise) {
 
     const variations = Object.keys(s.nameCounts || {});
 
-    // FIX: If there is exactly one variation, lock directly into it to prevent mixups.
-    if(variations.length === 1) {
-        openSchoolDetail(udise, variations[0]);
-        return;
-    } else if (variations.length === 0) {
+    // If there's only 0 or 1 variation, skip the selector and just open it
+    if(variations.length <= 1) {
         openSchoolDetail(udise, 'all');
         return;
     }
@@ -958,7 +956,7 @@ function openSchoolDetail(udise, specificVariationName = 'all'){
     if(!s) return;
     
     currentViewUdise = udise;
-    forcedSchoolNameFilter = specificVariationName;
+    forcedSchoolNameFilter = specificVariationName; // Ensure the global filter state is updated
     
     document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
     
@@ -1018,12 +1016,14 @@ function openSchoolDetail(udise, specificVariationName = 'all'){
             currentSchoolStudents.push(data);
             
             const vName = getVariationName(data);
-            // Only add classes to filter if they match the forced school filter
+            
+            // Populate classes strictly based on what is visible to the user
             if (forcedSchoolNameFilter === 'all' || vName === forcedSchoolNameFilter) {
                  if(data.class) classes.add(normalizeClass(data.class));
             }
             variationNames.add(vName);
         });
+        
         currentSchoolStudents.sort((a,b) => b.id - a.id);
         
         // Populate Class Filter based on visible data
@@ -1042,7 +1042,7 @@ function openSchoolDetail(udise, specificVariationName = 'all'){
             schoolNameFilterSelect.appendChild(opt);
         });
 
-        // Apply preselected variation from modal prompt
+        // Ensure the dropdown reflects the locked choice, even if hidden
         if(forcedSchoolNameFilter !== 'all' && variationNames.has(forcedSchoolNameFilter)) {
             schoolNameFilterSelect.value = forcedSchoolNameFilter;
         }
@@ -1098,7 +1098,7 @@ function renderTable(){
         filteredStudents = filteredStudents.filter(s => normalizeClass(s.class) === classFilter);
     }
     
-    // 3. Filter by School Name (Dropdown)
+    // 3. Filter by School Name (Dropdown - only applies if not forced)
     if (forcedSchoolNameFilter === 'all' && schoolNameFilter !== 'all') {
         filteredStudents = filteredStudents.filter(s => getVariationName(s) === schoolNameFilter);
     }
@@ -1912,4 +1912,4 @@ document.getElementById('previewEditBtn').onclick = async () => {
 
 </script>
 </body>
-</html>
+</html>v
