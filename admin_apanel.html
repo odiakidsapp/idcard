@@ -301,7 +301,7 @@
 <div id="editSchoolModal" class="modal">
     <div class="modal-content">
         <h3 style="color:#0b53a0; margin-top:0;">Edit Master Profile</h3>
-        <p style="font-size: 12px; color: #666; margin-bottom: 20px;">This updates the master record. All cards generated under this specific batch will use this school name and address.</p>
+        <p style="font-size: 12px; color: #666; margin-bottom: 20px;">This updates the master record. All cards generated under this UDISE will use this exact school name and address on the printout, ignoring typos made by operators.</p>
         <input type="hidden" id="esOldUdise">
         
         <div class="form-group"><label>Master School Name</label><input type="text" id="esName"></div>
@@ -328,14 +328,9 @@
 
         <!-- DANGER ZONE -->
         <div class="danger-zone">
-            <h4 style="margin: 0; color: #dc3545; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Danger Zone</h4>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="deleteCurrentBatch()" id="dangerDeleteBtn" class="btn btn-danger" style="flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px;">
-                    <i class="fas fa-trash"></i> Delete Current Batch
-                </button>
-                <button onclick="hardResetApp()" class="btn btn-outline" style="color: #dc3545; border-color: #dc3545;" title="Logout from Admin">
-                    Logout
-                </button>
+            <h4 style="margin: 0 0 10px 0; color: #dc3545; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Danger Zone (Delete Data)</h4>
+            <div id="deleteOptionsContainer" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <!-- Dynamically injected buttons go here -->
             </div>
         </div>
     </div>
@@ -374,7 +369,7 @@ const SIGN_POS = { x: 434, y: 850, maxW: 180, maxH: 80 };
 
 window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
 
-// Normalize Class for consistency
+// Class Normalizer for robust mapping across Admin & App
 function normalizeClass(cls) {
     if (!cls) return "";
     const c = String(cls).toLowerCase().replace(/[\s\-\.]/g, '');
@@ -426,7 +421,14 @@ function toOdiaClass(str) {
     return toOdiaDigits(str);
 }
 
-function escapeHtml(s){ return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); }
+function escapeHtml(s){ 
+    if(!s) return '';
+    return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); 
+}
+function escapeJs(s){
+    if(!s) return '';
+    return (s+'').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
 
 // Custom Alert UI
 function showMsg(msg, isConfirm = false, isDanger = false) {
@@ -630,7 +632,7 @@ async function rebuildSchoolsMap() {
         schoolQs.forEach(doc => {
             const d = doc.data();
             newMap[doc.id] = {
-                name: d.name, 
+                name: d.name, completedCount: 0, pendingCount: 0,
                 block: d.block || '', district: d.district || '',
                 pin: d.pin || '', udise: doc.id, phone: d.phone || d.hmPhone || '',
                 signature: d.hmSignature || '', latestActivity: d.lastModified || d.createdAt || 0,
@@ -649,7 +651,7 @@ async function rebuildSchoolsMap() {
             
             if(!newMap[udise]) {
                 newMap[udise] = {
-                    name: d.schoolName || 'Unknown School',
+                    name: d.schoolName || 'Unknown School', completedCount: 0, pendingCount: 0,
                     block: d.block||'', district: d.district||'', pin: d.pin||'',
                     udise: udise, phone: d.hmPhone||d.mobile||'', signature: d.hmSignature||'',
                     latestActivity: 0, sources: {}, rawNameCounts: {}, missingUdise: !d.udise
@@ -665,8 +667,10 @@ async function rebuildSchoolsMap() {
             }
 
             if(d.finalised !== false) {
+                newMap[udise].completedCount++;
                 newMap[udise].sources[src].completed++;
             } else {
+                newMap[udise].pendingCount++;
                 newMap[udise].sources[src].pending++;
             }
             
@@ -723,7 +727,7 @@ async function quickSync() {
         schoolQs.forEach(doc => {
             const d = doc.data();
             if(!schoolsMap[doc.id]) {
-                schoolsMap[doc.id] = { sources:{}, rawNameCounts:{}, missingUdise:false };
+                schoolsMap[doc.id] = { completedCount:0, pendingCount:0, sources:{}, rawNameCounts:{}, missingUdise:false };
             }
             Object.assign(schoolsMap[doc.id], {
                 name: d.name, block: d.block, district: d.district, pin: d.pin,
@@ -771,9 +775,9 @@ async function quickSync() {
             const value = udise.replace('NO_UDISE:', '');
             const snap = await db.collection('students').where(field, '==', value).get();
             
+            let comp = 0, pend = 0;
             let vars = {};
             let rawCounts = {};
-            let totalRecords = 0;
             
             snap.forEach(doc => { 
                 const d = doc.data();
@@ -784,27 +788,27 @@ async function quickSync() {
                 rawCounts[rName] = (rawCounts[rName] || 0) + 1;
                 
                 if(d.finalised !== false) {
+                    comp++; 
                     vars[src].completed++;
                 } else {
+                    pend++; 
                     vars[src].pending++;
                 }
-                totalRecords++;
             });
             
             if(schoolsMap[udise]) {
+                schoolsMap[udise].completedCount = comp;
+                schoolsMap[udise].pendingCount = pend;
                 schoolsMap[udise].sources = vars;
                 schoolsMap[udise].rawNameCounts = rawCounts;
-            } else if (totalRecords > 0) {
-                // Failsafe for legacy unlisted schools
+            } else if (comp > 0 || pend > 0) {
                 const best = Object.keys(rawCounts).sort((a,b)=>rawCounts[b]-rawCounts[a])[0];
                 schoolsMap[udise] = {
-                    name: best, block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
+                    name: best, completedCount: comp, pendingCount: pend,
+                    block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
                     latestActivity: maxId, sources: vars, rawNameCounts: rawCounts, missingUdise: field==='schoolName'
                 };
-            }
-            
-            // Clean up if empty
-            if (totalRecords === 0) {
+            } else {
                 delete schoolsMap[udise];
             }
         }
@@ -866,7 +870,6 @@ function renderDashboard(){
         
         let pendingBadge = totalPend > 0 ? `<div style="margin-top:6px; font-weight:800; color:#856404; background: #ffeeba; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-clock mr-1"></i> ${totalPend} Pending Review</div>` : '';
 
-        // Empty School Indicator
         let readyBadge = totalComp > 0 
             ? `<div style="margin-top:12px; font-weight:800; color:#28a745; background: #e8f5e9; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-check-circle mr-1"></i> ${totalComp} Ready</div>`
             : `<div style="margin-top:12px; font-weight:800; color:#6c757d; background: #e9ecef; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-folder-open mr-1"></i> 0 Ready Students</div>`;
@@ -874,7 +877,7 @@ function renderDashboard(){
         let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(udise)}`;
 
         div.innerHTML = `
-            <div class="school-card-content" onclick="openUdiseSelector('${escapeHtml(udise)}')">
+            <div class="school-card-content" onclick="openUdiseSelector('${escapeJs(udise)}')">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
                     <h3 title="${escapeHtml(udiseTitle)}" style="color:#0b53a0; font-family:monospace; font-size:1.3rem; letter-spacing:1px; margin:0;">${escapeHtml(udiseTitle)}</h3>
                 </div>
@@ -897,7 +900,7 @@ function renderDashboard(){
                 ${missingUdiseWarning}
             </div>
             <div class="school-actions">
-                <button class="btn btn-outline" style="padding: 6px 14px; font-size:13px; display:flex; align-items:center; gap:5px;" onclick="openSchoolEdit('${escapeHtml(udise)}')"><i class="fas fa-cog text-xs"></i> Master Profile</button>
+                <button class="btn btn-outline" style="padding: 6px 14px; font-size:13px; display:flex; align-items:center; gap:5px;" onclick="openSchoolEdit('${escapeJs(udise)}')"><i class="fas fa-cog text-xs"></i> Master Profile</button>
             </div>
         `;
         grid.appendChild(div);
@@ -918,12 +921,11 @@ function openUdiseSelector(udise) {
 
     const sources = Object.keys(s.sources || {});
 
-    // If there is only one source, dive straight into it
     if(sources.length === 1) {
         openSchoolDetail(udise, sources[0]);
         return;
     } else if (sources.length === 0) {
-        openSchoolDetail(udise, 'manual'); // Failsafe
+        openSchoolDetail(udise, 'manual');
         return;
     }
 
@@ -948,7 +950,7 @@ function openUdiseSelector(udise) {
 
         btn.onclick = () => {
             document.getElementById('udiseSelectorModal').style.display = 'none';
-            openSchoolDetail(udise, src); // Open STRICTLY this source
+            openSchoolDetail(udise, src);
         };
         list.appendChild(btn);
     });
@@ -966,7 +968,6 @@ function openSchoolDetail(udise, src){
     
     document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
     
-    // Header styling based on source
     const srcBadge = src === 'excel' 
         ? `<span style="font-size:12px; background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:4px; font-weight:bold; vertical-align:middle; margin-left:10px;"><i class="fas fa-file-excel"></i> Excel Upload</span>`
         : `<span style="font-size:12px; background:#e6f2ff; color:#0056b3; padding:4px 8px; border-radius:4px; font-weight:bold; vertical-align:middle; margin-left:10px;"><i class="fas fa-mobile-alt"></i> Manual App</span>`;
@@ -990,7 +991,6 @@ function openSchoolDetail(udise, src){
     document.getElementById('dashboardView').classList.add('hidden');
     document.getElementById('detailView').classList.remove('hidden');
     
-    // Reset Filters
     const classFilterSelect = document.getElementById('classFilterSelect');
     classFilterSelect.innerHTML = '<option value="all">All Classes</option>';
     document.getElementById('printFilterSelect').value = 'all';
@@ -1017,7 +1017,6 @@ function openSchoolDetail(udise, src){
         });
         currentSchoolStudents.sort((a,b) => b.id - a.id);
         
-        // Populate Class Filter based on strictly visible data
         Array.from(classes).sort().forEach(cls => {
             const opt = document.createElement('option');
             opt.value = cls; 
@@ -1169,7 +1168,6 @@ function updateSelection(){
     }
 }
 
-// BULK DELETE
 async function bulkDeleteSelected() {
     const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
     if(ids.length === 0) return;
@@ -1194,12 +1192,10 @@ async function bulkDeleteSelected() {
             await batch.commit();
         }
 
-        // Update local state
         currentSchoolStudents = currentSchoolStudents.filter(s => !ids.includes(s.id.toString()));
 
-        // Resync map counts locally
         if(activeUdise && schoolsMap[activeUdise]) {
-             await quickSync(); // Use quickSync to fix the UI counters accurately
+             await quickSync(); 
         }
 
         renderTable(); 
@@ -1213,7 +1209,6 @@ async function bulkDeleteSelected() {
     }
 }
 
-// PRINT STATUS LOGIC
 async function markSelectedPrinted(status) {
     const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
     if(ids.length === 0) return;
@@ -1236,7 +1231,6 @@ async function markSelectedPrinted(status) {
             await batch.commit();
         }
 
-        // Update local state
         ids.forEach(id => {
             const s = currentSchoolStudents.find(x => x.id == id);
             if(s) s.isPrinted = status;
@@ -1305,7 +1299,9 @@ async function drawCard(s) {
 
     ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
 
-    const sm = schoolsMap[activeUdise];
+    // Securely fallback to target UDISE if testing via Preview Edit
+    const targetUdise = activeUdise || s.udise || ('NO_UDISE:' + s.schoolName);
+    const sm = schoolsMap[targetUdise];
 
     if(window.assets.mode === 'auto') {
         const centerHeadX = SCHOOL_NAME_POS.x + (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) / 2;
@@ -1551,12 +1547,9 @@ document.getElementById('generateBtn').onclick = async () => {
     }, 500);
 };
 
-async function openSchoolEdit(udise){
+function openSchoolEdit(udise){
     const s = schoolsMap[udise];
-    if(!s) {
-        await showMsg("School data missing");
-        return;
-    }
+    if(!s) return;
     
     document.getElementById('oldSchoolName').value = udise;
     document.getElementById('esName').value = s.name;
@@ -1567,6 +1560,19 @@ async function openSchoolEdit(udise){
     document.getElementById('esUdise').value = s.udise || '';
     document.getElementById('esSignInput').value = ''; 
     
+    const delContainer = document.getElementById('deleteOptionsContainer');
+    delContainer.innerHTML = '';
+    
+    const sources = Object.keys(s.sources || {});
+    if (sources.includes('manual')) {
+        delContainer.innerHTML += `<button type="button" onclick="executeBatchDelete('${escapeJs(udise)}', 'manual')" class="btn btn-outline" style="flex:1; border-color:#dc3545; color:#dc3545; font-weight:bold; padding: 12px 10px;">🗑 Delete Manual Data</button>`;
+    }
+    if (sources.includes('excel')) {
+        delContainer.innerHTML += `<button type="button" onclick="executeBatchDelete('${escapeJs(udise)}', 'excel')" class="btn btn-outline" style="flex:1; border-color:#dc3545; color:#dc3545; font-weight:bold; padding: 12px 10px;">🗑 Delete Excel Data</button>`;
+    }
+    
+    delContainer.innerHTML += `<button type="button" onclick="executeBatchDelete('${escapeJs(udise)}', 'all')" class="btn btn-danger" style="flex:1; min-width: 100%; padding: 12px 10px; background:#bb2d3b;">🗑 Delete Entire UDISE (All Data)</button>`;
+
     document.getElementById('editSchoolModal').style.display = 'flex';
 }
 
@@ -1662,25 +1668,35 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         if(updates.hmSignature) schoolsMap[newUdise].signature = updates.hmSignature;
         
         localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
-        renderDashboard();
+        
+        if (currentViewUdise === oldUdise) {
+            // Keep the user in the detail view but update parameters
+            openSchoolDetail(newUdise, activeSource);
+        } else {
+            renderDashboard();
+        }
     } catch(e) { showMsg("Error updating school: " + e.message); } 
     finally { btn.disabled = false; btn.textContent = "Save Master Profile"; }
 };
 
-async function deleteEntireSchool() {
-    const udise = document.getElementById('oldSchoolName').value;
+async function executeBatchDelete(udise, targetSource) {
     const s = schoolsMap[udise];
-    
     if(!s) return;
 
-    let confirmMsg = `<b>Warning: This action cannot be undone!</b><br><br>You are about to permanently delete the entire school: <b>${escapeHtml(s.name)}</b>.<br>This will delete <b>all student records</b> across all entry sources from the database.`;
-    
+    let confirmMsg = "";
+    if (targetSource === 'all') {
+        confirmMsg = `<b>Warning: This action cannot be undone!</b><br><br>You are about to permanently delete <b>ALL data</b> for UDISE: ${escapeHtml(udise)} (${escapeHtml(s.name)}).`;
+    } else {
+        const label = targetSource === 'excel' ? 'Excel Upload' : 'Manual App';
+        confirmMsg = `<b>Warning!</b><br><br>You are about to permanently delete ONLY the <b>${label}</b> data for UDISE: ${escapeHtml(udise)}.<br>The other data will remain untouched.`;
+    }
+
     if(!(await showMsg(confirmMsg, true, true))) return;
 
-    const btn = document.getElementById('dangerDeleteBtn');
-    const oldText = btn.innerHTML;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Deleting...`;
-    btn.disabled = true;
+    // Show loading overlay on modal
+    const modalContent = document.querySelector('#editSchoolModal .modal-content');
+    modalContent.style.opacity = '0.5';
+    modalContent.style.pointerEvents = 'none';
 
     try {
         const isLegacyNoUdise = udise.startsWith('NO_UDISE:');
@@ -1693,6 +1709,10 @@ async function deleteEntireSchool() {
         let docs = snap.docs;
         if (isLegacyNoUdise) docs = docs.filter(doc => !doc.data().udise);
         
+        if (targetSource !== 'all') {
+            docs = docs.filter(doc => getStudentSource(doc.data()) === targetSource);
+        }
+
         const chunks = [];
         for (let i = 0; i < docs.length; i += 400) {
             chunks.push(docs.slice(i, i + 400));
@@ -1704,25 +1724,28 @@ async function deleteEntireSchool() {
             await batch.commit();
         }
         
-        try {
-            if (!isLegacyNoUdise) await db.collection('schools').doc(udise).delete();
-        } catch(e) {}
+        await quickSync(); 
         
-        try {
-            if (!isLegacyNoUdise) await window.storage.ref(`school_signatures/${udise}_signature.png`).delete();
-        } catch(e) {}
-
-        delete schoolsMap[udise];
-        localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
-        
-        document.getElementById('editSchoolModal').style.display='none';
-        showDashboard(); 
+        if (targetSource === 'all' || !schoolsMap[udise]) {
+            try { if (!isLegacyNoUdise) await db.collection('schools').doc(udise).delete(); } catch(e) {}
+            try { if (!isLegacyNoUdise) await window.storage.ref(`school_signatures/${udise}_signature.png`).delete(); } catch(e) {}
+            delete schoolsMap[udise];
+            localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+            
+            document.getElementById('editSchoolModal').style.display='none';
+            await showMsg("All data deleted successfully!");
+            showDashboard(); 
+        } else {
+            document.getElementById('editSchoolModal').style.display='none';
+            await showMsg(`${targetSource === 'excel' ? 'Excel' : 'Manual'} data deleted successfully!`);
+            openSchoolDetail(udise, 'all'); 
+        }
 
     } catch(e) {
         showMsg("Error deleting: " + e.message);
     } finally {
-        btn.innerHTML = oldText;
-        btn.disabled = false;
+        modalContent.style.opacity = '1';
+        modalContent.style.pointerEvents = 'auto';
     }
 }
 
