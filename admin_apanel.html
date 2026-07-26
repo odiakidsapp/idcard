@@ -423,6 +423,7 @@ const blobToBase64 = blob => new Promise((resolve, reject) => {
     reader.onerror = reject;
 });
 
+// Upgraded Custom Alert UI Logic
 function showMsg(msg, isConfirm = false, isDanger = false) {
     return new Promise(resolve => {
         document.getElementById('customAlertMsg').innerHTML = msg;
@@ -465,18 +466,23 @@ function showMsg(msg, isConfirm = false, isDanger = false) {
     });
 }
 
+// Renamed DB variable for Admin to avoid conflict in global scope if loaded similarly to other scripts
 let db = null;
 let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
 let lastSyncId = Number(localStorage.getItem('adminLastSyncId')) || 0;
 let currentSchoolStudents = [];
-let forcedSchoolNameFilter = 'all'; 
+let forcedSchoolNameFilter = 'all'; // Local variable to track active filter
 
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
 
+// STATS LOGIC
 function updateStats() {
     if(!currentSchoolStudents) return;
     
+    // Create a local filtered array mimicking the table's state
     let filteredStudents = currentSchoolStudents;
+    
+    // Apply forced filter if active
     if (forcedSchoolNameFilter !== 'all') {
         filteredStudents = filteredStudents.filter(s => getVariationName(s) === forcedSchoolNameFilter);
     }
@@ -487,6 +493,7 @@ function updateStats() {
     const printed = filteredStudents.filter(s => s.isPrinted).length;
     
     const classCounts = {};
+    // Only count classes for Ready to Print students within this filtered view
     filteredStudents.forEach(s => {
         if (s.finalised !== false && !s.isPrinted) {
             const c = s.class ? s.class.trim() : 'Unknown';
@@ -506,13 +513,16 @@ function updateStats() {
     document.getElementById('classStatsContainer').innerHTML = classHtml || '<i>No ready class data available.</i>';
 }
 
+// Handle Language Switch & Auto Background Load
 async function changeLanguage() {
     const lang = document.getElementById('langToggle').value;
     window.assets.language = lang;
+    
     document.getElementById('tplStatus').className = 'status-badge status-err';
     document.getElementById('tplStatus').textContent = 'Loading...';
     
     const bgFile = lang === 'odia' ? 'background.png' : 'eng_background.png';
+    
     try {
         const resp = await fetch(bgFile);
         if(resp.ok) {
@@ -550,6 +560,7 @@ async function loadAutoAssets() {
             document.getElementById('fontStatus').textContent = 'Auto-Loaded';
         }
     } catch(e) {}
+
     changeLanguage(); 
 }
 
@@ -564,14 +575,19 @@ function startApp() {
         appId: "1:331979663377:web:026e537a7fcaca813129b0",
         measurementId: "G-PXVV87C78S"
     };
-    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
     db = firebase.firestore();
     window.storage = firebase.storage();
     
     initDashboard();
     loadAutoAssets();
     initializeFaceDetector();
-  } catch(e){ console.error(e); showMsg('Firebase error: '+e.message); }
+  } catch(e){ 
+      console.error(e); 
+      showMsg('Firebase error: '+e.message); 
+  }
 }
 
 const ADMIN_PASSWORD = "Anwesh@1998";
@@ -616,13 +632,19 @@ function initDashboard() {
     }
 }
 
+// ----------------------------------------------------
+// THE NEW ROBUST SYNC LOGIC USING 'schools' COLLECTION
+// ----------------------------------------------------
 async function rebuildSchoolsMap() {
     const btn = document.getElementById('fullSyncBtn');
     if(btn) { btn.textContent = "Fetching..."; btn.disabled = true; }
+    
     document.getElementById('schoolGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; background: white; border-radius: 12px; border: 1px solid #eee;"><i class="fas fa-spinner fa-spin fa-3x" style="color: #007bff; margin-bottom: 20px;"></i><p>Rebuilding dashboard from database...</p></div>';
     
     try {
         const newMap = {};
+        
+        // 1. Fetch official school records
         const schoolQs = await db.collection('schools').get();
         schoolQs.forEach(doc => {
             const d = doc.data();
@@ -635,6 +657,7 @@ async function rebuildSchoolsMap() {
             };
         });
 
+        // 2. Fetch all students to accurately calculate counts
         let maxId = 0;
         const studentQs = await db.collection('students').get();
         
@@ -881,17 +904,17 @@ function openUdiseSelector(udise) {
 
 let currentViewUdise = null;
 
-function openSchoolDetail(udise, specificSchoolName = 'all'){
+function openSchoolDetail(udise, specificVariationName = 'all'){
     let s = schoolsMap[udise];
     if(!s) return;
     
     currentViewUdise = udise;
-    forcedSchoolNameFilter = specificSchoolName;
+    forcedSchoolNameFilter = specificVariationName;
     
     document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
     
     // Header logic: If user picked a specific source, show that in header, otherwise show Master Name
-    const displayName = (specificSchoolName === 'all') ? (s.name || 'Unnamed School') : specificSchoolName;
+    const displayName = (specificVariationName === 'all') ? (s.name || 'Unnamed School') : specificVariationName;
     document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas fa-school" style="color:#007bff; margin-right:8px;"></i>${escapeHtml(displayName)}`;
     
     document.getElementById('viewAddress').innerHTML = `<i class="fas fa-map-marker-alt" style="color:#dc3545"></i> ${s.block}, ${s.district} - ${s.pin}`;
@@ -1158,6 +1181,7 @@ async function bulkDeleteSelected() {
              const pendCount = currentSchoolStudents.filter(st => st.finalised === false).length;
              schoolsMap[currentViewUdise].completedCount = compCount;
              schoolsMap[currentViewUdise].pendingCount = pendCount;
+             if(compCount === 0 && pendCount === 0) delete schoolsMap[currentViewUdise];
              localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         }
 
