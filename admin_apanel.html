@@ -35,7 +35,7 @@
     input, select { padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing: border-box; background: #fff; transition: border-color 0.2s;}
     input:focus, select:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.1);}
 
-    .school-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+    .school-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
     .school-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea; position: relative; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; justify-content: space-between;}
     .school-card:hover { transform: translateY(-4px); border-color: #b3d4ff; box-shadow: 0 12px 24px rgba(0,123,255,0.08); }
     .school-card-content { cursor: pointer; flex: 1;}
@@ -85,6 +85,10 @@
     .modal-btns { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
     .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
     .danger-zone { margin-top: 30px; padding-top: 20px; border-top: 2px dashed #ffcdd2; display: flex; flex-direction: column; gap: 10px;}
+    
+    /* Variation List */
+    .variation-item { font-size: 13px; color: #444; border-bottom: 1px solid #eee; padding: 6px 0; display: flex; justify-content: space-between; align-items: center;}
+    .variation-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -118,7 +122,9 @@
     
     <div class="detail-header">
         <div>
-            <h2 id="viewSchoolName" style="color:#E85C0D; margin:0; font-size: 1.8rem;">School Name</h2>
+            <h2 id="viewUdiseHead" style="color:#0b53a0; margin:0; font-size: 1.8rem; font-family: monospace; letter-spacing: 1px;">UDISE: XXXXXX</h2>
+            <div id="viewSchoolNameMaster" style="color:#E85C0D; font-size:18px; font-weight:bold; margin-top:8px;"></div>
+            
             <div id="viewAddress" style="color:#555; font-size:15px; margin-top:8px; display: flex; align-items: center; gap: 5px;"></div>
             <div id="viewContact" style="color:#0277bd; font-weight:bold; margin-top:6px; display: flex; align-items: center; gap: 5px;"></div>
         </div>
@@ -220,7 +226,7 @@
                     <th style="width: 40px;">#</th>
                     <th style="width: 60px;">Photo</th>
                     <th>Name</th>
-                    <th>School (Variation)</th>
+                    <th>Entry Variation</th>
                     <th>Class</th>
                     <th>Roll</th>
                     <th>DOB</th>
@@ -252,6 +258,18 @@
 </div>
 
 <canvas id="cardCanvas" style="display:none;"></canvas>
+
+<!-- UDISE Multi-Variation Selector Modal -->
+<div id="udiseSelectorModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <h3 id="udiseSelectorTitle" style="color: #0b53a0; font-family: monospace; letter-spacing: 1px;">UDISE: XXXXXX</h3>
+        <p style="color:#555; font-size:14px; margin-bottom:20px; line-height: 1.5;">This UDISE has multiple school names associated with it (often due to manual entry errors or Excel uploads). Which batch would you like to view?</p>
+        <div id="udiseSelectorList" style="display:flex; flex-direction:column; gap:12px; max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div>
+        <div class="modal-btns">
+            <button class="btn btn-secondary" onclick="document.getElementById('udiseSelectorModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
 
 <!-- Edit Student Modal -->
 <div id="editModal" class="modal">
@@ -290,10 +308,11 @@
 <!-- Edit School Modal -->
 <div id="editSchoolModal" class="modal">
     <div class="modal-content">
-        <h3 style="color:#0b53a0; margin-top:0;">Edit School Profile</h3>
+        <h3 style="color:#0b53a0; margin-top:0;">Edit Master Profile</h3>
+        <p style="font-size: 12px; color: #666; margin-bottom: 20px;">This updates the master record. All cards generated under this UDISE will use this school name and address, regardless of how the student was initially entered.</p>
         <input type="hidden" id="oldSchoolName">
         
-        <div class="form-group"><label>School Name (Master)</label><input type="text" id="esName"></div>
+        <div class="form-group"><label>Master School Name</label><input type="text" id="esName"></div>
         <div class="form-group"><label>Contact Number</label><input type="text" id="esPhone"></div>
         
         <div style="display:flex; gap:15px;">
@@ -312,7 +331,7 @@
 
         <div class="modal-btns">
             <button class="btn btn-secondary" onclick="document.getElementById('editSchoolModal').style.display='none'">Cancel</button>
-            <button class="btn btn-primary" id="saveSchoolBtn">Update Profile</button>
+            <button class="btn btn-primary" id="saveSchoolBtn">Save Master Profile</button>
         </div>
 
         <!-- DANGER ZONE -->
@@ -453,7 +472,6 @@ function updateStats() {
     
     // Calculate stats based on what is currently shown in the table to respect filters
     const tbody = document.querySelector('#studentTable tbody');
-    // If the table is rendering right now, we can just use the full currentSchoolStudents for global stats
     
     const total = currentSchoolStudents.length;
     const pendingData = currentSchoolStudents.filter(s => s.finalised === false).length;
@@ -646,8 +664,6 @@ async function rebuildSchoolsMap() {
             // Name Variation Tracking
             if (d.schoolName) {
                 newMap[udise].nameCounts[d.schoolName] = (newMap[udise].nameCounts[d.schoolName] || 0) + 1;
-                const best = Object.keys(newMap[udise].nameCounts).sort((a, b) => newMap[udise].nameCounts[b] - newMap[udise].nameCounts[a])[0];
-                newMap[udise].name = best;
             }
 
             if(d.finalised !== false) newMap[udise].completedCount++;
@@ -655,6 +671,14 @@ async function rebuildSchoolsMap() {
             
             newMap[udise].latestActivity = Math.max(newMap[udise].latestActivity, d.lastModified || d.id || 0);
             maxId = Math.max(maxId, d.lastModified || d.id || 0);
+        });
+
+        // Ensure Master Name logic applies if no official school doc existed
+        Object.keys(newMap).forEach(k => {
+             const sm = newMap[k];
+             if(!sm.name && Object.keys(sm.nameCounts).length > 0) {
+                  sm.name = Object.keys(sm.nameCounts).sort((a,b)=>sm.nameCounts[b]-sm.nameCounts[a])[0];
+             }
         });
 
         schoolsMap = newMap;
@@ -718,17 +742,23 @@ async function quickSync() {
             const snap = await db.collection('students').where(field, '==', value).get();
             
             let comp = 0, pend = 0;
-            snap.forEach(d => { if(d.data().finalised !== false) comp++; else pend++; });
+            let counts = {};
+            snap.forEach(d => { 
+                const sName = d.data().schoolName || 'Unknown';
+                counts[sName] = (counts[sName] || 0) + 1;
+                if(d.data().finalised !== false) comp++; else pend++; 
+            });
             
             if(schoolsMap[udise]) {
                 schoolsMap[udise].completedCount = comp;
                 schoolsMap[udise].pendingCount = pend;
+                schoolsMap[udise].nameCounts = counts;
             } else if (comp > 0 || pend > 0) {
-                // Failsafe for legacy unlisted schools
+                const best = Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
                 schoolsMap[udise] = {
-                    name: value, completedCount: comp, pendingCount: pend,
+                    name: best, completedCount: comp, pendingCount: pend,
                     block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
-                    latestActivity: maxId, nameCounts: {}, missingUdise: field==='schoolName'
+                    latestActivity: maxId, nameCounts: counts, missingUdise: field==='schoolName'
                 };
             }
         }
@@ -767,15 +797,18 @@ function renderDashboard(){
         if(s.block || s.district) loc = `<i class="fas fa-map-marker-alt" style="color: #dc3545; width: 16px;"></i> ${escapeHtml(s.block || '')}, ${escapeHtml(s.district || '')}`;
         else loc = `<i class="fas fa-map-marker-alt" style="color: #ccc; width: 16px;"></i> <span style="color:#aaa; font-style:italic;">Missing Address</span>`;
 
-        const altNames = Object.keys(s.nameCounts || {});
-        let typoWarning = '';
-        if (altNames.length > 1) {
-            typoWarning = `<div style="background:#fff3cd; color:#856404; font-size:11px; padding:6px 10px; border-radius:6px; margin-top:10px; display:flex; gap:6px; align-items:start;"><i class="fas fa-exclamation-triangle" style="margin-top:2px;"></i> Multiple variations of this school name exist. Tap Edit to fix.</div>`;
+        let variationsHtml = '';
+        if (s.nameCounts && Object.keys(s.nameCounts).length > 0) {
+            variationsHtml = Object.keys(s.nameCounts).map(n => 
+                `<div class="variation-item"><div style="flex:1; truncate; padding-right:10px;"><i class="fas fa-chevron-right text-xs" style="color:#ccc; margin-right:5px;"></i> ${escapeHtml(n)}</div> <span style="color:#888; font-weight:bold;">${s.nameCounts[n]}</span></div>`
+            ).join('');
+        } else {
+             variationsHtml = `<div class="variation-item" style="color:#888; font-style:italic;">No students added yet.</div>`;
         }
 
         let missingUdiseWarning = '';
         if (s.missingUdise) {
-            missingUdiseWarning = `<div style="background:#f8d7da; color:#721c24; font-size:11px; padding:6px 10px; border-radius:6px; margin-top:10px; display:flex; gap:6px; align-items:start;"><i class="fas fa-exclamation-triangle" style="margin-top:2px;"></i> No UDISE. Tap Edit School to add it.</div>`;
+            missingUdiseWarning = `<div style="background:#f8d7da; color:#721c24; font-size:11px; padding:6px 10px; border-radius:6px; margin-top:10px; display:flex; gap:6px; align-items:start;"><i class="fas fa-exclamation-triangle" style="margin-top:2px;"></i> No UDISE. Tap Edit Profile to add it.</div>`;
         }
         
         let pendingBadge = s.pendingCount > 0 ? `<div style="margin-top:6px; font-weight:800; color:#856404; background: #ffeeba; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-clock mr-1"></i> ${s.pendingCount} Pending Review</div>` : '';
@@ -783,20 +816,35 @@ function renderDashboard(){
         // Empty School Indicator
         let readyBadge = s.completedCount > 0 
             ? `<div style="margin-top:12px; font-weight:800; color:#28a745; background: #e8f5e9; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-check-circle mr-1"></i> ${s.completedCount} Ready</div>`
-            : `<div style="margin-top:12px; font-weight:800; color:#6c757d; background: #e9ecef; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-folder-open mr-1"></i> 0 Students - Empty School</div>`;
+            : `<div style="margin-top:12px; font-weight:800; color:#6c757d; background: #e9ecef; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-folder-open mr-1"></i> 0 Ready Students</div>`;
+
+        let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(udise)}`;
 
         div.innerHTML = `
-            <div class="school-card-content" onclick="openSchoolDetail('${escapeHtml(udise)}')">
-                <h3 title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</h3>
-                <div class="school-meta"><i class="fas fa-fingerprint" style="color: #6c757d; width: 16px;"></i> <b>UDISE:</b> ${s.missingUdise ? '<span style="color:#dc3545;">Not set</span>' : escapeHtml(udise)}</div>
+            <div class="school-card-content" onclick="openUdiseSelector('${escapeHtml(udise)}')">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                    <h3 title="${escapeHtml(udiseTitle)}" style="color:#0b53a0; font-family:monospace; font-size:1.3rem; letter-spacing:1px; margin:0;">${escapeHtml(udiseTitle)}</h3>
+                </div>
+                
+                <div class="school-meta" style="color:#E85C0D; font-weight:bold; font-size:15px; margin-bottom:12px;">
+                    <i class="fas fa-school" style="margin-right:5px;"></i> ${escapeHtml(s.name || 'Unknown')}
+                </div>
+
+                <div style="background: #fdfdfd; padding: 10px 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #f0f0f0;">
+                    <div style="font-size:11px; text-transform:uppercase; color:#999; font-weight:bold; margin-bottom:5px;">Associated Entries</div>
+                    ${variationsHtml}
+                </div>
+                
                 <div class="school-meta">${loc}</div>
-                ${readyBadge}
-                <br>${pendingBadge}
-                ${typoWarning}
+                
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                    ${readyBadge}
+                    ${pendingBadge}
+                </div>
                 ${missingUdiseWarning}
             </div>
             <div class="school-actions">
-                <button class="btn btn-outline" style="padding: 6px 14px; font-size:13px; display:flex; align-items:center; gap:5px;" onclick="openSchoolEdit('${escapeHtml(udise)}')"><i class="fas fa-pen text-xs"></i> Edit Profile</button>
+                <button class="btn btn-outline" style="padding: 6px 14px; font-size:13px; display:flex; align-items:center; gap:5px;" onclick="openSchoolEdit('${escapeHtml(udise)}')"><i class="fas fa-pen text-xs"></i> Master Profile</button>
             </div>
         `;
         grid.appendChild(div);
@@ -809,14 +857,62 @@ function showDashboard(){
     renderDashboard();
 }
 
+function openUdiseSelector(udise) {
+    const s = schoolsMap[udise];
+    if(!s) return;
+
+    const variations = Object.keys(s.nameCounts || {});
+
+    // If there's only 0 or 1 variation, skip the selector and just open it
+    if(variations.length <= 1) {
+        openSchoolDetail(udise, variations.length === 1 ? variations[0] : 'all');
+        return;
+    }
+
+    document.getElementById('udiseSelectorTitle').textContent = s.missingUdise ? 'Legacy Setup' : `UDISE: ${udise}`;
+    const list = document.getElementById('udiseSelectorList');
+    list.innerHTML = '';
+
+    // Button for ALL
+    const btnAll = document.createElement('button');
+    btnAll.className = 'btn btn-primary';
+    btnAll.style.textAlign = 'left';
+    btnAll.style.padding = '12px 16px';
+    btnAll.innerHTML = `<b>Manage All Variations Together</b> <span style="font-size:12px; float:right;">${s.completedCount + s.pendingCount} Total</span>`;
+    btnAll.onclick = () => {
+        document.getElementById('udiseSelectorModal').style.display = 'none';
+        openSchoolDetail(udise, 'all');
+    };
+    list.appendChild(btnAll);
+
+    // Buttons for each variation
+    variations.forEach(v => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-outline';
+        btn.style.textAlign = 'left';
+        btn.style.padding = '10px 16px';
+        btn.style.borderColor = '#007bff';
+        btn.innerHTML = `<b>${escapeHtml(v)}</b> <span style="font-size:11px; float:right; background:#e6f2ff; color:#007bff; padding:4px 8px; border-radius:12px; font-weight:bold;">${s.nameCounts[v]}</span>`;
+        btn.onclick = () => {
+            document.getElementById('udiseSelectorModal').style.display = 'none';
+            openSchoolDetail(udise, v);
+        };
+        list.appendChild(btn);
+    });
+
+    document.getElementById('udiseSelectorModal').style.display = 'flex';
+}
+
 let currentViewUdise = null;
 
-function openSchoolDetail(udise){
+function openSchoolDetail(udise, preselectedSchoolName = 'all'){
     let s = schoolsMap[udise];
     if(!s) return;
     currentViewUdise = udise;
     
-    document.getElementById('viewSchoolName').textContent = s.name;
+    document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
+    document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas fa-school" style="color:#007bff; margin-right:8px;"></i>${s.name || 'Unnamed School'}`;
+    
     document.getElementById('viewAddress').innerHTML = `<i class="fas fa-map-marker-alt" style="color:#dc3545"></i> ${s.block}, ${s.district} - ${s.pin}`;
     document.getElementById('viewContact').innerHTML = `<i class="fas fa-phone-alt"></i> ${s.phone || 'No phone provided'}`;
     
@@ -879,6 +975,11 @@ function openSchoolDetail(udise){
             opt.textContent = name;
             schoolNameFilterSelect.appendChild(opt);
         });
+
+        // Apply preselected variation from modal prompt
+        if(preselectedSchoolName !== 'all' && schoolNames.has(preselectedSchoolName)) {
+            schoolNameFilterSelect.value = preselectedSchoolName;
+        }
 
         renderTable();
         updateStats(); 
