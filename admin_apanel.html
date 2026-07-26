@@ -194,6 +194,14 @@
             </select>
         </div>
         
+        <!-- School Name Filter (Hidden if preselected) -->
+        <div id="schoolNameFilterContainer" style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
+            <label style="font-size:13px; font-weight:bold; color: #444;">Entry Source:</label>
+            <select id="schoolNameFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 140px; border-color: #ddd;">
+                <option value="all">Show All</option>
+            </select>
+        </div>
+
         <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
             <label style="font-size:13px; font-weight:bold; color: #444;">Class:</label>
             <select id="classFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 120px; border-color: #ddd;">
@@ -219,6 +227,7 @@
                     <th style="width: 40px;">#</th>
                     <th style="width: 60px;">Photo</th>
                     <th>Name</th>
+                    <th id="schoolColHeader">Entry Source</th>
                     <th>Class</th>
                     <th>Roll</th>
                     <th>DOB</th>
@@ -250,6 +259,18 @@
 </div>
 
 <canvas id="cardCanvas" style="display:none;"></canvas>
+
+<!-- UDISE Multi-Variation Selector Modal -->
+<div id="udiseSelectorModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <h3 id="udiseSelectorTitle" style="color: #0b53a0; font-family: monospace; letter-spacing: 1px;">UDISE: XXXXXX</h3>
+        <p style="color:#555; font-size:14px; margin-bottom:20px; line-height: 1.5;">This UDISE contains entries from different sources (Manual vs Excel). Which batch would you like to view?</p>
+        <div id="udiseSelectorList" style="display:flex; flex-direction:column; gap:12px; max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div>
+        <div class="modal-btns">
+            <button class="btn btn-secondary" onclick="document.getElementById('udiseSelectorModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
 
 <!-- Edit Student Modal -->
 <div id="editModal" class="modal">
@@ -289,7 +310,7 @@
 <div id="editSchoolModal" class="modal">
     <div class="modal-content">
         <h3 style="color:#0b53a0; margin-top:0;">Edit Master Profile</h3>
-        <p style="font-size: 12px; color: #666; margin-bottom: 20px;">This updates the master record. All cards generated under this specific batch will use this school name and address.</p>
+        <p style="font-size: 12px; color: #666; margin-bottom: 20px;">This updates the master record. All cards generated under this UDISE will use this school name and address, regardless of how the student was initially entered.</p>
         <input type="hidden" id="oldSchoolName">
         
         <div class="form-group"><label>Master School Name</label><input type="text" id="esName"></div>
@@ -318,8 +339,8 @@
         <div class="danger-zone">
             <h4 style="margin: 0; color: #dc3545; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Danger Zone</h4>
             <div style="display: flex; gap: 10px;">
-                <button onclick="deleteEntireSchool()" class="btn btn-danger" style="flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px;">
-                    <i class="fas fa-trash"></i> Delete Entire Batch
+                <button onclick="deleteEntireSchool()" id="dangerDeleteBtn" class="btn btn-danger" style="flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <i class="fas fa-trash"></i> Delete Entire UDISE
                 </button>
                 <button onclick="hardResetApp()" class="btn btn-outline" style="color: #dc3545; border-color: #dc3545;" title="Logout from Admin">
                     Logout
@@ -362,6 +383,7 @@ const SIGN_POS = { x: 434, y: 850, maxW: 180, maxH: 80 };
 
 window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
 
+// Class Normalizer for robust mapping across Admin & App
 function normalizeClass(cls) {
     if (!cls) return "";
     const c = String(cls).toLowerCase().replace(/[\s\-\.]/g, '');
@@ -379,11 +401,11 @@ function normalizeClass(cls) {
     return cls; 
 }
 
-function getStudentSource(d) {
-    if (d.source) return d.source;
-    if (d.batchId || d.isExcel) return 'excel';
-    if (d.synced === undefined && d.photoName === undefined && d.source !== 'manual') return 'excel';
-    return 'manual';
+// Determine if entry is from Excel vs Manual
+function getVariationName(d) {
+    const isExcel = d.source === 'excel' || d.batchId || d.isExcel || (d.synced === undefined && d.photoName === undefined && d.source !== 'manual');
+    const prefix = isExcel ? '[Excel Upload] ' : '[Manual App] ';
+    return prefix + (d.schoolName || 'Unknown School');
 }
 
 function toOdiaDigits(str){ 
@@ -395,6 +417,7 @@ function toOdiaDigits(str){
 function toOdiaClass(str) {
     const norm = normalizeClass(str);
     if (window.assets.language === 'english') return norm; 
+    
     if (norm === "Shishuvatika") return 'ଶିଶୁ ବାଟିକା';
     if (norm === '1') return 'ପ୍ରଥମ';
     if (norm === '2') return 'ଦ୍ଵିତୀୟ';
@@ -406,14 +429,17 @@ function toOdiaClass(str) {
     if (norm === '8') return 'ଅଷ୍ଟମ';
     if (norm === '9') return 'ନବମ';
     if (norm === '10') return 'ଦଶମ';
+    
     return toOdiaDigits(str);
 }
 
 function escapeHtml(s){ return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); }
 
+// Upgraded Custom Alert UI Logic
 function showMsg(msg, isConfirm = false, isDanger = false) {
     return new Promise(resolve => {
         document.getElementById('customAlertMsg').innerHTML = msg;
+        
         const okBtn = document.getElementById('customAlertOk');
         const cancelBtn = document.getElementById('customAlertCancel');
         const icon = document.getElementById('customAlertIcon');
@@ -424,38 +450,63 @@ function showMsg(msg, isConfirm = false, isDanger = false) {
         if (isDanger) {
             okBtn.className = 'btn btn-danger';
             okBtn.textContent = 'Yes, Proceed';
-            icon.textContent = '⚠️'; icon.style.color = '#dc3545';
-            title.textContent = 'Warning'; title.style.color = '#dc3545';
+            icon.textContent = '⚠️';
+            icon.style.color = '#dc3545';
+            title.textContent = 'Warning';
+            title.style.color = '#dc3545';
         } else {
             okBtn.className = 'btn btn-primary';
             okBtn.textContent = isConfirm ? 'Confirm' : 'OK';
-            icon.textContent = isConfirm ? '❓' : '✅'; icon.style.color = isConfirm ? '#ffc107' : '#28a745';
-            title.textContent = isConfirm ? 'Confirm Action' : 'Success'; title.style.color = '#222';
+            icon.textContent = isConfirm ? '❓' : '✅';
+            icon.style.color = isConfirm ? '#ffc107' : '#28a745';
+            title.textContent = isConfirm ? 'Confirm Action' : 'Success';
+            title.style.color = '#222';
         }
 
         document.getElementById('customAlertModal').style.display = 'flex';
-        okBtn.onclick = () => { document.getElementById('customAlertModal').style.display = 'none'; resolve(true); };
-        if(isConfirm) cancelBtn.onclick = () => { document.getElementById('customAlertModal').style.display = 'none'; resolve(false); };
+
+        okBtn.onclick = () => {
+            document.getElementById('customAlertModal').style.display = 'none';
+            resolve(true);
+        };
+        if(isConfirm) {
+            cancelBtn.onclick = () => {
+                document.getElementById('customAlertModal').style.display = 'none';
+                resolve(false);
+            };
+        }
     });
 }
 
+// Renamed DB variable for Admin to avoid conflict in global scope if loaded similarly to other scripts
 let db = null;
 let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
 let lastSyncId = Number(localStorage.getItem('adminLastSyncId')) || 0;
 let currentSchoolStudents = [];
-let currentViewKey = null;
+let forcedSchoolNameFilter = 'all'; // Local variable to track active filter
 
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
 
+// STATS LOGIC
 function updateStats() {
     if(!currentSchoolStudents) return;
-    const total = currentSchoolStudents.length;
-    const pendingData = currentSchoolStudents.filter(s => s.finalised === false).length;
-    const readyToPrint = currentSchoolStudents.filter(s => s.finalised !== false && !s.isPrinted).length;
-    const printed = currentSchoolStudents.filter(s => s.isPrinted).length;
+    
+    // Create a local filtered array mimicking the table's state
+    let filteredStudents = currentSchoolStudents;
+    
+    // Apply forced filter if active
+    if (forcedSchoolNameFilter !== 'all') {
+        filteredStudents = filteredStudents.filter(s => getVariationName(s) === forcedSchoolNameFilter);
+    }
+    
+    const total = filteredStudents.length;
+    const pendingData = filteredStudents.filter(s => s.finalised === false).length;
+    const readyToPrint = filteredStudents.filter(s => s.finalised !== false && !s.isPrinted).length;
+    const printed = filteredStudents.filter(s => s.isPrinted).length;
     
     const classCounts = {};
-    currentSchoolStudents.forEach(s => {
+    // Only count classes for Ready to Print students within this filtered view
+    filteredStudents.forEach(s => {
         if (s.finalised !== false && !s.isPrinted) {
             const c = s.class ? normalizeClass(s.class) : 'Unknown';
             classCounts[c] = (classCounts[c] || 0) + 1;
@@ -467,23 +518,32 @@ function updateStats() {
     document.getElementById('statReadyPrint').textContent = readyToPrint;
     document.getElementById('statPrinted').textContent = printed;
     
-    const classHtml = Object.keys(classCounts).sort().map(c => `<span class="class-pill"><b>Class ${c}:</b> ${classCounts[c]}</span>`).join(' ');
+    const classHtml = Object.keys(classCounts).sort().map(c => 
+        `<span class="class-pill"><b>Class ${c}:</b> ${classCounts[c]}</span>`
+    ).join(' ');
+    
     document.getElementById('classStatsContainer').innerHTML = classHtml || '<i>No ready class data available.</i>';
 }
 
+// Handle Language Switch & Auto Background Load
 async function changeLanguage() {
     const lang = document.getElementById('langToggle').value;
     window.assets.language = lang;
+    
     document.getElementById('tplStatus').className = 'status-badge status-err';
     document.getElementById('tplStatus').textContent = 'Loading...';
+    
     const bgFile = lang === 'odia' ? 'background.png' : 'eng_background.png';
+    
     try {
         const resp = await fetch(bgFile);
         if(resp.ok) {
             const blob = await resp.blob();
-            const img = new Image(); img.src = URL.createObjectURL(blob);
+            const img = new Image();
+            img.src = URL.createObjectURL(blob);
             img.onload = () => {
-                window.assets.template = img; window.assets.mode = 'auto';
+                window.assets.template = img;
+                window.assets.mode = 'auto';
                 document.getElementById('tplStatus').className = 'status-badge status-ok';
                 document.getElementById('tplStatus').textContent = `Auto-Loaded (${lang === 'odia' ? 'Odia' : 'English'})`;
                 updateSelection();
@@ -491,7 +551,8 @@ async function changeLanguage() {
         } else {
             document.getElementById('tplStatus').className = 'status-badge status-err';
             document.getElementById('tplStatus').textContent = 'Missing';
-            window.assets.template = null; updateSelection();
+            window.assets.template = null;
+            updateSelection();
         }
     } catch(e) {
         document.getElementById('tplStatus').className = 'status-badge status-err';
@@ -511,6 +572,7 @@ async function loadAutoAssets() {
             document.getElementById('fontStatus').textContent = 'Auto-Loaded';
         }
     } catch(e) {}
+
     changeLanguage(); 
 }
 
@@ -525,10 +587,19 @@ function startApp() {
         appId: "1:331979663377:web:026e537a7fcaca813129b0",
         measurementId: "G-PXVV87C78S"
     };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore(); window.storage = firebase.storage();
-    initDashboard(); loadAutoAssets(); initializeFaceDetector();
-  } catch(e){ console.error(e); showMsg('Firebase error: '+e.message); }
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    db = firebase.firestore();
+    window.storage = firebase.storage();
+    
+    initDashboard();
+    loadAutoAssets();
+    initializeFaceDetector();
+  } catch(e){ 
+      console.error(e); 
+      showMsg('Firebase error: '+e.message); 
+  }
 }
 
 const ADMIN_PASSWORD = "Anwesh@1998";
@@ -546,12 +617,18 @@ function hardResetApp() {
     location.reload();
 }
 
-if (sessionStorage.getItem('adminAuthed') === 'true') unlockAdmin();
-else {
+if (sessionStorage.getItem('adminAuthed') === 'true') {
+    unlockAdmin();
+} else {
     document.getElementById('adminPasswordBtn').onclick = () => {
         const entered = document.getElementById('adminPasswordInput').value;
-        if (entered === ADMIN_PASSWORD) { sessionStorage.setItem('adminAuthed', 'true'); unlockAdmin(); } 
-        else { document.getElementById('adminPasswordError').style.display = 'block'; document.getElementById('adminPasswordInput').value = ''; }
+        if (entered === ADMIN_PASSWORD) {
+            sessionStorage.setItem('adminAuthed', 'true');
+            unlockAdmin();
+        } else {
+            document.getElementById('adminPasswordError').style.display = 'block';
+            document.getElementById('adminPasswordInput').value = '';
+        }
     };
     document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') document.getElementById('adminPasswordBtn').click();
@@ -560,71 +637,87 @@ else {
 
 function initDashboard() {
     renderDashboard();
-    if (lastSyncId === 0 && Object.keys(schoolsMap).length === 0) rebuildSchoolsMap();
-    else quickSync();
+    if (lastSyncId === 0 && Object.keys(schoolsMap).length === 0) {
+        rebuildSchoolsMap();
+    } else {
+        quickSync();
+    }
 }
 
+// ----------------------------------------------------
+// THE NEW ROBUST SYNC LOGIC USING 'schools' COLLECTION
+// ----------------------------------------------------
 async function rebuildSchoolsMap() {
     const btn = document.getElementById('fullSyncBtn');
     if(btn) { btn.textContent = "Fetching..."; btn.disabled = true; }
+    
     document.getElementById('schoolGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; background: white; border-radius: 12px; border: 1px solid #eee;"><i class="fas fa-spinner fa-spin fa-3x" style="color: #007bff; margin-bottom: 20px;"></i><p>Rebuilding dashboard from database...</p></div>';
     
     try {
         const newMap = {};
+        
+        // 1. Fetch official school records
+        const schoolQs = await db.collection('schools').get();
+        schoolQs.forEach(doc => {
+            const d = doc.data();
+            newMap[doc.id] = {
+                name: d.name, completedCount: 0, pendingCount: 0,
+                block: d.block || '', district: d.district || '',
+                pin: d.pin || '', udise: doc.id, phone: d.phone || d.hmPhone || '',
+                signature: d.hmSignature || '', latestActivity: d.lastModified || d.createdAt || 0,
+                variations: {}, rawNameCounts: {}, missingUdise: false
+            };
+        });
+
+        // 2. Fetch all students to accurately calculate counts
         let maxId = 0;
         const studentQs = await db.collection('students').get();
         
         studentQs.forEach(doc => {
             const d = doc.data();
-            const udise = d.udise || (d.schoolName ? `NO_UDISE:${d.schoolName}` : 'UNKNOWN');
-            if(udise === 'UNKNOWN') return;
+            const udise = d.udise || (d.schoolName ? `NO_UDISE:${d.schoolName}` : null);
+            if(!udise) return;
             
-            const source = getStudentSource(d);
-            const groupKey = `${udise}_${source}`;
-            
-            if(!newMap[groupKey]) {
-                newMap[groupKey] = {
+            if(!newMap[udise]) {
+                newMap[udise] = {
                     name: d.schoolName || 'Unknown School', completedCount: 0, pendingCount: 0,
                     block: d.block||'', district: d.district||'', pin: d.pin||'',
-                    udise: udise, source: source, phone: d.hmPhone||d.mobile||'', signature: d.hmSignature||'',
-                    latestActivity: 0, rawNameCounts: {}, missingUdise: !d.udise
+                    udise: udise, phone: d.hmPhone||d.mobile||'', signature: d.hmSignature||'',
+                    latestActivity: 0, variations: {}, rawNameCounts: {}, missingUdise: !d.udise
                 };
             }
             
-            if (d.schoolName) newMap[groupKey].rawNameCounts[d.schoolName] = (newMap[groupKey].rawNameCounts[d.schoolName] || 0) + 1;
-            if (d.finalised !== false) newMap[groupKey].completedCount++; else newMap[groupKey].pendingCount++;
+            // Name Variation Tracking
+            const vName = getVariationName(d);
+            if(!newMap[udise].variations[vName]) newMap[udise].variations[vName] = { completed: 0, pending: 0 };
             
+            if (d.schoolName) {
+                newMap[udise].rawNameCounts = newMap[udise].rawNameCounts || {};
+                newMap[udise].rawNameCounts[d.schoolName] = (newMap[udise].rawNameCounts[d.schoolName] || 0) + 1;
+            }
+
+            if(d.finalised !== false) {
+                newMap[udise].completedCount++;
+                newMap[udise].variations[vName].completed++;
+            } else {
+                newMap[udise].pendingCount++;
+                newMap[udise].variations[vName].pending++;
+            }
+            
+            // Fix timestamp handling to find the most recent
             let docTime = 0;
-            if (d.lastModified) docTime = Number(d.lastModified) || 0;
-            else if (d.createdAt && d.createdAt.toMillis) docTime = d.createdAt.toMillis();
-            else if (d.submittedAt && d.submittedAt.toMillis) docTime = d.submittedAt.toMillis();
-            else if (typeof d.id === 'number') docTime = d.id;
-
-            if (!isNaN(docTime)) {
-                 newMap[groupKey].latestActivity = Math.max(newMap[groupKey].latestActivity, docTime);
-                 maxId = Math.max(maxId, docTime);
-            }
-        });
-
-        const schoolQs = await db.collection('schools').get();
-        schoolQs.forEach(doc => {
-            const d = doc.data();
-            let udise = doc.id;
-            let source = d.source || 'manual';
-            const idParts = doc.id.split('_');
-            if(idParts.length > 1 && (idParts[1] === 'manual' || idParts[1] === 'excel')) { udise = idParts[0]; source = idParts[1]; }
+            if(d.lastModified) docTime = Number(d.lastModified) || 0;
+            else if(d.createdAt && d.createdAt.toMillis) docTime = d.createdAt.toMillis();
+            else if(d.submittedAt && d.submittedAt.toMillis) docTime = d.submittedAt.toMillis();
+            else if(typeof d.id === 'number') docTime = d.id;
             
-            const groupKey = `${udise}_${source}`;
-            if (newMap[groupKey]) {
-                newMap[groupKey].name = d.name || newMap[groupKey].name;
-                newMap[groupKey].block = d.block || newMap[groupKey].block;
-                newMap[groupKey].district = d.district || newMap[groupKey].district;
-                newMap[groupKey].pin = d.pin || newMap[groupKey].pin;
-                newMap[groupKey].phone = d.phone || d.hmPhone || newMap[groupKey].phone;
-                newMap[groupKey].signature = d.hmSignature || newMap[groupKey].signature;
+            if(!isNaN(docTime)) {
+                newMap[udise].latestActivity = Math.max(newMap[udise].latestActivity, docTime);
+                maxId = Math.max(maxId, docTime);
             }
         });
 
+        // Ensure Master Name logic applies if no official school doc existed
         Object.keys(newMap).forEach(k => {
              const sm = newMap[k];
              if(!sm.name && sm.rawNameCounts && Object.keys(sm.rawNameCounts).length > 0) {
@@ -634,11 +727,13 @@ async function rebuildSchoolsMap() {
 
         schoolsMap = newMap;
         lastSyncId = maxId;
+        
         localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         localStorage.setItem('adminLastSyncId', lastSyncId.toString());
         renderDashboard();
     } catch(err) {
         showMsg("Error rebuilding dashboard: " + err.message);
+        document.getElementById('schoolGrid').innerHTML = `<p style="color:red; padding: 20px; background: #f8d7da; border-radius: 8px;">Error: ${err.message}</p>`;
     } finally {
         if(btn) { btn.innerHTML = "🔄 Full Refresh"; btn.disabled = false; }
     }
@@ -656,28 +751,28 @@ async function quickSync() {
     try {
         let hasChanges = false;
         let maxId = lastSyncId;
-        const updatedGroups = new Set();
         
+        // 1. Fetch updated schools
         const schoolQs = await db.collection('schools').where('lastModified', '>', lastSyncId).get();
         schoolQs.forEach(doc => {
             const d = doc.data();
-            let udise = doc.id;
-            let source = d.source || 'manual';
-            const idParts = doc.id.split('_');
-            if(idParts.length > 1 && (idParts[1] === 'manual' || idParts[1] === 'excel')) { udise = idParts[0]; source = idParts[1]; }
-            
-            const groupKey = `${udise}_${source}`;
-            if(!schoolsMap[groupKey]) schoolsMap[groupKey] = { completedCount:0, pendingCount:0, rawNameCounts:{}, missingUdise:false };
-            
-            Object.assign(schoolsMap[groupKey], {
+            if(!schoolsMap[doc.id]) {
+                schoolsMap[doc.id] = { completedCount:0, pendingCount:0, variations:{}, rawNameCounts:{}, missingUdise:false };
+            }
+            Object.assign(schoolsMap[doc.id], {
                 name: d.name, block: d.block, district: d.district, pin: d.pin,
-                udise: udise, source: source, phone: d.phone || d.hmPhone, signature: d.hmSignature,
-                latestActivity: Math.max(schoolsMap[groupKey].latestActivity || 0, d.lastModified || 0)
+                udise: doc.id, phone: d.phone || d.hmPhone, signature: d.hmSignature,
+                latestActivity: Math.max(schoolsMap[doc.id].latestActivity || 0, d.lastModified || 0)
             });
             hasChanges = true;
         });
 
-        const queries = [db.collection('students').where('lastModified', '>', lastSyncId).get()];
+        // 2. Multi-pronged Fetch to catch all possible timestamps (fixes Excel missing bug)
+        const queries = [
+            db.collection('students').where('lastModified', '>', lastSyncId).get()
+        ];
+        
+        // Only run these if we actually have a previous sync, otherwise it's just a full refresh
         if (lastSyncId > 0) {
             const syncDate = new Date(lastSyncId);
             queries.push(db.collection('students').where('createdAt', '>', syncDate).get());
@@ -685,16 +780,14 @@ async function quickSync() {
         }
 
         const results = await Promise.allSettled(queries);
+        const updatedUdises = new Set();
         
         results.forEach(res => {
             if(res.status === 'fulfilled' && res.value) {
                 res.value.forEach(doc => {
                     const d = doc.data();
-                    const udise = d.udise || (d.schoolName ? `NO_UDISE:${d.schoolName}` : 'UNKNOWN');
-                    if(udise !== 'UNKNOWN') {
-                        const source = getStudentSource(d);
-                        updatedGroups.add(`${udise}_${source}`);
-                    }
+                    const udise = d.udise || (d.schoolName ? `NO_UDISE:${d.schoolName}` : null);
+                    if(udise) updatedUdises.add(udise);
                     
                     let docTime = 0;
                     if(d.lastModified) docTime = Number(d.lastModified) || 0;
@@ -710,42 +803,48 @@ async function quickSync() {
             }
         });
 
-        for(let groupKey of updatedGroups) {
-            const lastUnderscore = groupKey.lastIndexOf('_');
-            const udise = groupKey.substring(0, lastUnderscore);
-            const source = groupKey.substring(lastUnderscore + 1);
-
+        // 3. Recalculate accurate counts for affected UDISES only
+        for(let udise of updatedUdises) {
             const field = udise.startsWith('NO_UDISE:') ? 'schoolName' : 'udise';
             const value = udise.replace('NO_UDISE:', '');
-            
             const snap = await db.collection('students').where(field, '==', value).get();
-            let comp = 0, pend = 0; let rawCounts = {};
+            
+            let comp = 0, pend = 0;
+            let vars = {};
+            let rawCounts = {};
             
             snap.forEach(doc => { 
                 const d = doc.data();
-                if (getStudentSource(d) === source) {
-                    const rName = d.schoolName || 'Unknown';
-                    rawCounts[rName] = (rawCounts[rName] || 0) + 1;
-                    if(d.finalised !== false) comp++; else pend++; 
+                const vName = getVariationName(d);
+                if(!vars[vName]) vars[vName] = { completed: 0, pending: 0 };
+                
+                const rName = d.schoolName || 'Unknown';
+                rawCounts[rName] = (rawCounts[rName] || 0) + 1;
+                
+                if(d.finalised !== false) {
+                    comp++; 
+                    vars[vName].completed++;
+                } else {
+                    pend++; 
+                    vars[vName].pending++;
                 }
             });
             
-            if (comp > 0 || pend > 0) {
-                if(!schoolsMap[groupKey]) {
-                    const best = Object.keys(rawCounts).sort((a,b)=>rawCounts[b]-rawCounts[a])[0];
-                    schoolsMap[groupKey] = {
-                        name: best, completedCount: comp, pendingCount: pend,
-                        block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
-                        latestActivity: maxId, rawNameCounts: rawCounts, missingUdise: field==='schoolName', source: source
-                    };
-                } else {
-                    schoolsMap[groupKey].completedCount = comp;
-                    schoolsMap[groupKey].pendingCount = pend;
-                    schoolsMap[groupKey].rawNameCounts = rawCounts;
-                    schoolsMap[groupKey].latestActivity = Math.max(schoolsMap[groupKey].latestActivity, maxId);
-                }
+            if(schoolsMap[udise]) {
+                schoolsMap[udise].completedCount = comp;
+                schoolsMap[udise].pendingCount = pend;
+                schoolsMap[udise].variations = vars;
+                schoolsMap[udise].rawNameCounts = rawCounts;
+            } else if (comp > 0 || pend > 0) {
+                // Failsafe for legacy unlisted schools
+                const best = Object.keys(rawCounts).sort((a,b)=>rawCounts[b]-rawCounts[a])[0];
+                schoolsMap[udise] = {
+                    name: best, completedCount: comp, pendingCount: pend,
+                    block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
+                    latestActivity: maxId, variations: vars, rawNameCounts: rawCounts, missingUdise: field==='schoolName'
+                };
             } else {
-                delete schoolsMap[groupKey];
+                delete schoolsMap[udise];
             }
         }
         
@@ -755,21 +854,27 @@ async function quickSync() {
             localStorage.setItem('adminLastSyncId', lastSyncId.toString());
             renderDashboard();
         }
-    } catch(err) { console.error("Quick Sync Error:", err); } finally { if(btn) btn.innerHTML = "⚡ Quick Sync"; }
+    } catch(err) {
+        console.error("Quick Sync Error:", err);
+    } finally {
+        if(btn) btn.innerHTML = "⚡ Quick Sync";
+    }
 }
+
 
 function renderDashboard(){
     const grid = document.getElementById('schoolGrid');
     grid.innerHTML = '';
-    const keys = Object.keys(schoolsMap).sort((a, b) => schoolsMap[b].latestActivity - schoolsMap[a].latestActivity);
     
-    if(keys.length === 0){ 
+    const udises = Object.keys(schoolsMap).sort((a, b) => schoolsMap[b].latestActivity - schoolsMap[a].latestActivity);
+    
+    if(udises.length === 0){ 
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; background: white; border-radius: 12px; border: 1px dashed #ccc;"><i class="fas fa-folder-open fa-3x" style="color: #ccc; margin-bottom: 15px;"></i><p style="color: #777;">No schools found in the database. Use Full Refresh if missing.</p></div>'; 
         return; 
     }
     
-    keys.forEach(groupKey => {
-        const s = schoolsMap[groupKey];
+    udises.forEach(udise => {
+        const s = schoolsMap[udise];
         const div = document.createElement('div');
         div.className = 'school-card';
         
@@ -777,30 +882,44 @@ function renderDashboard(){
             ? `<i class="fas fa-map-marker-alt" style="color: #dc3545; width: 16px;"></i> ${escapeHtml(s.block || '')}, ${escapeHtml(s.district || '')}`
             : `<i class="fas fa-map-marker-alt" style="color: #ccc; width: 16px;"></i> <span style="color:#aaa; font-style:italic;">Missing Address</span>`;
 
+        const altNames = Object.keys(s.variations || {});
+        let variationsHtml = '';
+        if (altNames.length > 0) {
+            variationsHtml = altNames.map(v => {
+                const total = s.variations[v].completed + s.variations[v].pending;
+                return `<div class="variation-item"><div style="flex:1; truncate; padding-right:10px;"><i class="fas fa-chevron-right text-xs" style="color:#ccc; margin-right:5px;"></i> ${escapeHtml(v)}</div> <span style="color:#888; font-weight:bold;">${total}</span></div>`;
+            }).join('');
+        } else {
+             variationsHtml = `<div class="variation-item" style="color:#888; font-style:italic;">No students added yet.</div>`;
+        }
+
         let missingUdiseWarning = s.missingUdise 
             ? `<div style="background:#f8d7da; color:#721c24; font-size:11px; padding:6px 10px; border-radius:6px; margin-top:10px; display:flex; gap:6px; align-items:start;"><i class="fas fa-exclamation-triangle" style="margin-top:2px;"></i> No UDISE. Tap Master Profile to add it.</div>` : '';
         
         let pendingBadge = s.pendingCount > 0 ? `<div style="margin-top:6px; font-weight:800; color:#856404; background: #ffeeba; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-clock mr-1"></i> ${s.pendingCount} Pending Review</div>` : '';
 
+        // Empty School Indicator
         let readyBadge = s.completedCount > 0 
             ? `<div style="margin-top:12px; font-weight:800; color:#28a745; background: #e8f5e9; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-check-circle mr-1"></i> ${s.completedCount} Ready</div>`
             : `<div style="margin-top:12px; font-weight:800; color:#6c757d; background: #e9ecef; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-folder-open mr-1"></i> 0 Ready Students</div>`;
 
-        let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(s.udise)}`;
-        
-        const isExcel = s.source === 'excel';
-        const srcBadge = isExcel 
-            ? `<span style="font-size:11px; background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:4px; font-weight:bold; vertical-align:middle; margin-left:10px;"><i class="fas fa-file-excel"></i> Excel Upload</span>`
-            : `<span style="font-size:11px; background:#e6f2ff; color:#0056b3; padding:4px 8px; border-radius:4px; font-weight:bold; vertical-align:middle; margin-left:10px;"><i class="fas fa-mobile-alt"></i> Manual App</span>`;
+        let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(udise)}`;
 
         div.innerHTML = `
-            <div class="school-card-content" onclick="openSchoolDetail('${escapeHtml(groupKey)}')">
+            <div class="school-card-content" onclick="openUdiseSelector('${escapeHtml(udise)}')">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
                     <h3 title="${escapeHtml(udiseTitle)}" style="color:#0b53a0; font-family:monospace; font-size:1.3rem; letter-spacing:1px; margin:0;">${escapeHtml(udiseTitle)}</h3>
                 </div>
-                <div class="school-meta" style="color:#E85C0D; font-weight:bold; font-size:15px; margin-bottom:12px; display:flex; align-items:center;">
-                    <i class="fas fa-school" style="margin-right:5px;"></i> <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(s.name || 'Unknown')}</span> ${srcBadge}
+                
+                <div class="school-meta" style="color:#E85C0D; font-weight:bold; font-size:15px; margin-bottom:12px;">
+                    <i class="fas fa-school" style="margin-right:5px;"></i> ${escapeHtml(s.name || 'Unknown')}
                 </div>
+
+                <div style="background: #fdfdfd; padding: 10px 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #f0f0f0;">
+                    <div style="font-size:11px; text-transform:uppercase; color:#999; font-weight:bold; margin-bottom:5px;">Entry Sources</div>
+                    ${variationsHtml}
+                </div>
+                
                 <div class="school-meta">${loc}</div>
                 
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
@@ -810,7 +929,7 @@ function renderDashboard(){
                 ${missingUdiseWarning}
             </div>
             <div class="school-actions">
-                <button class="btn btn-outline" style="padding: 6px 14px; font-size:13px; display:flex; align-items:center; gap:5px;" onclick="openSchoolEdit('${escapeHtml(groupKey)}')"><i class="fas fa-cog text-xs"></i> Master Profile</button>
+                <button class="btn btn-outline" style="padding: 6px 14px; font-size:13px; display:flex; align-items:center; gap:5px;" onclick="openSchoolEdit('${escapeHtml(udise)}')"><i class="fas fa-cog text-xs"></i> Master Profile</button>
             </div>
         `;
         grid.appendChild(div);
@@ -820,24 +939,73 @@ function renderDashboard(){
 function showDashboard(){
     document.getElementById('detailView').classList.add('hidden');
     document.getElementById('dashboardView').classList.remove('hidden');
-    currentViewKey = null;
+    forcedSchoolNameFilter = 'all'; // Reset forced filter
     renderDashboard();
 }
 
-function openSchoolDetail(groupKey){
-    let s = schoolsMap[groupKey];
+function openUdiseSelector(udise) {
+    const s = schoolsMap[udise];
+    if(!s) return;
+
+    const variations = Object.keys(s.variations || {});
+
+    // If there's only 0 or 1 variation, skip the selector and just open it
+    if(variations.length <= 1) {
+        openSchoolDetail(udise, 'all');
+        return;
+    }
+
+    document.getElementById('udiseSelectorTitle').textContent = s.missingUdise ? 'Legacy Setup' : `UDISE: ${udise}`;
+    const list = document.getElementById('udiseSelectorList');
+    list.innerHTML = '';
+
+    // Button for ALL
+    const btnAll = document.createElement('button');
+    btnAll.className = 'btn btn-primary';
+    btnAll.style.textAlign = 'left';
+    btnAll.style.padding = '12px 16px';
+    btnAll.innerHTML = `<b>Manage All Variations Together</b> <span style="font-size:12px; float:right;">${s.completedCount + s.pendingCount} Total</span>`;
+    btnAll.onclick = () => {
+        document.getElementById('udiseSelectorModal').style.display = 'none';
+        openSchoolDetail(udise, 'all');
+    };
+    list.appendChild(btnAll);
+
+    // Buttons for each variation
+    variations.forEach(v => {
+        const counts = s.variations[v];
+        const total = counts.completed + counts.pending;
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-outline';
+        btn.style.textAlign = 'left';
+        btn.style.padding = '10px 16px';
+        btn.style.borderColor = '#007bff';
+        btn.innerHTML = `<b>${escapeHtml(v)}</b> <span style="font-size:11px; float:right; background:#e6f2ff; color:#007bff; padding:4px 8px; border-radius:12px; font-weight:bold;">${total}</span>`;
+        btn.onclick = () => {
+            document.getElementById('udiseSelectorModal').style.display = 'none';
+            // Set the strict filter and open
+            openSchoolDetail(udise, v);
+        };
+        list.appendChild(btn);
+    });
+
+    document.getElementById('udiseSelectorModal').style.display = 'flex';
+}
+
+let currentViewUdise = null;
+
+function openSchoolDetail(udise, specificVariationName = 'all'){
+    let s = schoolsMap[udise];
     if(!s) return;
     
-    currentViewKey = groupKey;
+    currentViewUdise = udise;
+    forcedSchoolNameFilter = specificVariationName; // Ensure the global filter state is updated
     
-    document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${s.udise}`;
+    document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
     
-    const isExcel = s.source === 'excel';
-    const srcBadge = isExcel 
-        ? `<span style="font-size:12px; background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:4px; font-weight:bold; vertical-align:middle; margin-left:10px;"><i class="fas fa-file-excel"></i> Excel Upload</span>`
-        : `<span style="font-size:12px; background:#e6f2ff; color:#0056b3; padding:4px 8px; border-radius:4px; font-weight:bold; vertical-align:middle; margin-left:10px;"><i class="fas fa-mobile-alt"></i> Manual App</span>`;
-        
-    document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas fa-school" style="color:#007bff; margin-right:8px;"></i>${escapeHtml(s.name || 'Unnamed School')} ${srcBadge}`;
+    // Header logic: If user picked a specific source, show that in header, otherwise show Master Name
+    const displayName = (specificVariationName === 'all') ? (s.name || 'Unnamed School') : specificVariationName;
+    document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas fa-school" style="color:#007bff; margin-right:8px;"></i>${escapeHtml(displayName)}`;
     
     document.getElementById('viewAddress').innerHTML = `<i class="fas fa-map-marker-alt" style="color:#dc3545"></i> ${s.block}, ${s.district} - ${s.pin}`;
     document.getElementById('viewContact').innerHTML = `<i class="fas fa-phone-alt"></i> ${s.phone || 'No phone provided'}`;
@@ -855,9 +1023,22 @@ function openSchoolDetail(groupKey){
     
     document.getElementById('dashboardView').classList.add('hidden');
     document.getElementById('detailView').classList.remove('hidden');
+    
+    // Hide the school filter dropdown if a specific school is locked in
+    const schoolFilterContainer = document.getElementById('schoolNameFilterContainer');
+    if (forcedSchoolNameFilter !== 'all') {
+        schoolFilterContainer.style.display = 'none';
+    } else {
+        schoolFilterContainer.style.display = 'flex';
+    }
 
+    // Reset Filters
     const classFilterSelect = document.getElementById('classFilterSelect');
     classFilterSelect.innerHTML = '<option value="all">All Classes</option>';
+    
+    const schoolNameFilterSelect = document.getElementById('schoolNameFilterSelect');
+    schoolNameFilterSelect.innerHTML = '<option value="all">All Variations</option>';
+    
     document.getElementById('printFilterSelect').value = 'all';
     document.getElementById('dataStatusFilterSelect').value = 'all';
 
@@ -869,24 +1050,43 @@ function openSchoolDetail(groupKey){
     db.collection('students').where(field, '==', value).get().then(qs => {
         currentSchoolStudents = [];
         const classes = new Set();
+        const variationNames = new Set();
         
         qs.forEach(doc => {
             const data = doc.data();
             if (s.udise.startsWith('NO_UDISE:') && data.udise) return;
             
-            // Strictly filter client side by the precise source we clicked on
-            if(getStudentSource(data) === s.source) {
-                currentSchoolStudents.push(data);
-                if(data.class) classes.add(normalizeClass(data.class));
+            currentSchoolStudents.push(data);
+            
+            const vName = getVariationName(data);
+            // Only add classes to filter if they match the forced school filter
+            if (forcedSchoolNameFilter === 'all' || vName === forcedSchoolNameFilter) {
+                 if(data.class) classes.add(normalizeClass(data.class));
             }
+            variationNames.add(vName);
         });
         currentSchoolStudents.sort((a,b) => b.id - a.id);
         
+        // Populate Class Filter based on visible data
         Array.from(classes).sort().forEach(cls => {
             const opt = document.createElement('option');
-            opt.value = cls; opt.textContent = 'Class: ' + cls;
+            opt.value = cls; 
+            opt.textContent = 'Class: ' + cls;
             classFilterSelect.appendChild(opt);
         });
+        
+        // Populate School Name Filter (only matters if viewing "All")
+        Array.from(variationNames).sort().forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name; 
+            opt.textContent = name;
+            schoolNameFilterSelect.appendChild(opt);
+        });
+
+        // Apply preselected variation from modal prompt
+        if(forcedSchoolNameFilter !== 'all' && variationNames.has(forcedSchoolNameFilter)) {
+            schoolNameFilterSelect.value = forcedSchoolNameFilter;
+        }
 
         renderTable();
         updateStats(); 
@@ -899,11 +1099,11 @@ function openSchoolDetail(groupKey){
 }
 
 function downloadHmSignature() {
-    if(!currentViewKey || !schoolsMap[currentViewKey] || !schoolsMap[currentViewKey].signature) {
+    if(!currentViewUdise || !schoolsMap[currentViewUdise] || !schoolsMap[currentViewUdise].signature) {
         showMsg("No signature available to download.");
         return;
     }
-    const s = schoolsMap[currentViewKey];
+    const s = schoolsMap[currentViewUdise];
     const a = document.createElement('a');
     a.href = s.signature;
     const safeName = (s.name || 'School').replace(/[^a-zA-Z0-9]/g, '_');
@@ -916,18 +1116,40 @@ function downloadHmSignature() {
 function renderTable(){
     const tbody = document.querySelector('#studentTable tbody');
     const classFilter = document.getElementById('classFilterSelect').value;
+    const schoolNameFilter = document.getElementById('schoolNameFilterSelect').value;
     const printFilter = document.getElementById('printFilterSelect').value;
     const dataStatus = document.getElementById('dataStatusFilterSelect').value;
     
     let filteredStudents = currentSchoolStudents;
 
-    if (dataStatus === 'pending') filteredStudents = filteredStudents.filter(s => s.finalised === false);
-    else if (dataStatus === 'completed') filteredStudents = filteredStudents.filter(s => s.finalised !== false);
-
-    if (classFilter !== 'all') filteredStudents = filteredStudents.filter(s => normalizeClass(s.class) === classFilter);
+    // 0. Force Filter to Selected Variation (if active)
+    if (forcedSchoolNameFilter !== 'all') {
+        filteredStudents = filteredStudents.filter(s => getVariationName(s) === forcedSchoolNameFilter);
+    }
     
-    if (printFilter === 'printed') filteredStudents = filteredStudents.filter(s => s.isPrinted);
-    else if (printFilter === 'unprinted') filteredStudents = filteredStudents.filter(s => !s.isPrinted);
+    // 1. Filter by Data Status
+    if (dataStatus === 'pending') {
+        filteredStudents = filteredStudents.filter(s => s.finalised === false);
+    } else if (dataStatus === 'completed') {
+        filteredStudents = filteredStudents.filter(s => s.finalised !== false);
+    }
+
+    // 2. Filter by Class
+    if (classFilter !== 'all') {
+        filteredStudents = filteredStudents.filter(s => normalizeClass(s.class) === classFilter);
+    }
+    
+    // 3. Filter by School Name (Dropdown)
+    if (forcedSchoolNameFilter === 'all' && schoolNameFilter !== 'all') {
+        filteredStudents = filteredStudents.filter(s => getVariationName(s) === schoolNameFilter);
+    }
+    
+    // 4. Filter by Print Status
+    if (printFilter === 'printed') {
+        filteredStudents = filteredStudents.filter(s => s.isPrinted);
+    } else if (printFilter === 'unprinted') {
+        filteredStudents = filteredStudents.filter(s => !s.isPrinted);
+    }
 
     tbody.innerHTML = '';
     document.getElementById('selectAll').checked = false;
@@ -937,6 +1159,9 @@ function renderTable(){
         updateSelection();
         return;
     }
+    
+    const showSchoolCol = forcedSchoolNameFilter === 'all';
+    document.getElementById('schoolColHeader').style.display = showSchoolCol ? '' : 'none';
 
     filteredStudents.forEach((s, i) => {
         const tr = document.createElement('tr');
@@ -950,11 +1175,15 @@ function renderTable(){
             printStatusBadge = `<span class="badge-ready"><i class="fas fa-print"></i> Ready Print</span>`;
         }
         
+        // Protect against missing photoBase64
         const photoSrc = s.photoBase64 && s.photoBase64.startsWith('http') ? s.photoBase64 : (s.photoBase64 || '');
+
+        let schoolColHtml = showSchoolCol ? `<td style="color: #666; font-size: 12px; font-weight:600;">${escapeHtml(getVariationName(s))}</td>` : '';
 
         tr.innerHTML = `<td style="text-align: center;"><input type="checkbox" class="sel" value="${s.id}" style="transform: scale(1.2);"></td><td><b>${i+1}</b></td>
         <td><img class="thumb" src="${photoSrc}" crossorigin="anonymous" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'%23ccc\\' stroke-width=\\'2\\' stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\'%3E%3Cpath d=\\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\\'/%3E%3Ccircle cx=\\'12\\' cy=\\'7\\' r=\\'4\\'/%3E%3C/svg%3E'"></td>
         <td style="font-weight: 600; color: #111;">${escapeHtml(s.name)}</td>
+        ${schoolColHtml}
         <td>${normalizeClass(s.class)}</td><td>${escapeHtml(s.roll)}</td><td>${escapeHtml(s.dob)}</td><td>${escapeHtml(s.bloodGroup)||'-'}</td>
         <td>${escapeHtml(s.mobile || s.phone || '-')}</td> 
         <td>${printStatusBadge}</td>
@@ -965,6 +1194,7 @@ function renderTable(){
         tbody.appendChild(tr);
     });
     
+    // Re-attach listener
     document.querySelectorAll('.sel').forEach(c => c.onchange = updateSelection);
     updateSelection();
 }
@@ -998,6 +1228,7 @@ function updateSelection(){
     if(n > 0) {
         bulkDelBtn.disabled = false;
         
+        // Only allow generation if NONE of the selected are "Pending Data"
         let hasPendingData = false;
         selectedCheckboxes.forEach(c => {
             const st = currentSchoolStudents.find(x => x.id.toString() === c.value);
@@ -1032,6 +1263,7 @@ function updateSelection(){
     }
 }
 
+// BULK DELETE
 async function bulkDeleteSelected() {
     const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
     if(ids.length === 0) return;
@@ -1056,14 +1288,12 @@ async function bulkDeleteSelected() {
             await batch.commit();
         }
 
+        // Update local state
         currentSchoolStudents = currentSchoolStudents.filter(s => !ids.includes(s.id.toString()));
 
-        if(currentViewKey && schoolsMap[currentViewKey]) {
-             const compCount = currentSchoolStudents.filter(st => st.finalised !== false).length;
-             const pendCount = currentSchoolStudents.filter(st => st.finalised === false).length;
-             schoolsMap[currentViewKey].completedCount = compCount;
-             schoolsMap[currentViewKey].pendingCount = pendCount;
-             localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        // Resync map counts locally
+        if(currentViewUdise && schoolsMap[currentViewUdise]) {
+             await quickSync(); // Fast recalculation since we deleted items
         }
 
         renderTable(); 
@@ -1077,6 +1307,7 @@ async function bulkDeleteSelected() {
     }
 }
 
+// PRINT STATUS LOGIC
 async function markSelectedPrinted(status) {
     const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
     if(ids.length === 0) return;
@@ -1099,13 +1330,14 @@ async function markSelectedPrinted(status) {
             await batch.commit();
         }
 
+        // Update local state
         ids.forEach(id => {
             const s = currentSchoolStudents.find(x => x.id == id);
             if(s) s.isPrinted = status;
         });
 
         renderTable(); 
-        updateStats(); 
+        updateStats(); // Update stats panel
     } catch (e) {
         showMsg("Error updating print status: " + e.message);
     } finally {
@@ -1167,12 +1399,14 @@ async function drawCard(s) {
 
     ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
 
-    const sm = schoolsMap[currentViewKey];
+    // Get the MASTER school data from the dashboard instead of the specific student's record
+    const sm = schoolsMap[s.udise || ('NO_UDISE:' + s.schoolName)];
 
     if(window.assets.mode === 'auto') {
         const centerHeadX = SCHOOL_NAME_POS.x + (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) / 2;
         ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
         
+        // Force master school name regardless of selection filter
         const printSchoolName = sm && sm.name ? sm.name : (s.schoolName || '');
         
         let fs = 45; ctx.font = `bold ${fs}px OdiaFont`;
@@ -1216,10 +1450,11 @@ async function drawCard(s) {
         photo.src = s.photoBase64;
         await new Promise((resolve, reject) => {
              photo.onload = resolve;
+             // Handle case where image fails to load from storage so drawing doesn't stall forever
              photo.onerror = () => { console.warn("Failed to load image for", s.name); resolve(); }
         });
         
-        if (photo.width > 0) { 
+        if (photo.width > 0) { // Only draw if loaded successfully
             let sx=0, sy=0, sw=photo.width, sh=photo.height;
             if(window.assets.aiModel === 'loaded' && faceDetector) {
                 try {
@@ -1234,11 +1469,13 @@ async function drawCard(s) {
             }
             ctx.drawImage(photo, sx, sy, sw, sh, px, py, pw, ph);
         } else {
+             // Draw placeholder if missing
              ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
              ctx.fillStyle = '#999'; ctx.textAlign='center'; ctx.font = '20px Arial';
              ctx.fillText('No Photo', px+pw/2, py+ph/2);
         }
     } else {
+        // Draw placeholder if none exists
         ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
         ctx.fillStyle = '#999'; ctx.textAlign='center'; ctx.font = '20px Arial';
         ctx.fillText('No Photo', px+pw/2, py+ph/2);
@@ -1263,6 +1500,7 @@ async function drawCard(s) {
     return await new Promise(r => canvas.toBlob(r, 'image/png'));
 }
 
+// NEW VERIFICATION PDF FUNCTION
 document.getElementById('verifyBtn').onclick = async () => {
     const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
     const targets = currentSchoolStudents.filter(s => ids.includes(s.id.toString()));
@@ -1283,6 +1521,7 @@ document.getElementById('verifyBtn').onclick = async () => {
             const imgObj = new Image(); imgObj.src = imgUrl;
             await new Promise(r => imgObj.onload=r);
 
+            // Convert to JPEG at full resolution but 90% quality for smaller file size without "cracking" photos
             const tempCvs = document.createElement('canvas');
             tempCvs.width = CARD_W;
             tempCvs.height = CARD_H;
@@ -1294,6 +1533,7 @@ document.getElementById('verifyBtn').onclick = async () => {
             if(i>0) verifyPdf.addPage([CARD_W, CARD_H], 'portrait');
             verifyPdf.addImage(jpegUrl, 'JPEG', 0, 0, CARD_W, CARD_H, undefined, 'FAST');
             
+            // Add Watermark
             verifyPdf.saveGraphicsState();
             verifyPdf.setGState(new verifyPdf.GState({opacity: 0.3}));
             verifyPdf.setTextColor(255, 0, 0); verifyPdf.setFontSize(30);
@@ -1306,7 +1546,7 @@ document.getElementById('verifyBtn').onclick = async () => {
         }
 
         btn.innerHTML = `<i class="fas fa-download"></i> Downloading...`;
-        const safeName = (schoolsMap[currentViewKey]?.name || 'School').replace(/[^a-zA-Z0-9]/g, '_');
+        const safeName = (schoolsMap[currentViewUdise]?.name || 'School').replace(/[^a-zA-Z0-9]/g, '_');
         verifyPdf.save(`${safeName}_Verification_Proof.pdf`);
 
     } catch (error) {
@@ -1325,10 +1565,13 @@ document.getElementById('generateBtn').onclick = async () => {
 
     const zip = new JSZip();
     const folder = zip.folder("PNGs");
+    
+    // Create dual folders for A4 layouts
     const folderA4WithGaps = zip.folder("A4_Sheets_With_Gaps");
     const folderA4NoGaps = zip.folder("A4_Sheets_No_Gaps");
     
     const { jsPDF } = window.jspdf;
+    
     const verifyPdf = new jsPDF({ unit:'px', format:[CARD_W, CARD_H] });
 
     const imgs = [];
@@ -1343,6 +1586,7 @@ document.getElementById('generateBtn').onclick = async () => {
         await new Promise(r => imgObj.onload=r);
         imgs.push(imgObj);
 
+        // Convert to JPEG at full resolution but 90% quality for smaller file size without "cracking" photos
         const tempCvs = document.createElement('canvas');
         tempCvs.width = CARD_W;
         tempCvs.height = CARD_H;
@@ -1365,15 +1609,19 @@ document.getElementById('generateBtn').onclick = async () => {
     const pageCvs = document.createElement('canvas'); pageCvs.width=A4_W; pageCvs.height=A4_H;
     const pctx = pageCvs.getContext('2d');
     
+    // Config for sheets WITH GAPS
     const GAP_X = 40, GAP_Y = 150;
     const startX_Gaps = (A4_W - ((5*CARD_W)+(4*GAP_X)))/2;
     const startY_Gaps = (A4_H - ((2*CARD_H)+(1*GAP_Y)))/2;
+
+    // Config for sheets NO GAPS
     const startX_NoGaps = (A4_W - (5*CARD_W))/2;
     const startY_NoGaps = (A4_H - (2*CARD_H))/2;
 
     for(let i=0; i<imgs.length; i+=10) {
         const chunk = imgs.slice(i, i+10);
         
+        // 1. Generate A4 sheet WITH gaps
         pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
         chunk.forEach((img, idx) => {
             const c = idx % 5; const r = Math.floor(idx/5);
@@ -1385,6 +1633,7 @@ document.getElementById('generateBtn').onclick = async () => {
         const pBlobGaps = await new Promise(r => pageCvs.toBlob(r, 'image/jpeg', 0.9));
         folderA4WithGaps.file(`A4_Print_Sheet_${Math.floor(i/10)+1}.jpg`, pBlobGaps);
 
+        // 2. Generate A4 sheet NO gaps
         pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
         chunk.forEach((img, idx) => {
             const c = idx % 5; const r = Math.floor(idx/5);
@@ -1406,6 +1655,7 @@ document.getElementById('generateBtn').onclick = async () => {
     
     btn.disabled = false; updateSelection();
     
+    // Auto-prompt to update printed status
     setTimeout(async () => {
         if(await showMsg("ID Cards generated successfully!<br><br>Do you want to mark these selected students as 'Printed' so they disappear from the Pending list?", true)) {
             await markSelectedPrinted(true);
@@ -1413,14 +1663,14 @@ document.getElementById('generateBtn').onclick = async () => {
     }, 500);
 };
 
-async function openSchoolEdit(groupKey){
-    const s = schoolsMap[groupKey];
+async function openSchoolEdit(udise){
+    const s = schoolsMap[udise];
     if(!s) {
         await showMsg("School data missing");
         return;
     }
     
-    document.getElementById('oldSchoolName').value = groupKey;
+    document.getElementById('oldSchoolName').value = udise;
     document.getElementById('esName').value = s.name;
     document.getElementById('esPhone').value = s.phone || '';
     document.getElementById('esBlock').value = s.block || '';
@@ -1429,6 +1679,13 @@ async function openSchoolEdit(groupKey){
     document.getElementById('esUdise').value = s.udise || '';
     document.getElementById('esSignInput').value = ''; 
     
+    const dangerBtn = document.getElementById('dangerDeleteBtn');
+    if (forcedSchoolNameFilter === 'all') {
+        dangerBtn.innerHTML = `<i class="fas fa-trash"></i> Delete Entire UDISE`;
+    } else {
+        dangerBtn.innerHTML = `<i class="fas fa-trash"></i> Delete ${escapeHtml(forcedSchoolNameFilter)} Batch`;
+    }
+    
     document.getElementById('editSchoolModal').style.display = 'flex';
 }
 
@@ -1436,28 +1693,16 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
     const btn = document.getElementById('saveSchoolBtn');
     btn.disabled = true; btn.textContent = "Updating...";
     
-    const groupKey = document.getElementById('oldSchoolName').value;
-    const s = schoolsMap[groupKey];
-    
+    const oldUdise = document.getElementById('oldSchoolName').value;
     const newName = document.getElementById('esName').value.trim();
-    const newPhone = document.getElementById('esPhone').value.trim();
-    const newBlock = document.getElementById('esBlock').value.trim();
-    const newDistrict = document.getElementById('esDistrict').value.trim();
-    const newPin = document.getElementById('esPin').value.trim();
     const newUdise = document.getElementById('esUdise').value.trim();
-
-    if(!newName) return showMsg("Name cannot be empty");
-    if(!newUdise) return showMsg("UDISE Number is mandatory.");
-    if(!/^\d{11}$/.test(newUdise)) return showMsg("UDISE must be exactly 11 digits.");
-
     const updates = {
         name: newName,
-        phone: newPhone,
-        block: newBlock,
-        district: newDistrict,
-        pin: newPin,
+        phone: document.getElementById('esPhone').value.trim(),
+        block: document.getElementById('esBlock').value.trim(),
+        district: document.getElementById('esDistrict').value.trim(),
+        pin: document.getElementById('esPin').value.trim(),
         udise: newUdise,
-        source: s.source, 
         lastModified: Date.now() 
     };
     
@@ -1478,21 +1723,20 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         
         const compressedBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
         
-        const ref = window.storage.ref(`school_signatures/${newUdise}_${s.source}_signature.png`);
+        const ref = window.storage.ref(`school_signatures/${newUdise}_signature.png`);
         const metadata = { contentType: 'image/png' };
         await ref.put(compressedBlob, metadata);
         updates.hmSignature = await ref.getDownloadURL();
     }
     
     try {
-        const docId = `${newUdise}_${s.source}`;
-        const oldDocId = `${s.udise}_${s.source}`;
-        
-        await db.collection('schools').doc(docId).set(updates, { merge: true });
-        if(oldDocId !== docId) {
-            await db.collection('schools').doc(oldDocId).delete();
+        // 1. Update the 'schools' document
+        await db.collection('schools').doc(newUdise).set(updates, { merge: true });
+        if(oldUdise !== newUdise) {
+            await db.collection('schools').doc(oldUdise).delete();
         }
 
+        // 2. Update all associated students in batch
         const studentUpdates = {
             schoolName: updates.name,
             hmPhone: updates.phone,
@@ -1504,11 +1748,15 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         };
         if (updates.hmSignature) studentUpdates.hmSignature = updates.hmSignature;
 
-        const field = s.udise.startsWith('NO_UDISE:') ? 'schoolName' : 'udise';
-        const value = s.udise.replace('NO_UDISE:', '');
+        const isLegacyNoUdise = oldUdise.startsWith('NO_UDISE:');
+        const legacyOldName = isLegacyNoUdise ? oldUdise.slice('NO_UDISE:'.length) : null;
 
-        const snap = await db.collection('students').where(field, '==', value).get();
-        let docs = snap.docs.filter(doc => getStudentSource(doc.data()) === s.source);
+        const snap = isLegacyNoUdise
+            ? await db.collection('students').where('schoolName', '==', legacyOldName).get()
+            : await db.collection('students').where('udise', '==', oldUdise).get();
+        
+        let docs = snap.docs;
+        if (isLegacyNoUdise) docs = docs.filter(doc => !doc.data().udise);
         
         const chunks = [];
         for (let i = 0; i < docs.length; i += 400) {
@@ -1524,51 +1772,63 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         await showMsg("Master Profile updated successfully!");
         document.getElementById('editSchoolModal').style.display='none';
         
-        if(oldDocId !== docId) {
-             schoolsMap[docId] = schoolsMap[groupKey];
-             delete schoolsMap[groupKey];
-        }
-        schoolsMap[docId].name = newName;
-        Object.assign(schoolsMap[docId], {
-            phone: updates.phone, block: updates.block, district: updates.district, pin: updates.pin, udise: newUdise
-        });
-        if(updates.hmSignature) schoolsMap[docId].signature = updates.hmSignature;
+        // Re-sync local state
+        await quickSync();
         
-        localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
-        
-        if (currentViewKey === groupKey) {
-            openSchoolDetail(docId);
+        if (currentViewUdise === oldUdise) {
+            openSchoolDetail(newUdise, forcedSchoolNameFilter);
         } else {
             renderDashboard();
         }
 
-    } catch(e) { showMsg("Error updating profile: " + e.message); } 
+    } catch(e) { showMsg("Error updating school: " + e.message); } 
     finally { btn.disabled = false; btn.textContent = "Save Master Profile"; }
 };
 
+// ==========================================
+// DANGER ZONE: DELETE BATCH / SCHOOL
+// ==========================================
 async function deleteEntireSchool() {
-    const groupKey = document.getElementById('oldSchoolName').value;
-    const s = schoolsMap[groupKey];
+    const udise = document.getElementById('oldSchoolName').value;
+    const s = schoolsMap[udise];
+    
     if(!s) return;
 
-    const sourceLabel = s.source === 'excel' ? 'Excel Upload' : 'Manual App';
-    const confirmMsg = `<b>Warning: This action cannot be undone!</b><br><br>You are about to permanently delete the <b>${sourceLabel}</b> batch for: <b>${escapeHtml(s.name)}</b>.<br>This will delete <b>all ${s.completedCount + s.pendingCount} student records</b> from the database.`;
+    let confirmMsg = "";
+    if (forcedSchoolNameFilter === 'all') {
+        confirmMsg = `<b>Warning: This action cannot be undone!</b><br><br>You are about to permanently delete the entire school: <b>${escapeHtml(s.name)}</b>.<br>This will delete <b>all ${s.completedCount + s.pendingCount} student records</b> across all entry sources from the database.`;
+    } else {
+        confirmMsg = `<b>Warning: This action cannot be undone!</b><br><br>You are about to permanently delete the <b>${escapeHtml(forcedSchoolNameFilter)}</b> batch.<br>This will delete ONLY the students in this specific batch.`;
+    }
+    
     if(!(await showMsg(confirmMsg, true, true))) return;
 
-    const btn = document.querySelector('.btn-danger');
+    const btn = document.getElementById('dangerDeleteBtn');
     const oldText = btn.innerHTML;
     btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Deleting...`;
     btn.disabled = true;
 
     try {
-        const field = s.udise.startsWith('NO_UDISE:') ? 'schoolName' : 'udise';
-        const value = s.udise.replace('NO_UDISE:', '');
+        const isLegacyNoUdise = udise.startsWith('NO_UDISE:');
+        const legacyOldName = isLegacyNoUdise ? udise.slice('NO_UDISE:'.length) : null;
 
-        const snap = await db.collection('students').where(field, '==', value).get();
-        let docs = snap.docs.filter(doc => getStudentSource(doc.data()) === s.source);
+        const snap = isLegacyNoUdise
+            ? await db.collection('students').where('schoolName', '==', legacyOldName).get()
+            : await db.collection('students').where('udise', '==', udise).get();
+            
+        let docs = snap.docs;
+        if (isLegacyNoUdise) docs = docs.filter(doc => !doc.data().udise);
+        
+        // Target specifically the variation we are viewing, unless viewing 'all'
+        if (forcedSchoolNameFilter !== 'all') {
+            docs = docs.filter(doc => getVariationName(doc.data()) === forcedSchoolNameFilter);
+        }
 
+        // Delete students in batches
         const chunks = [];
-        for (let i = 0; i < docs.length; i += 400) { chunks.push(docs.slice(i, i + 400)); }
+        for (let i = 0; i < docs.length; i += 400) {
+            chunks.push(docs.slice(i, i + 400));
+        }
 
         for (const chunk of chunks) {
             const batch = db.batch();
@@ -1576,22 +1836,37 @@ async function deleteEntireSchool() {
             await batch.commit();
         }
         
-        try { await db.collection('schools').doc(`${s.udise}_${s.source}`).delete(); } catch(e) {}
-        try { await window.storage.ref(`school_signatures/${s.udise}_${s.source}_signature.png`).delete(); } catch(e) {}
+        // If 'all' or if we just deleted the very last batch for this UDISE, delete the Master school doc
+        if (forcedSchoolNameFilter === 'all' || docs.length === snap.docs.length) {
+            try {
+                if (!isLegacyNoUdise) await db.collection('schools').doc(udise).delete();
+            } catch(e) {}
+            
+            try {
+                if (!isLegacyNoUdise) await window.storage.ref(`school_signatures/${udise}_signature.png`).delete();
+            } catch(e) {}
 
-        delete schoolsMap[groupKey];
-        localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
-        
-        document.getElementById('editSchoolModal').style.display='none';
-        showDashboard(); 
+            delete schoolsMap[udise];
+            localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+            
+            document.getElementById('editSchoolModal').style.display='none';
+            showDashboard(); 
+        } else {
+            // We just deleted a sub-batch. Resync and stay on page.
+            document.getElementById('editSchoolModal').style.display='none';
+            await quickSync();
+            openSchoolDetail(udise, 'all');
+            showMsg("Batch deleted successfully!");
+        }
 
     } catch(e) {
-        showMsg("Error deleting batch: " + e.message);
+        showMsg("Error deleting: " + e.message);
     } finally {
         btn.innerHTML = oldText;
         btn.disabled = false;
     }
 }
+
 
 function openEditModal(id){
     const s = currentSchoolStudents.find(x => x.id == id);
