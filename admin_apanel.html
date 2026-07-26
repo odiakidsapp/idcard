@@ -181,23 +181,30 @@
     <div class="filter-bar">
         <div style="display: flex; align-items: center; gap: 8px;">
             <label style="font-size:13px; font-weight:bold; color: #444;">Data Status:</label>
-            <select id="dataStatusFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 150px; border-color: #ddd;">
+            <select id="dataStatusFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 140px; border-color: #ddd;">
                 <option value="all">Show All</option>
                 <option value="completed">Completed / Ready</option>
                 <option value="pending">Pending Review</option>
             </select>
         </div>
+        
+        <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
+            <label style="font-size:13px; font-weight:bold; color: #444;">School Name:</label>
+            <select id="schoolNameFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 140px; border-color: #ddd;">
+                <option value="all">All Variations</option>
+            </select>
+        </div>
 
         <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
             <label style="font-size:13px; font-weight:bold; color: #444;">Class:</label>
-            <select id="classFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 130px; border-color: #ddd;">
+            <select id="classFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 120px; border-color: #ddd;">
                 <option value="all">All Classes</option>
             </select>
         </div>
         
         <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
             <label style="font-size:13px; font-weight:bold; color: #444;">Print Status:</label>
-            <select id="printFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 140px; border-color: #ddd;">
+            <select id="printFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 130px; border-color: #ddd;">
                 <option value="all">Show All</option>
                 <option value="unprinted">Not Printed</option>
                 <option value="printed">Already Printed</option>
@@ -213,6 +220,7 @@
                     <th style="width: 40px;">#</th>
                     <th style="width: 60px;">Photo</th>
                     <th>Name</th>
+                    <th>School (Variation)</th>
                     <th>Class</th>
                     <th>Roll</th>
                     <th>DOB</th>
@@ -442,6 +450,10 @@ window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual'
 // STATS LOGIC
 function updateStats() {
     if(!currentSchoolStudents) return;
+    
+    // Calculate stats based on what is currently shown in the table to respect filters
+    const tbody = document.querySelector('#studentTable tbody');
+    // If the table is rendering right now, we can just use the full currentSchoolStudents for global stats
     
     const total = currentSchoolStudents.length;
     const pendingData = currentSchoolStudents.filter(s => s.finalised === false).length;
@@ -825,10 +837,14 @@ function openSchoolDetail(udise){
     // Reset Filters
     const classFilterSelect = document.getElementById('classFilterSelect');
     classFilterSelect.innerHTML = '<option value="all">All Classes</option>';
+    
+    const schoolNameFilterSelect = document.getElementById('schoolNameFilterSelect');
+    schoolNameFilterSelect.innerHTML = '<option value="all">All Variations</option>';
+    
     document.getElementById('printFilterSelect').value = 'all';
     document.getElementById('dataStatusFilterSelect').value = 'all';
 
-    document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 40px;"><i class="fas fa-spinner fa-spin fa-2x" style="color: #007bff; margin-bottom: 10px;"></i><br>Loading students from Firebase...</td></tr>';
+    document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="12" style="text-align:center; padding: 40px;"><i class="fas fa-spinner fa-spin fa-2x" style="color: #007bff; margin-bottom: 10px;"></i><br>Loading students from Firebase...</td></tr>';
     
     db.collection('students').where(...(udise.startsWith('NO_UDISE:')
         ? ['schoolName', '==', udise.slice('NO_UDISE:'.length)]
@@ -836,12 +852,15 @@ function openSchoolDetail(udise){
     )).get().then(qs => {
         currentSchoolStudents = [];
         const classes = new Set();
+        const schoolNames = new Set();
+        
         qs.forEach(doc => {
             const data = doc.data();
             if (udise.startsWith('NO_UDISE:') && data.udise) return;
             // WE NOW LOAD ALL STUDENTS, INCLUDING PENDING ONES
             currentSchoolStudents.push(data);
             if(data.class) classes.add(data.class);
+            if(data.schoolName) schoolNames.add(data.schoolName);
         });
         currentSchoolStudents.sort((a,b) => b.id - a.id);
         
@@ -851,6 +870,14 @@ function openSchoolDetail(udise){
             opt.value = cls; 
             opt.textContent = 'Class: ' + cls;
             classFilterSelect.appendChild(opt);
+        });
+        
+        // Populate School Name Filter
+        Array.from(schoolNames).sort().forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name; 
+            opt.textContent = name;
+            schoolNameFilterSelect.appendChild(opt);
         });
 
         renderTable();
@@ -865,7 +892,7 @@ function openSchoolDetail(udise){
             localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         }
     }).catch(e => {
-        document.getElementById('studentTable').querySelector('tbody').innerHTML = `<tr><td colspan="11" style="color:red; text-align:center; padding: 20px;">Error loading students: ${e.message}</td></tr>`;
+        document.getElementById('studentTable').querySelector('tbody').innerHTML = `<tr><td colspan="12" style="color:red; text-align:center; padding: 20px;">Error loading students: ${e.message}</td></tr>`;
     });
     
     updateSelection();
@@ -889,6 +916,7 @@ function downloadHmSignature() {
 function renderTable(){
     const tbody = document.querySelector('#studentTable tbody');
     const classFilter = document.getElementById('classFilterSelect').value;
+    const schoolNameFilter = document.getElementById('schoolNameFilterSelect').value;
     const printFilter = document.getElementById('printFilterSelect').value;
     const dataStatus = document.getElementById('dataStatusFilterSelect').value;
     
@@ -906,7 +934,12 @@ function renderTable(){
         filteredStudents = filteredStudents.filter(s => s.class === classFilter);
     }
     
-    // 3. Filter by Print Status
+    // 3. Filter by School Name
+    if (schoolNameFilter !== 'all') {
+        filteredStudents = filteredStudents.filter(s => s.schoolName === schoolNameFilter);
+    }
+    
+    // 4. Filter by Print Status
     if (printFilter === 'printed') {
         filteredStudents = filteredStudents.filter(s => s.isPrinted);
     } else if (printFilter === 'unprinted') {
@@ -917,7 +950,7 @@ function renderTable(){
     document.getElementById('selectAll').checked = false;
     
     if(filteredStudents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 40px; color: #777; font-style: italic;">No students found matching your filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding: 40px; color: #777; font-style: italic;">No students found matching your filters.</td></tr>';
         updateSelection();
         return;
     }
@@ -939,7 +972,9 @@ function renderTable(){
 
         tr.innerHTML = `<td style="text-align: center;"><input type="checkbox" class="sel" value="${s.id}" style="transform: scale(1.2);"></td><td><b>${i+1}</b></td>
         <td><img class="thumb" src="${photoSrc}" crossorigin="anonymous" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'%23ccc\\' stroke-width=\\'2\\' stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\'%3E%3Cpath d=\\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\\'/%3E%3Ccircle cx=\\'12\\' cy=\\'7\\' r=\\'4\\'/%3E%3C/svg%3E'"></td>
-        <td style="font-weight: 600; color: #111;">${s.name}</td><td>${s.class}</td><td>${s.roll}</td><td>${s.dob}</td><td>${s.bloodGroup||'-'}</td>
+        <td style="font-weight: 600; color: #111;">${s.name}</td>
+        <td style="color: #666; font-size: 12px;">${s.schoolName || '-'}</td>
+        <td>${s.class}</td><td>${s.roll}</td><td>${s.dob}</td><td>${s.bloodGroup||'-'}</td>
         <td>${s.mobile || s.phone || '-'}</td> 
         <td>${printStatusBadge}</td>
         <td style="text-align: right; white-space: nowrap;">
@@ -1052,7 +1087,6 @@ async function bulkDeleteSelected() {
              const pendCount = currentSchoolStudents.filter(st => st.finalised === false).length;
              schoolsMap[currentViewUdise].completedCount = compCount;
              schoolsMap[currentViewUdise].pendingCount = pendCount;
-             if(compCount === 0 && pendCount === 0) delete schoolsMap[currentViewUdise];
              localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         }
 
