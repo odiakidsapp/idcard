@@ -189,9 +189,9 @@
         </div>
         
         <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
-            <label style="font-size:13px; font-weight:bold; color: #444;">School Name:</label>
+            <label style="font-size:13px; font-weight:bold; color: #444;">School Name Variation:</label>
             <select id="schoolNameFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 140px; border-color: #ddd;">
-                <option value="all">All Variations</option>
+                <option value="all">Show All</option>
             </select>
         </div>
 
@@ -293,7 +293,7 @@
         <h3 style="color:#0b53a0; margin-top:0;">Edit School Profile</h3>
         <input type="hidden" id="oldSchoolName">
         
-        <div class="form-group"><label>School Name</label><input type="text" id="esName"></div>
+        <div class="form-group"><label>School Name (Master)</label><input type="text" id="esName"></div>
         <div class="form-group"><label>Contact Number</label><input type="text" id="esPhone"></div>
         
         <div style="display:flex; gap:15px;">
@@ -1193,14 +1193,19 @@ async function drawCard(s) {
 
     ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
 
+    // Get the MASTER school data from the dashboard instead of the specific student's record
+    const sm = schoolsMap[s.udise || ('NO_UDISE:' + s.schoolName)];
+
     if(window.assets.mode === 'auto') {
-        const sm = schoolsMap[s.udise || ('NO_UDISE:' + s.schoolName)];
         const centerHeadX = SCHOOL_NAME_POS.x + (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) / 2;
         ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
         
+        // **NEW: Use master school name (sm.name) instead of student's specific schoolName**
+        const printSchoolName = sm && sm.name ? sm.name : (s.schoolName || '');
+        
         let fs = 45; ctx.font = `bold ${fs}px OdiaFont`;
-        while (ctx.measureText(s.schoolName).width > (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) && fs > 10) { fs--; ctx.font = `bold ${fs}px OdiaFont`; }
-        ctx.fillText(s.schoolName, centerHeadX, SCHOOL_NAME_POS.y);
+        while (ctx.measureText(printSchoolName).width > (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) && fs > 10) { fs--; ctx.font = `bold ${fs}px OdiaFont`; }
+        ctx.fillText(printSchoolName, centerHeadX, SCHOOL_NAME_POS.y);
         
         ctx.font = '30px OdiaFont'; 
         let addr = [];
@@ -1568,7 +1573,7 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
         renderDashboard();
     } catch(e) { showMsg("Error updating school: " + e.message); } 
-    finally { btn.disabled = false; btn.textContent = "Update School"; }
+    finally { btn.disabled = false; btn.textContent = "Update Profile"; }
 };
 
 // ==========================================
