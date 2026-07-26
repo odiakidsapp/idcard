@@ -35,18 +35,6 @@
         input[type="number"] { -moz-appearance: textfield; }
         
         .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-        
-        /* Smooth expand/collapse for student cards */
-        .details-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
-            opacity: 0;
-        }
-        .details-content.expanded {
-            max-height: 200px;
-            opacity: 1;
-        }
 
         /* Sidebar Overlay */
         #sidebarOverlay {
@@ -624,7 +612,9 @@
               appId: "1:331979663377:web:026e537a7fcaca813129b0",
               measurementId: "G-PXVV87C78S"
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const firestore = firebase.firestore();
         const firebaseStorage = firebase.storage();
 
@@ -1476,9 +1466,9 @@
                             <div class="text-xs text-gray-600 font-medium mt-1">Class: <span class="text-gray-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-gray-300">|</span> Roll: <span class="text-gray-800">${s.roll}</span></div>
                             <div class="mt-1">${statusHtml}</div>
                         </div>
-                        <div class="flex-shrink-0 pl-2 flex flex-row gap-3">
-                            <button onclick="editStudent(${s.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-10 h-10 rounded-full transition shadow-md flex items-center justify-center text-sm" title="Edit Student"><i class="fas fa-pen"></i></button>
-                            <button onclick="deleteStudent(${s.id})" class="text-red-500 bg-red-50 hover:bg-red-100 w-10 h-10 rounded-full transition shadow-md flex items-center justify-center text-sm" title="Move to Recycle Bin"><i class="fas fa-trash"></i></button>
+                        <div class="flex-shrink-0 pl-1 flex items-center gap-3 border-l border-gray-100 ml-1 pl-3">
+                            <button onclick="editStudent('${s.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Edit Student"><i class="fas fa-pen"></i></button>
+                            <button onclick="deleteStudent('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Move to Recycle Bin"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
@@ -1569,7 +1559,8 @@
             }
         };
 
-        window.editStudent = function(id) {
+        window.editStudent = function(idStr) {
+            const id = Number(idStr);
             const s = students.find(x => x.id === id);
             if(!s) return;
             document.getElementById('editId').value = s.id;
@@ -1612,13 +1603,9 @@
             saveBtn.classList.replace('bg-green-600', 'bg-blue-600');
             saveBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
             
-            // Delete button removed from inside the modal since it is now on the card itself
-            document.getElementById('deleteInEditBtn').classList.add('hidden');
-            
             document.getElementById('addStudentModal').classList.remove('hidden');
         }
 
-        // Exposed globally for the inline close button
         window.resetForm = function(hideForm = true) {
             document.getElementById('editId').value = '';
             document.getElementById('sName').value = '';
@@ -1636,8 +1623,6 @@
             saveBtn.classList.replace('bg-blue-600', 'bg-green-600');
             saveBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
             
-            document.getElementById('deleteInEditBtn').classList.add('hidden');
-            
             if (hideForm) {
                 document.getElementById('addStudentModal').classList.add('hidden');
             }
@@ -1646,7 +1631,8 @@
         // ==========================================
         // RECYCLE BIN LOGIC (Soft Delete & Hard Delete)
         // ==========================================
-        window.deleteStudent = async function(id) {
+        window.deleteStudent = async function(idStr) {
+            const id = Number(idStr);
             const confirmed = await showConfirm("Move this student to the Recycle Bin? You can restore them within 30 days.", "Delete Student?", "Yes, Move to Bin");
             if(!confirmed) return;
             
