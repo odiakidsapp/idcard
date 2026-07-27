@@ -111,7 +111,7 @@
         <div class="button-group">
             <button class="btn btn-success" id="quickSyncBtn" onclick="quickSync()" title="Fetches only recently added students">⚡ Quick Sync</button>
             <button class="btn btn-primary" id="fullSyncBtn" onclick="fullResync()" title="Reads whole database (Uses Quota)">🔄 Full Refresh</button>
-            <button class="btn btn-warning" id="downloadRawBtn" title="Download Excel Data">💾 Export Backup</button>
+            <button class="btn btn-warning" id="downloadRawBtn" onclick="exportBackup()" title="Download Excel Data">💾 Export Backup</button>
         </div>
     </div>
     <div id="schoolGrid" class="school-grid"><p style="color: #666; font-style: italic;">Loading dashboard data...</p></div>
@@ -132,31 +132,6 @@
             <small style="font-weight: 600; color: #666;">HM Signature</small>
             <img id="viewHmSign" class="hm-sign-img" src="" alt="No Sign" crossorigin="anonymous">
             <button id="downloadSignBtn" class="btn btn-outline" style="font-size:11px; padding:4px 10px; margin-top:8px; display:none;" onclick="downloadHmSignature()" title="Download HM Signature">⬇ Download</button>
-        </div>
-    </div>
-
-    <!-- EXPANDED STATS PANEL -->
-    <div class="stats-panel" id="statsPanel">
-        <div class="stat-box primary">
-            <div class="stat-value" id="statTotal">0</div>
-            <div class="stat-label">Total Uploaded</div>
-        </div>
-        <div class="stat-box warning">
-            <div class="stat-value" id="statPendingReview">0</div>
-            <div class="stat-label">Pending Review</div>
-        </div>
-        <div class="stat-box info">
-            <div class="stat-value" id="statReadyPrint">0</div>
-            <div class="stat-label">Ready to Print</div>
-        </div>
-        <div class="stat-box success">
-            <div class="stat-value" id="statPrinted">0</div>
-            <div class="stat-label">Printed</div>
-        </div>
-        
-        <div class="class-stats">
-            <div style="font-size: 12px; color: #666; font-weight: 800; text-transform: uppercase; margin-bottom: 8px;">Class-wise Breakdown (Ready to Print only):</div>
-            <div id="classStatsContainer"></div>
         </div>
     </div>
 
@@ -186,11 +161,11 @@
     <!-- Filter Bar -->
     <div class="filter-bar">
         <div style="display: flex; align-items: center; gap: 8px;">
-            <label style="font-size:13px; font-weight:bold; color: #444;">Data Status:</label>
-            <select id="dataStatusFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 140px; border-color: #ddd;">
-                <option value="all">Show All</option>
-                <option value="completed">Completed / Ready</option>
-                <option value="pending">Pending Review</option>
+            <label style="font-size:13px; font-weight:bold; color: #444;">Source:</label>
+            <select id="sourceFilterSelect" onchange="onSourceFilterChange()" style="padding: 8px 12px; border-radius: 6px; min-width: 120px; border-color: #ddd;">
+                <option value="all">All Sources</option>
+                <option value="excel">Excel Upload</option>
+                <option value="manual">Manual App</option>
             </select>
         </div>
 
@@ -209,6 +184,15 @@
                 <option value="printed">Already Printed</option>
             </select>
         </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
+            <label style="font-size:13px; font-weight:bold; color: #444;">Review (Excel only):</label>
+            <select id="reviewFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 140px; border-color: #ddd;">
+                <option value="all">Show All</option>
+                <option value="reviewed">Reviewed</option>
+                <option value="not_reviewed">Not Reviewed</option>
+            </select>
+        </div>
     </div>
 
     <div class="table-container">
@@ -224,6 +208,7 @@
                     <th>DOB</th>
                     <th>Blood</th>
                     <th>Mobile</th>
+                    <th>Source</th>
                     <th>Status</th>
                     <th style="text-align: right;">Action</th>
                 </tr>
@@ -250,18 +235,6 @@
 </div>
 
 <canvas id="cardCanvas" style="display:none;"></canvas>
-
-<!-- UDISE Source Selector Modal -->
-<div id="udiseSelectorModal" class="modal">
-    <div class="modal-content" style="max-width: 500px;">
-        <h3 id="udiseSelectorTitle" style="color: #0b53a0; font-family: monospace; letter-spacing: 1px;">UDISE: XXXXXX</h3>
-        <p style="color:#555; font-size:14px; margin-bottom:20px; line-height: 1.5;">This UDISE contains entries from different sources. Which batch would you like to view?</p>
-        <div id="udiseSelectorList" style="display:flex; flex-direction:column; gap:12px; max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div>
-        <div class="modal-btns">
-            <button class="btn btn-secondary" onclick="document.getElementById('udiseSelectorModal').style.display='none'">Cancel</button>
-        </div>
-    </div>
-</div>
 
 <!-- Edit Student Modal -->
 <div id="editModal" class="modal">
@@ -461,6 +434,13 @@ function showMsg(msg, isConfirm = false, isDanger = false) {
     });
 }
 
+// Close modals when clicking outside modal content
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
+});
+
 // Database Core Variables
 let db = null;
 let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
@@ -471,29 +451,7 @@ let activeSource = null;
 
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
 
-function updateStats() {
-    if(!currentSchoolStudents) return;
-    const total = currentSchoolStudents.length;
-    const pendingData = currentSchoolStudents.filter(s => s.finalised === false).length;
-    const readyToPrint = currentSchoolStudents.filter(s => s.finalised !== false && !s.isPrinted).length;
-    const printed = currentSchoolStudents.filter(s => s.isPrinted).length;
-    
-    const classCounts = {};
-    currentSchoolStudents.forEach(s => {
-        if (s.finalised !== false && !s.isPrinted) {
-            const c = s.class ? normalizeClass(s.class) : 'Unknown';
-            classCounts[c] = (classCounts[c] || 0) + 1;
-        }
-    });
-    
-    document.getElementById('statTotal').textContent = total;
-    document.getElementById('statPendingReview').textContent = pendingData;
-    document.getElementById('statReadyPrint').textContent = readyToPrint;
-    document.getElementById('statPrinted').textContent = printed;
-    
-    const classHtml = Object.keys(classCounts).sort().map(c => `<span class="class-pill"><b>Class ${c}:</b> ${classCounts[c]}</span>`).join(' ');
-    document.getElementById('classStatsContainer').innerHTML = classHtml || '<i>No ready class data available.</i>';
-}
+
 
 async function changeLanguage() {
     const lang = document.getElementById('langToggle').value;
@@ -520,6 +478,8 @@ async function changeLanguage() {
     } catch(e) {
         document.getElementById('tplStatus').className = 'status-badge status-err';
         document.getElementById('tplStatus').textContent = 'Error Fetching';
+        window.assets.template = null;
+        updateSelection();
     }
 }
 
@@ -563,6 +523,17 @@ function unlockAdmin() {
     startApp();
 }
 
+function exportBackup() {
+    const data = JSON.stringify(schoolsMap, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Admin_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
 function hardResetApp() {
     sessionStorage.removeItem('adminAuthed');
     localStorage.removeItem('adminSchoolsMap');
@@ -579,6 +550,9 @@ else {
     };
     document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') document.getElementById('adminPasswordBtn').click();
+    });
+    document.getElementById('adminPasswordInput').addEventListener('input', () => {
+        document.getElementById('adminPasswordError').style.display = 'none';
     });
 }
 
@@ -799,52 +773,15 @@ function renderDashboard(){
         const s = schoolsMap[udise];
         const div = document.createElement('div');
         div.className = 'school-card';
-        
-        let loc = s.block || s.district 
-            ? `<i class="fas fa-map-marker-alt" style="color: #dc3545; width: 16px;"></i> ${escapeHtml(s.block || '')}, ${escapeHtml(s.district || '')}`
-            : `<i class="fas fa-map-marker-alt" style="color: #ccc; width: 16px;"></i> <span style="color:#aaa; font-style:italic;">Missing Address</span>`;
-
-        let sourcesHtml = '';
-        if (s.sources && Object.keys(s.sources).length > 0) {
-            sourcesHtml = Object.keys(s.sources).map(src => {
-                const total = s.sources[src].completed + s.sources[src].pending;
-                const label = src === 'excel' ? 'Excel Upload Data' : 'Manual App Data';
-                const icon = src === 'excel' ? 'fa-file-excel text-purple-500' : 'fa-mobile-alt text-blue-500';
-                return `<div class="variation-item"><div style="flex:1;"><i class="fas ${icon}" style="margin-right:8px; width:14px; text-align:center;"></i> ${label}</div> <span style="color:#888; font-weight:bold;">${total}</span></div>`;
-            }).join('');
-        } else {
-             sourcesHtml = `<div class="variation-item" style="color:#888; font-style:italic;">No students added yet.</div>`;
-        }
-
-        let missingUdiseWarning = s.missingUdise 
-            ? `<div style="background:#f8d7da; color:#721c24; font-size:11px; padding:6px 10px; border-radius:6px; margin-top:10px; display:flex; gap:6px; align-items:start;"><i class="fas fa-exclamation-triangle" style="margin-top:2px;"></i> No UDISE. Tap Master Profile to add it.</div>` : '';
-        
-        let pendingBadge = s.pendingCount > 0 ? `<div style="margin-top:6px; font-weight:800; color:#856404; background: #ffeeba; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-clock mr-1"></i> ${s.pendingCount} Pending Review</div>` : '';
-
-        let readyBadge = s.completedCount > 0 
-            ? `<div style="margin-top:12px; font-weight:800; color:#28a745; background: #e8f5e9; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-check-circle mr-1"></i> ${s.completedCount} Ready</div>`
-            : `<div style="margin-top:12px; font-weight:800; color:#6c757d; background: #e9ecef; display:inline-block; padding: 4px 10px; border-radius: 6px; font-size: 13px;"><i class="fas fa-folder-open mr-1"></i> 0 Ready Students</div>`;
 
         let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(udise)}`;
 
         div.innerHTML = `
-            <div class="school-card-content" onclick="openUdiseSelector('${escapeJs(udise)}')">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
-                    <h3 title="${escapeHtml(udiseTitle)}" style="color:#0b53a0; font-family:monospace; font-size:1.3rem; letter-spacing:1px; margin:0;">${escapeHtml(udiseTitle)}</h3>
-                </div>
-                <div class="school-meta" style="color:#E85C0D; font-weight:bold; font-size:15px; margin-bottom:12px; display:flex; align-items:center;">
+            <div class="school-card-content" onclick="openSchoolDetail('${escapeJs(udise)}')">
+                <h3 title="${escapeHtml(udiseTitle)}" style="color:#0b53a0; font-family:monospace; font-size:1.3rem; letter-spacing:1px; margin:0 0 10px 0;">${escapeHtml(udiseTitle)}</h3>
+                <div class="school-meta" style="color:#E85C0D; font-weight:bold; font-size:15px; display:flex; align-items:center;">
                     <i class="fas fa-school" style="margin-right:5px;"></i> <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(s.name || 'Unknown')}</span>
                 </div>
-                <div style="background: #fdfdfd; padding: 10px 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #f0f0f0;">
-                    <div style="font-size:11px; text-transform:uppercase; color:#999; font-weight:bold; margin-bottom:5px;">Entry Sources Detected</div>
-                    ${sourcesHtml}
-                </div>
-                <div class="school-meta">${loc}</div>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-                    ${readyBadge}
-                    ${pendingBadge}
-                </div>
-                ${missingUdiseWarning}
             </div>
             <div class="school-actions">
                 <button class="btn btn-outline" style="padding: 6px 14px; font-size:13px; display:flex; align-items:center; gap:5px;" onclick="openSchoolEdit('${escapeJs(udise)}')"><i class="fas fa-cog text-xs"></i> Master Profile</button>
@@ -862,63 +799,16 @@ function showDashboard(){
     renderDashboard();
 }
 
-function openUdiseSelector(udise) {
-    const s = schoolsMap[udise];
-    if(!s) return;
-
-    const sources = Object.keys(s.sources || {});
-
-    if(sources.length === 1) {
-        openSchoolDetail(udise, sources[0]);
-        return;
-    } else if (sources.length === 0) {
-        openSchoolDetail(udise, 'manual');
-        return;
-    }
-
-    document.getElementById('udiseSelectorTitle').textContent = s.missingUdise ? 'Legacy Setup' : `UDISE: ${udise}`;
-    const list = document.getElementById('udiseSelectorList');
-    list.innerHTML = '';
-
-    sources.forEach(src => {
-        const counts = s.sources[src];
-        const total = counts.completed + counts.pending;
-        const btn = document.createElement('button');
-        
-        if (src === 'excel') {
-            btn.className = 'w-full text-left bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 p-4 rounded-xl transition cursor-pointer mb-3';
-            btn.innerHTML = `<div style="font-weight:bold; margin-bottom:4px;"><i class="fas fa-file-excel text-purple-600" style="margin-right:8px; width:16px;"></i>Excel Upload Batch</div>
-                             <div style="font-size:12px; color:#6b21a8; display:flex; justify-content:space-between;">Manage Excel Data <b>${total} Students</b></div>`;
-        } else {
-            btn.className = 'w-full text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 p-4 rounded-xl transition cursor-pointer mb-3';
-            btn.innerHTML = `<div style="font-weight:bold; margin-bottom:4px;"><i class="fas fa-mobile-alt text-blue-600" style="margin-right:8px; width:16px;"></i>Manual App Batch</div>
-                             <div style="font-size:12px; color:#0056b3; display:flex; justify-content:space-between;">Manage App Data <b>${total} Students</b></div>`;
-        }
-
-        btn.onclick = () => {
-            document.getElementById('udiseSelectorModal').style.display = 'none';
-            openSchoolDetail(udise, src);
-        };
-        list.appendChild(btn);
-    });
-
-    document.getElementById('udiseSelectorModal').style.display = 'flex';
-}
-
-function openSchoolDetail(udise, src){
+function openSchoolDetail(udise){
     let s = schoolsMap[udise];
     if(!s) return;
     
     activeUdise = udise;
-    activeSource = src;
+    activeSource = null; // Detail view now shows all sources combined; filtered client-side.
     
     document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
     
-    const srcBadge = src === 'excel' 
-        ? `<span style="font-size:12px; background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:4px; font-weight:bold; vertical-align:middle; margin-left:10px;"><i class="fas fa-file-excel"></i> Excel Upload</span>`
-        : `<span style="font-size:12px; background:#e6f2ff; color:#0056b3; padding:4px 8px; border-radius:4px; font-weight:bold; vertical-align:middle; margin-left:10px;"><i class="fas fa-mobile-alt"></i> Manual App</span>`;
-        
-    document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas fa-school" style="color:#007bff; margin-right:8px;"></i>${escapeHtml(s.name || 'Unnamed School')} ${srcBadge}`;
+    document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas fa-school" style="color:#007bff; margin-right:8px;"></i>${escapeHtml(s.name || 'Unnamed School')}`;
     
     document.getElementById('viewAddress').innerHTML = `<i class="fas fa-map-marker-alt" style="color:#dc3545"></i> ${s.block}, ${s.district} - ${s.pin}`;
     document.getElementById('viewContact').innerHTML = `<i class="fas fa-phone-alt"></i> ${s.phone || 'No phone provided'}`;
@@ -940,9 +830,11 @@ function openSchoolDetail(udise, src){
     const classFilterSelect = document.getElementById('classFilterSelect');
     classFilterSelect.innerHTML = '<option value="all">All Classes</option>';
     document.getElementById('printFilterSelect').value = 'all';
-    document.getElementById('dataStatusFilterSelect').value = 'all';
+    document.getElementById('sourceFilterSelect').value = 'all';
+    document.getElementById('reviewFilterSelect').value = 'all';
+    document.getElementById('reviewFilterSelect').disabled = false;
 
-    document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 40px;"><i class="fas fa-spinner fa-spin fa-2x" style="color: #007bff; margin-bottom: 10px;"></i><br>Loading students from Firebase...</td></tr>';
+    document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="12" style="text-align:center; padding: 40px;"><i class="fas fa-spinner fa-spin fa-2x" style="color: #007bff; margin-bottom: 10px;"></i><br>Loading students from Firebase...</td></tr>';
     
     const field = s.udise.startsWith('NO_UDISE:') ? 'schoolName' : 'udise';
     const value = s.udise.replace('NO_UDISE:', '');
@@ -955,10 +847,9 @@ function openSchoolDetail(udise, src){
             const data = doc.data();
             if (s.udise.startsWith('NO_UDISE:') && data.udise) return;
             
-            if(getStudentSource(data) === activeSource) {
-                currentSchoolStudents.push(data);
-                if(data.class) classes.add(normalizeClass(data.class));
-            }
+            data._source = getStudentSource(data);
+            currentSchoolStudents.push(data);
+            if(data.class) classes.add(normalizeClass(data.class));
         });
         currentSchoolStudents.sort((a,b) => b.id - a.id);
         
@@ -969,13 +860,26 @@ function openSchoolDetail(udise, src){
         });
 
         renderTable();
-        updateStats(); 
         
     }).catch(e => {
-        document.getElementById('studentTable').querySelector('tbody').innerHTML = `<tr><td colspan="11" style="color:red; text-align:center; padding: 20px;">Error loading students: ${e.message}</td></tr>`;
+        document.getElementById('studentTable').querySelector('tbody').innerHTML = `<tr><td colspan="12" style="color:red; text-align:center; padding: 20px;">Error loading students: ${e.message}</td></tr>`;
     });
     
     updateSelection();
+}
+
+// Review filter only makes sense for Excel data (manual data has no review step).
+// Disable it automatically when the source filter is set to Manual.
+function onSourceFilterChange(){
+    const sourceFilter = document.getElementById('sourceFilterSelect').value;
+    const reviewSelect = document.getElementById('reviewFilterSelect');
+    if(sourceFilter === 'manual') {
+        reviewSelect.value = 'all';
+        reviewSelect.disabled = true;
+    } else {
+        reviewSelect.disabled = false;
+    }
+    renderTable();
 }
 
 function downloadHmSignature() {
@@ -997,12 +901,17 @@ function renderTable(){
     const tbody = document.querySelector('#studentTable tbody');
     const classFilter = document.getElementById('classFilterSelect').value;
     const printFilter = document.getElementById('printFilterSelect').value;
-    const dataStatus = document.getElementById('dataStatusFilterSelect').value;
+    const sourceFilter = document.getElementById('sourceFilterSelect').value;
+    const reviewFilter = document.getElementById('reviewFilterSelect').value;
     
     let filteredStudents = currentSchoolStudents;
 
-    if (dataStatus === 'pending') filteredStudents = filteredStudents.filter(s => s.finalised === false);
-    else if (dataStatus === 'completed') filteredStudents = filteredStudents.filter(s => s.finalised !== false);
+    if (sourceFilter !== 'all') filteredStudents = filteredStudents.filter(s => s._source === sourceFilter);
+
+    // Review status only applies to Excel data; Manual data never requires review, so it's excluded
+    // whenever a specific review status is picked (it can't be "reviewed" or "not reviewed").
+    if (reviewFilter === 'not_reviewed') filteredStudents = filteredStudents.filter(s => s._source === 'excel' && s.finalised === false);
+    else if (reviewFilter === 'reviewed') filteredStudents = filteredStudents.filter(s => s._source === 'excel' && s.finalised !== false);
 
     if (classFilter !== 'all') filteredStudents = filteredStudents.filter(s => normalizeClass(s.class) === classFilter);
     
@@ -1013,7 +922,7 @@ function renderTable(){
     document.getElementById('selectAll').checked = false;
     
     if(filteredStudents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 40px; color: #777; font-style: italic;">No students found matching your filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding: 40px; color: #777; font-style: italic;">No students found matching your filters.</td></tr>';
         updateSelection();
         return;
     }
@@ -1022,13 +931,17 @@ function renderTable(){
         const tr = document.createElement('tr');
         
         let printStatusBadge = '';
-        if (s.finalised === false) {
-            printStatusBadge = `<span class="badge-pending"><i class="fas fa-exclamation-triangle"></i> Pending Data</span>`;
+        if (s._source === 'excel' && s.finalised === false) {
+            printStatusBadge = `<span class="badge-pending"><i class="fas fa-exclamation-triangle"></i> Not Reviewed</span>`;
         } else if (s.isPrinted) {
             printStatusBadge = `<span class="badge-printed"><i class="fas fa-check"></i> Printed</span>`;
         } else {
             printStatusBadge = `<span class="badge-ready"><i class="fas fa-print"></i> Ready Print</span>`;
         }
+
+        const sourceBadge = s._source === 'excel'
+            ? `<span style="font-size:11px; background:#f3e8ff; color:#6b21a8; padding:3px 8px; border-radius:5px; font-weight:600; white-space:nowrap;"><i class="fas fa-file-excel"></i> Excel</span>`
+            : `<span style="font-size:11px; background:#e6f2ff; color:#0056b3; padding:3px 8px; border-radius:5px; font-weight:600; white-space:nowrap;"><i class="fas fa-mobile-alt"></i> Manual</span>`;
         
         const photoSrc = s.photoBase64 && s.photoBase64.startsWith('http') ? s.photoBase64 : (s.photoBase64 || '');
 
@@ -1037,6 +950,7 @@ function renderTable(){
         <td style="font-weight: 600; color: #111;">${escapeHtml(s.name)}</td>
         <td>${normalizeClass(s.class)}</td><td>${escapeHtml(s.roll)}</td><td>${escapeHtml(s.dob)}</td><td>${escapeHtml(s.bloodGroup)||'-'}</td>
         <td>${escapeHtml(s.mobile || s.phone || '-')}</td> 
+        <td>${sourceBadge}</td>
         <td>${printStatusBadge}</td>
         <td style="text-align: right; white-space: nowrap;">
             <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;" onclick="openEditModal('${s.id}')" title="Edit Student"><i class="fas fa-pen"></i></button> 
@@ -1143,7 +1057,6 @@ async function bulkDeleteSelected() {
         }
 
         renderTable(); 
-        updateStats(); 
     } catch (e) {
         showMsg("Error deleting students: " + e.message);
     } finally {
@@ -1181,7 +1094,6 @@ async function markSelectedPrinted(status) {
         });
 
         renderTable(); 
-        updateStats(); 
     } catch (e) {
         showMsg("Error updating print status: " + e.message);
     } finally {
@@ -1395,7 +1307,8 @@ document.getElementById('verifyBtn').onclick = async () => {
     } catch (error) {
         showMsg("Error generating verification PDF: " + error.message);
     } finally {
-        btn.disabled = false; 
+        btn.disabled = false;
+        btn.innerHTML = `👀 Verify PDF`;
         updateSelection();
     }
 };
@@ -1415,8 +1328,8 @@ document.getElementById('generateBtn').onclick = async () => {
     const verifyPdf = new jsPDF({ unit:'px', format:[CARD_W, CARD_H] });
 
     const imgs = [];
-
-    for(let i=0; i<targets.length; i++) {
+    try {
+    for(let i = 0; i < targets.length; i++) {
         btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Drawing ${i+1}/${targets.length}...`;
         const blob = await drawCard(targets[i]);
         folder.file(`${targets[i].name}_${targets[i].roll}.png`, blob);
@@ -1483,11 +1396,16 @@ document.getElementById('generateBtn').onclick = async () => {
     zip.file("Verify_Proof.pdf", verifyPdf.output('arraybuffer'));
     
     btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Zipping...`;
-    const content = await zip.generateAsync({type:'blob'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(content);
-    a.download = `ID_Cards_${Date.now()}.zip`; a.click();
-    
-    btn.disabled = false; updateSelection();
+    const zipBlob = await zip.generateAsync({type:'blob'});
+    const dlLink = document.createElement('a'); dlLink.href = URL.createObjectURL(zipBlob);
+    dlLink.download = `ID_Cards_${Date.now()}.zip`; dlLink.click();
+
+    } catch(genErr) {
+        showMsg("Error generating ID cards: " + genErr.message);
+    } finally {
+        btn.disabled = false;
+        updateSelection();
+    }
     
     setTimeout(async () => {
         if(await showMsg("ID Cards generated successfully!<br><br>Do you want to mark these selected students as 'Printed' so they disappear from the Pending list?", true)) {
@@ -1547,25 +1465,29 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
     
     const file = document.getElementById('esSignInput').files[0];
     if(file) {
-        const img = new Image();
-        img.src = URL.createObjectURL(file);
-        await new Promise(r => img.onload = r);
-        
-        const canvas = document.createElement('canvas');
-        const cx = canvas.getContext('2d');
-        const maxW = 400;
-        let w = img.width, h = img.height;
-        if(w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
-        canvas.width = w; canvas.height = h;
-        cx.clearRect(0, 0, w, h); // Deliberately keeping transparent upload to allow blending
-        cx.drawImage(img, 0, 0, w, h);
-        
-        const compressedBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-        
-        const ref = window.storage.ref(`school_signatures/${newUdise}_signature.png`);
-        const metadata = { contentType: 'image/png' };
-        await ref.put(compressedBlob, metadata);
-        updates.hmSignature = await ref.getDownloadURL();
+        try {
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error("Image load failed")); });
+            
+            const sigCanvas = document.createElement('canvas');
+            const cx = sigCanvas.getContext('2d');
+            const maxW = 400;
+            let w = img.width, h = img.height;
+            if(w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
+            sigCanvas.width = w; sigCanvas.height = h;
+            cx.clearRect(0, 0, w, h);
+            cx.drawImage(img, 0, 0, w, h);
+            
+            const compressedBlob = await new Promise(r => sigCanvas.toBlob(r, 'image/png'));
+            
+            const ref = window.storage.ref(`school_signatures/${newUdise}_signature.png`);
+            const metadata = { contentType: 'image/png' };
+            await ref.put(compressedBlob, metadata);
+            updates.hmSignature = await ref.getDownloadURL();
+        } catch(uploadErr) {
+            await showMsg("Signature upload failed: " + uploadErr.message + ". Other changes will still be saved.");
+        }
     }
     
     try {
@@ -1623,7 +1545,7 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         renderDashboard();
         
         if (activeUdise === oldUdise) {
-            openSchoolDetail(newUdise, activeSource);
+            openSchoolDetail(newUdise);
         }
 
     } catch(e) { showMsg("Error updating school: " + e.message); } 
@@ -1689,10 +1611,9 @@ window.executeBatchDelete = async function(udise, targetSource) {
             document.getElementById('editSchoolModal').style.display='none';
             await showMsg(`${targetSource === 'excel' ? 'Excel' : 'Manual'} data deleted successfully!`);
             
-            if (activeUdise === udise && activeSource === targetSource) {
-                showDashboard();
-            } else if (activeUdise === udise) {
-                openSchoolDetail(udise, activeSource);
+            if (activeUdise === udise) {
+                if (schoolsMap[udise]) openSchoolDetail(udise);
+                else showDashboard();
             }
         }
 
@@ -1739,7 +1660,6 @@ document.getElementById('saveEditBtn').onclick = async () => {
         if(s) Object.assign(s, data);
         document.getElementById('editModal').style.display='none';
         renderTable();
-        updateStats(); 
     } catch(e) { showMsg("Error: "+e.message); }
     finally {
         btn.innerHTML = oldText;
