@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Panel - ID Cards Pro</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; padding:20px; background:#f4f7f6; color:#222; }
+    .container { max-width:1200px; margin:0 auto; }
+    h1 { color:#0b53a0; margin-bottom: 20px; font-weight: 800; letter-spacing: -0.5px;}
+    
+    .hidden { display: none !important; }
+    .btn { padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600; color:white; transition: all 0.2s ease;}
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
+    .btn:active { transform: translateY(0); box-shadow: none;}
+    .btn-primary { background:#007bff; }
+    .btn-success { background:#28a745; }
+    .btn-danger { background:#dc3545; }
+    .btn-warning { background:#ffc107; color:#222; }
+    .btn-info { background:#17a2b8; color:white; }
+    .btn-secondary { background:#6c757d; }
+    .btn-outline { background: transparent; border: 1px solid #ccc; color: #333; }
+    .btn-outline:hover { background: #f8f9fa; border-color: #bbb;}
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none;}
+    
+    input, select { padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing: border-box; background: #fff; transition: border-color 0.2s;}
+    input:focus, select:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.1);}
+
+    .school-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+    .school-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea; position: relative; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; justify-content: space-between;}
+    .school-card:hover { transform: translateY(-4px); border-color: #b3d4ff; box-shadow: 0 12px 24px rgba(0,123,255,0.08); }
+    .school-card-content { cursor: pointer; flex: 1;}
+    .school-card-content h3 { color: #1a1a1a; margin-top: 0; font-size: 1.25rem;}
+    .school-meta { font-size: 14px; color: #555; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;}
+    .school-actions { margin-top: 20px; padding-top: 15px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; }
+    
+    .detail-header { background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: start; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border: 1px solid #eaeaea;}
+    .hm-sign-img { height: 60px; border: 1px dashed #ccc; margin-top: 8px; background: #fdfdfd; padding: 4px; border-radius: 4px; object-fit: contain;}
+
+    .stats-panel { background: white; padding: 20px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); display: flex; flex-wrap: wrap; gap: 20px; border: 1px solid #eaeaea;}
+    .stat-box { background: #fcfcfc; border: 1px solid #f0f0f0; padding: 16px; border-radius: 12px; text-align: center; flex: 1; min-width: 140px; transition: transform 0.2s;}
+    .stat-box:hover { transform: scale(1.02); }
+    .stat-box.primary { border-bottom: 4px solid #007bff; }
+    .stat-box.warning { border-bottom: 4px solid #fd7e14; }
+    .stat-box.info { border-bottom: 4px solid #17a2b8; }
+    .stat-box.success { border-bottom: 4px solid #28a745; }
+    .stat-value { font-size: 28px; font-weight: 800; margin-bottom: 4px; color: #222; }
+    .stat-label { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+    .class-stats { width: 100%; margin-top: 10px; padding-top: 20px; border-top: 1px solid #f0f0f0; }
+    .class-pill { display: inline-block; background: #f4f6f8; border: 1px solid #e0e4e8; color: #444; padding: 6px 14px; border-radius: 20px; margin: 4px 6px 4px 0; font-size: 13px; font-weight: 500;}
+
+    .status-badge { display:inline-block; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:bold; margin-left:5px; }
+    .status-ok { background:#d4edda; color:#155724; }
+    .status-err { background:#f8d7da; color:#721c24; }
+    
+    .badge-printed { background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight:600; display: inline-flex; align-items: center; gap: 4px;}
+    .badge-ready { background: #cce5ff; color: #004085; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight:600; display: inline-flex; align-items: center; gap: 4px;}
+    .badge-pending { background: #ffeeba; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight:600; display: inline-flex; align-items: center; gap: 4px;}
+
+    .config-panel { background: #f8fbff; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #cce5ff; display: flex; gap: 24px; align-items: center; flex-wrap:wrap; box-shadow: inset 0 2px 4px rgba(0,123,255,0.02);}
+    .filter-bar { background: #fff; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eaeaea; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.02);}
+    .table-container { background: white; padding: 20px; border-radius: 16px; overflow-x: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #eaeaea;}
+    table { width:100%; border-collapse:collapse; font-size: 14px; }
+    th, td { padding:12px 10px; border-bottom:1px solid #f0f0f0; text-align:left; vertical-align: middle; }
+    th { background:#fbfbfb; font-weight: 700; color: #444; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;}
+    tr:hover td { background: #fdfdfe; }
+    img.thumb { width:40px; height:40px; border-radius:6px; object-fit: cover; border: 1px solid #e0e0e0; background: #f4f4f4;}
+
+    .action-bar { margin-top: 24px; padding: 20px 24px; background: white; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.08); z-index: 100; flex-wrap: wrap; gap: 15px; border: 1px solid #eaeaea;}
+
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center; backdrop-filter: blur(4px);}
+    .modal-content { background:white; padding:30px; border-radius:16px; width:90%; max-width:450px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.2);}
+    .modal-content h3 { margin-top: 0; color: #1a1a1a; font-size: 1.4rem; margin-bottom: 20px;}
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #555;}
+    .modal-btns { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+    .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .danger-zone { margin-top: 30px; padding-top: 20px; border-top: 2px dashed #ffcdd2; display: flex; flex-direction: column; gap: 10px;}
+    
+    /* Variation List */
+    .variation-item { font-size: 13px; color: #444; border-bottom: 1px solid #eee; padding: 8px 0; display: flex; justify-content: space-between; align-items: center;}
+    .variation-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+
+<div id="lockScreen" style="position:fixed; inset:0; background: linear-gradient(135deg, #0b53a0 0%, #003b7a 100%); z-index:5000; display:flex; align-items:center; justify-content:center; flex-direction:column; color:white; font-family:system-ui,sans-serif;">
+    <div style="background:white; color:#222; padding:40px 35px; border-radius:20px; width:90%; max-width:360px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.4);">
+        <div style="font-size:48px; margin-bottom:15px;">🔒</div>
+        <h2 style="margin:0 0 8px 0; color:#0b53a0; font-weight: 800;">Admin Access</h2>
+        <p style="font-size:14px; color:#666; margin-bottom:25px;">Enter master password to continue</p>
+        <input type="password" id="adminPasswordInput" placeholder="Password" style="width:100%; padding:14px; border-radius:10px; border:2px solid #e0e0e0; margin-bottom:16px; box-sizing:border-box; font-size:16px; text-align: center; letter-spacing: 2px;">
+        <button id="adminPasswordBtn" class="btn btn-primary" style="width:100%; padding:14px; font-size: 16px; border-radius: 10px;">Unlock Database</button>
+        <div id="adminPasswordError" style="color:#dc3545; font-size:13px; margin-top:12px; font-weight: 600; display:none;">Incorrect password. Try again.</div>
+    </div>
+</div>
+
+<div class="container" id="mainContainer" style="display:none;">
+  <div id="dashboardView">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap: wrap; gap: 15px;">
+        <h1 style="margin:0;">Admin Dashboard</h1>
+        <div class="button-group">
+            <button class="btn btn-success" id="quickSyncBtn" onclick="quickSync()" title="Fetches only recently added students">⚡ Quick Sync</button>
+            <button class="btn btn-primary" id="fullSyncBtn" onclick="fullResync()" title="Reads whole database (Uses Quota)">🔄 Full Refresh</button>
+            <button class="btn btn-warning" id="downloadRawBtn" onclick="exportBackup()" title="Download Excel Data">💾 Export Backup</button>
+        </div>
+    </div>
+    <div id="schoolGrid" class="school-grid"><p style="color: #666; font-style: italic;">Loading dashboard data...</p></div>
+  </div>
+
+  <div id="detailView" class="hidden">
+    <button class="btn btn-secondary" onclick="showDashboard()" style="margin-bottom:20px; background: #fff; color: #333; border: 1px solid #ccc;">← Back to Dashboard</button>
+    
+    <div class="detail-header">
+        <div>
+            <div id="viewUdiseHead" style="color:#0b53a0; margin:0; font-size: 1.8rem; font-family: monospace; letter-spacing: 1px; font-weight:bold;">UDISE: XXXXXX</div>
+            <div id="viewSchoolNameMaster" style="color:#E85C0D; font-size:18px; font-weight:bold; margin-top:8px;"></div>
+            
+            <!-- UDISE Credentials Placeholder -->
+            <div id="viewCredentials" style="display:none;"></div>
+
+            <div id="viewAddress" style="color:#555; font-size:15px; margin-top:8px; display: flex; align-items: center; gap: 5px;"></div>
+            <div id="viewContact" style="color:#0277bd; font-weight:bold; margin-top:6px; display: flex; align-items: center; gap: 5px;"></div>
+        </div>
+        <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; background: #f9f9f9; padding: 10px 15px; border-radius: 10px; border: 1px solid #eee;">
+            <small style="font-weight: 600; color: #666;">HM Signature</small>
+            <img id="viewHmSign" class="hm-sign-img" src="" alt="No Sign" crossorigin="anonymous">
+            <button id="downloadSignBtn" class="btn btn-outline" style="font-size:11px; padding:4px 10px; margin-top:8px; display:none;" onclick="downloadHmSignature()" title="Download HM Signature">⬇ Download</button>
+        </div>
+    </div>
+
+    <div class="config-panel">
+        <div>
+            <label style="font-size:12px; font-weight:bold;">Card Language</label><br>
+            <select id="langToggle" onchange="changeLanguage()" style="padding: 9px; font-size: 13px; background: white; border-color: #a5d0f5;">
+                <option value="odia" selected>Odia (Default)</option>
+                <option value="english">English</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:12px; font-weight:bold;">Background PNG</label><br>
+            <input id="templateInput" type="file" accept="image/png" style="background: white; border-color: #a5d0f5; padding: 6px 10px;">
+            <span id="tplStatus" class="status-badge status-err">Missing</span>
+        </div>
+        <div>
+            <label style="font-size:12px; font-weight:bold;">Odia Font (.ttf)</label><br>
+            <input id="fontInput" type="file" accept=".ttf,.otf" style="background: white; border-color: #a5d0f5; padding: 6px 10px;">
+            <span id="fontStatus" class="status-badge status-err">Missing</span>
+        </div>
+        <div style="flex:1; text-align:right;">
+             <span id="aiStatus" style="font-style:italic; font-weight: 600; color: #0056b3; background: #cce5ff; padding: 6px 12px; border-radius: 20px;">⏳ AI Loading...</span>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="font-size:13px; font-weight:bold; color: #444;">Source:</label>
+            <select id="sourceFilterSelect" onchange="onSourceFilterChange()" style="padding: 8px 12px; border-radius: 6px; min-width: 120px; border-color: #ddd;">
+                <option value="all">All Sources</option>
+                <option value="excel">Excel Upload</option>
+                <option value="manual">Manual App</option>
+            </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
+            <label style="font-size:13px; font-weight:bold; color: #444;">Class:</label>
+            <select id="classFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 120px; border-color: #ddd;">
+                <option value="all">All Classes</option>
+            </select>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
+            <label style="font-size:13px; font-weight:bold; color: #444;">Print Status:</label>
+            <select id="printFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 130px; border-color: #ddd;">
+                <option value="all">Show All</option>
+                <option value="unprinted">Not Printed</option>
+                <option value="printed">Already Printed</option>
+            </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
+            <label style="font-size:13px; font-weight:bold; color: #444;">Review (Excel only):</label>
+            <select id="reviewFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 140px; border-color: #ddd;">
+                <option value="all">Show All</option>
+                <option value="reviewed">Reviewed</option>
+                <option value="not_reviewed">Not Reviewed</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table id="studentTable">
+            <thead>
+                <tr>
+                    <th style="width:40px; text-align: center;"><input type="checkbox" id="selectAll" style="transform: scale(1.2);"></th>
+                    <th style="width: 40px;">#</th>
+                    <th style="width: 60px;">Photo</th>
+                    <th>Name</th>
+                    <th>Class</th>
+                    <th>Roll</th>
+                    <th>DOB</th>
+                    <th>Blood</th>
+                    <th>Mobile</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="action-bar">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span id="selectionCount" style="font-weight: 800; font-size: 16px; color: #007bff; background: #e6f2ff; padding: 6px 12px; border-radius: 8px;">0 selected</span>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button id="bulkDeleteBtn" class="btn btn-danger" onclick="bulkDeleteSelected()" disabled>🗑 Delete Selected</button>
+            <div style="width: 1px; background: #ddd; margin: 0 5px;"></div>
+            <button id="markPrintedBtn" class="btn btn-outline" onclick="markSelectedPrinted(true)" disabled>✔ Mark Printed</button>
+            <button id="markUnprintedBtn" class="btn btn-outline" onclick="markSelectedPrinted(false)" disabled>✖ Mark Unprinted</button>
+            <div style="width: 1px; background: #ddd; margin: 0 5px;"></div>
+            <button id="verifyBtn" class="btn btn-info" disabled>👀 Verify PDF</button>
+            <button id="generateBtn" class="btn btn-success" style="font-size: 15px; padding: 10px 20px; box-shadow: 0 4px 10px rgba(40,167,69,0.3);" disabled>🖨 Generate Cards</button>
+        </div>
+    </div>
+  </div>
+</div>
+
+<canvas id="cardCanvas" style="display:none;"></canvas>
+
+<!-- Edit Student Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3>Edit Student Details</h3>
+        <input type="hidden" id="editId">
+        <div class="form-group"><label>Full Name</label><input type="text" id="editName"></div>
+        <div style="display:flex; gap:15px;">
+            <div class="form-group" style="flex:1"><label>Class</label><input type="text" id="editClass"></div>
+            <div class="form-group" style="flex:1"><label>Roll Number</label><input type="text" id="editRoll"></div>
+        </div>
+        <div style="display:flex; gap:15px;">
+            <div class="form-group" style="flex:1"><label>Date of Birth</label><input type="date" id="editDob"></div>
+            <div class="form-group" style="flex:1"><label>Blood Group</label>
+                <select id="editBlood">
+                    <option value="">- Select -</option>
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group"><label>Mobile Number</label><input type="text" id="editPhone"></div>
+
+        <div id="undoReviewBox" class="hidden" style="background:#fff3cd; border:1px solid #ffe69c; padding:12px 14px; border-radius:10px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div style="font-size:12.5px; color:#7a5b00; line-height:1.4;">
+                <b>Reviewed / Ready to Print.</b><br>Send this student back to Pending Review if something needs fixing.
+            </div>
+            <button type="button" class="btn btn-warning" id="undoReviewBtn" style="font-size:12.5px; padding:8px 12px; white-space:nowrap;">↩ Undo Review</button>
+        </div>
+        
+        <div class="modal-btns" style="justify-content: space-between; align-items: center; margin-top: 30px;">
+            <button class="btn btn-warning" id="previewEditBtn" style="font-size: 13px; padding: 8px 12px;">👁 Preview Card</button>
+            <div style="display: flex; gap:10px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+                <button class="btn btn-primary" id="saveEditBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit School Modal -->
+<div id="editSchoolModal" class="modal">
+    <div class="modal-content">
+        <h3 style="color:#0b53a0; margin-top:0;">Edit Master Profile</h3>
+        <p style="font-size: 12px; color: #666; margin-bottom: 20px;">This updates the master record. All cards generated under this UDISE will use this exact school name and address on the printout, ignoring typos made by operators.</p>
+        <input type="hidden" id="esOldUdise">
+        
+        <div class="form-group"><label>Master School Name</label><input type="text" id="esName"></div>
+        <div class="form-group"><label>Contact Number</label><input type="text" id="esPhone"></div>
+        
+        <div style="display:flex; gap:15px;">
+            <div class="form-group" style="flex:1"><label>Block</label><input type="text" id="esBlock"></div>
+            <div class="form-group" style="flex:1"><label>District</label><input type="text" id="esDistrict"></div>
+        </div>
+        <div style="display:flex; gap:15px;">
+            <div class="form-group" style="flex:1"><label>Pin Code</label><input type="number" id="esPin"></div>
+            <div class="form-group" style="flex:1"><label>UDISE Code *</label><input type="text" id="esUdise" maxlength="11" style="font-family: monospace; font-weight: bold; letter-spacing: 1px;"></div>
+        </div>
+        
+        <div class="form-group" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+            <label>Update HM Signature <span style="font-weight: normal; color: #888;">(Optional)</span></label>
+            <input type="file" id="esSignInput" accept="image/*" style="background: white; margin-top: 5px;">
+        </div>
+
+        <div class="modal-btns">
+            <button class="btn btn-secondary" onclick="document.getElementById('editSchoolModal').style.display='none'">Cancel</button>
+            <button class="btn btn-primary" id="saveSchoolBtn">Save Master Profile</button>
+        </div>
+
+        <!-- DANGER ZONE -->
+        <div class="danger-zone">
+            <h4 style="margin: 0 0 10px 0; color: #dc3545; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Danger Zone (Delete Data)</h4>
+            <div id="deleteOptionsContainer" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <!-- Dynamically injected buttons go here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="adminPreviewModal" class="modal">
+    <div class="modal-content" style="text-align: center; background: #eef2f5; z-index: 2500;">
+        <h3 style="margin-top:0; color: #0b53a0;">Card Preview</h3>
+        <img id="adminPreviewImg" src="" style="width:100%; max-width: 320px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin: 0 auto; display: block;">
+        <button class="btn btn-secondary" onclick="document.getElementById('adminPreviewModal').style.display='none'" style="margin-top: 25px; width: 100%;">Close Preview</button>
+    </div>
+</div>
+
+<!-- Custom Alert/Confirm Modal -->
+<div id="customAlertModal" class="modal" style="z-index: 9999;">
+    <div class="modal-content" style="text-align:center; max-width: 350px;">
+        <div id="customAlertIcon" style="font-size: 40px; color: #007bff; margin-bottom: 10px;">ℹ️</div>
+        <h3 id="customAlertTitle" style="margin-top:0; color: #222;">Notice</h3>
+        <p id="customAlertMsg" style="margin-bottom:25px; color: #555; line-height: 1.5;"></p>
+        <div class="modal-btns" style="justify-content:center; width: 100%;">
+            <button class="btn btn-secondary" id="customAlertCancel" style="display:none; flex: 1;">Cancel</button>
+            <button class="btn btn-primary" id="customAlertOk" style="flex: 1;">OK</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const DPI = 300;
+const CARD_W = 638;  
+const CARD_H = 1012; 
+const A4_W = 3508, A4_H = 2480;
+
+const SCHOOL_NAME_POS = { x: 121, y: 55, maxX: 611 }; 
+const ADDR_POS = { x: 198, y: 94 };
+const SIGN_POS = { x: 434, y: 850, maxW: 180, maxH: 80 };
+
+window.odiaDigits = ['୦','୧','୨','୩','୪','୫','୬','୭','୮','୯'];
+
+// Class Normalizer for robust mapping across Admin & App
+function normalizeClass(cls) {
+    if (!cls) return "";
+    const c = String(cls).toLowerCase().replace(/[\s\-\.]/g, '');
+    if (['1', 'i', '01', '1st', 'class1', 'classi', 'std1'].includes(c)) return "1";
+    if (['2', 'ii', '02', '2nd', 'class2', 'classii', 'std2'].includes(c)) return "2";
+    if (['3', 'iii', '03', '3rd', 'class3', 'classiii', 'std3'].includes(c)) return "3";
+    if (['4', 'iv', '04', '4th', 'class4', 'classiv', 'std4'].includes(c)) return "4";
+    if (['5', 'v', '05', '5th', 'class5', 'classv', 'std5'].includes(c)) return "5";
+    if (['6', 'vi', '06', '6th', 'class6', 'classvi', 'std6'].includes(c)) return "6";
+    if (['7', 'vii', '07', '7th', 'class7', 'classvii', 'std7'].includes(c)) return "7";
+    if (['8', 'viii', '08', '8th', 'class8', 'classviii', 'std8'].includes(c)) return "8";
+    if (['9', 'ix', '09', '9th', 'class9', 'classix', 'std9'].includes(c)) return "9";
+    if (['10', 'x', '10th', 'class10', 'classx', 'std10'].includes(c)) return "10";
+    if (['shishuvatika', 'shishu', 'nursery', 'nursary', 'lkg', 'ukg', 'ukh', 'kg', 'kg1', 'kg2', 'pp1', 'pp2', 'preprimary'].includes(c)) return "Shishuvatika";
+    return cls; 
+}
+
+// True, strict source detection
+function getStudentSource(d) {
+    if (d.source) return d.source;
+    if (d.batchId || d.isExcel) return 'excel';
+    if (d.synced === undefined && d.photoName === undefined && d.source !== 'manual') return 'excel';
+    return 'manual';
+}
+
+function toOdiaDigits(str){ 
+    if (str===undefined||str===null) return ''; 
+    if (window.assets.language === 'english') return str; 
+    return (''+str).replace(/\d/g,d=>window.odiaDigits[d]||d); 
+}
+
+function toOdiaClass(str) {
+    const norm = normalizeClass(str);
+    if (window.assets.language === 'english') return norm; 
+    
+    if (norm === "Shishuvatika") return 'ଶିଶୁ ବାଟିକା';
+    if (norm === '1') return 'ପ୍ରଥମ';
+    if (norm === '2') return 'ଦ୍ଵିତୀୟ';
+    if (norm === '3') return 'ତୃତୀୟ';
+    if (norm === '4') return 'ଚତୁର୍ଥ';
+    if (norm === '5') return 'ପଞ୍ଚମ';
+    if (norm === '6') return 'ଷଷ୍ଠ';
+    if (norm === '7') return 'ସପ୍ତମ';
+    if (norm === '8') return 'ଅଷ୍ଟମ';
+    if (norm === '9') return 'ନବମ';
+    if (norm === '10') return 'ଦଶମ';
+    
+    return toOdiaDigits(str);
+}
+
+function escapeHtml(s){ 
+    if(!s) return '';
+    return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); 
+}
+
+// Essential for passing variables into onclick safely
+function escapeJs(s){
+    if(!s) return '';
+    return (s+'').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+// Custom Alert UI
+function showMsg(msg, isConfirm = false, isDanger = false) {
+    return new Promise(resolve => {
+        document.getElementById('customAlertMsg').innerHTML = msg;
+        const okBtn = document.getElementById('customAlertOk');
+        const cancelBtn = document.getElementById('customAlertCancel');
+        const icon = document.getElementById('customAlertIcon');
+        const title = document.getElementById('customAlertTitle');
+        
+        cancelBtn.style.display = isConfirm ? 'flex' : 'none';
+        
+        if (isDanger) {
+            okBtn.className = 'btn btn-danger';
+            okBtn.textContent = 'Yes, Proceed';
+            icon.textContent = '⚠️'; icon.style.color = '#dc3545';
+            title.textContent = 'Warning'; title.style.color = '#dc3545';
+        } else {
+            okBtn.className = 'btn btn-primary';
+            okBtn.textContent = isConfirm ? 'Confirm' : 'OK';
+            icon.textContent = isConfirm ? '❓' : '✅'; icon.style.color = isConfirm ? '#ffc107' : '#28a745';
+            title.textContent = isConfirm ? 'Confirm Action' : 'Success'; title.style.color = '#222';
+        }
+
+        document.getElementById('customAlertModal').style.display = 'flex';
+
+        okBtn.onclick = () => { document.getElementById('customAlertModal').style.display = 'none'; resolve(true); };
+        if(isConfirm) cancelBtn.onclick = () => { document.getElementById('customAlertModal').style.display = 'none'; resolve(false); };
+    });
+}
+
+// Close modals when clicking outside modal content
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
+});
+
+// Database Core Variables
+let db = null;
+let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
+let lastSyncId = Number(localStorage.getItem('adminLastSyncId')) || 0;
+let currentSchoolStudents = [];
+let activeUdise = null;
+let activeSource = null; 
+
+window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
+
+
+
+async function changeLanguage() {
+    const lang = document.getElementById('langToggle').value;
+    window.assets.language = lang;
+    document.getElementById('tplStatus').className = 'status-badge status-err';
+    document.getElementById('tplStatus').textContent = 'Loading...';
+    const bgFile = lang === 'odia' ? 'background.png' : 'eng_background.png';
+    try {
+        const resp = await fetch(bgFile);
+        if(resp.ok) {
+            const blob = await resp.blob();
+            const img = new Image(); img.src = URL.createObjectURL(blob);
+            img.onload = () => {
+                window.assets.template = img; window.assets.mode = 'auto';
+                document.getElementById('tplStatus').className = 'status-badge status-ok';
+                document.getElementById('tplStatus').textContent = `Auto-Loaded (${lang === 'odia' ? 'Odia' : 'English'})`;
+                updateSelection();
+            }
+        } else {
+            document.getElementById('tplStatus').className = 'status-badge status-err';
+            document.getElementById('tplStatus').textContent = 'Missing';
+            window.assets.template = null; updateSelection();
+        }
+    } catch(e) {
+        document.getElementById('tplStatus').className = 'status-badge status-err';
+        document.getElementById('tplStatus').textContent = 'Error Fetching';
+        window.assets.template = null;
+        updateSelection();
+    }
+}
+
+async function loadAutoAssets() {
+    try {
+        const resp = await fetch('OdiaFont.ttf');
+        if(resp.ok) {
+            const buf = await resp.arrayBuffer();
+            const font = new FontFace('OdiaFont', buf);
+            await font.load(); document.fonts.add(font);
+            window.assets.font = true;
+            document.getElementById('fontStatus').className = 'status-badge status-ok';
+            document.getElementById('fontStatus').textContent = 'Auto-Loaded';
+        }
+    } catch(e) {}
+    changeLanguage(); 
+}
+
+function startApp() {
+  try{
+    const firebaseConfig = {
+        apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+        authDomain: "idcard-60586.firebaseapp.com",
+        projectId: "idcard-60586",
+        storageBucket: "idcard-60586.firebasestorage.app",
+        messagingSenderId: "331979663377",
+        appId: "1:331979663377:web:026e537a7fcaca813129b0",
+        measurementId: "G-PXVV87C78S"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore(); window.storage = firebase.storage();
+    initDashboard(); loadAutoAssets(); initializeFaceDetector();
+  } catch(e){ console.error(e); showMsg('Firebase error: '+e.message); }
+}
+
+const ADMIN_PASSWORD = "Anwesh@1998";
+
+function unlockAdmin() {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('mainContainer').style.display = 'block';
+    startApp();
+}
+
+function exportBackup() {
+    const data = JSON.stringify(schoolsMap, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Admin_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function hardResetApp() {
+    sessionStorage.removeItem('adminAuthed');
+    localStorage.removeItem('adminSchoolsMap');
+    localStorage.removeItem('adminLastSyncId');
+    location.reload();
+}
+
+if (sessionStorage.getItem('adminAuthed') === 'true') unlockAdmin();
+else {
+    document.getElementById('adminPasswordBtn').onclick = () => {
+        const entered = document.getElementById('adminPasswordInput').value;
+        if (entered === ADMIN_PASSWORD) { sessionStorage.setItem('adminAuthed', 'true'); unlockAdmin(); } 
+        else { document.getElementById('adminPasswordError').style.display = 'block'; document.getElementById('adminPasswordInput').value = ''; }
+    };
+    document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('adminPasswordBtn').click();
+    });
+    document.getElementById('adminPasswordInput').addEventListener('input', () => {
+        document.getElementById('adminPasswordError').style.display = 'none';
+    });
+}
+
+function initDashboard() {
+    renderDashboard();
+    if (lastSyncId === 0 && Object.keys(schoolsMap).length === 0) rebuildSchoolsMap();
+    else quickSync();
+}
+
+async function rebuildSchoolsMap() {
+    const btn = document.getElementById('fullSyncBtn');
+    if(btn) { btn.textContent = "Fetching..."; btn.disabled = true; }
+    document.getElementById('schoolGrid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; background: white; border-radius: 12px; border: 1px solid #eee;"><i class="fas fa-spinner fa-spin fa-3x" style="color: #007bff; margin-bottom: 20px;"></i><p>Rebuilding dashboard from database...</p></div>';
+    
+    try {
+        const newMap = {};
+        let maxId = 0;
+        const studentQs = await db.collection('students').get();
+        
+        studentQs.forEach(doc => {
+            const d = doc.data();
+            const udise = d.udise || (d.schoolName ? `NO_UDISE:${d.schoolName}` : 'UNKNOWN');
+            if(udise === 'UNKNOWN') return;
+            
+            if(!newMap[udise]) {
+                newMap[udise] = {
+                    name: d.schoolName || 'Unknown School', completedCount: 0, pendingCount: 0,
+                    block: d.block||'', district: d.district||'', pin: d.pin||'',
+                    udise: udise, phone: d.hmPhone||d.mobile||'', signature: d.hmSignature||'',
+                    latestActivity: 0, sources: {}, rawNameCounts: {}, missingUdise: !d.udise
+                };
+            }
+            
+            const src = getStudentSource(d);
+            if(!newMap[udise].sources[src]) newMap[udise].sources[src] = { completed: 0, pending: 0 };
+            
+            if (d.schoolName) {
+                newMap[udise].rawNameCounts = newMap[udise].rawNameCounts || {};
+                newMap[udise].rawNameCounts[d.schoolName] = (newMap[udise].rawNameCounts[d.schoolName] || 0) + 1;
+            }
+
+            if(d.finalised !== false) {
+                newMap[udise].completedCount++;
+                newMap[udise].sources[src].completed++;
+            } else {
+                newMap[udise].pendingCount++;
+                newMap[udise].sources[src].pending++;
+            }
+            
+            let docTime = 0;
+            if (d.lastModified) docTime = Number(d.lastModified) || 0;
+            else if (d.createdAt && d.createdAt.toMillis) docTime = d.createdAt.toMillis();
+            else if (d.submittedAt && d.submittedAt.toMillis) docTime = d.submittedAt.toMillis();
+            else if (typeof d.id === 'number') docTime = d.id;
+
+            if (!isNaN(docTime)) {
+                 newMap[udise].latestActivity = Math.max(newMap[udise].latestActivity, docTime);
+                 maxId = Math.max(maxId, docTime);
+            }
+        });
+
+        // Pull Master School overrides AND Credentials
+        const schoolQs = await db.collection('schools').get();
+        schoolQs.forEach(doc => {
+            const d = doc.data();
+            let udise = doc.id;
+            if (newMap[udise]) {
+                newMap[udise].name = d.name || newMap[udise].name;
+                newMap[udise].block = d.block || newMap[udise].block;
+                newMap[udise].district = d.district || newMap[udise].district;
+                newMap[udise].pin = d.pin || newMap[udise].pin;
+                newMap[udise].phone = d.phone || d.hmPhone || newMap[udise].phone;
+                newMap[udise].signature = d.hmSignature || newMap[udise].signature;
+                newMap[udise].udiseUser = d.udiseUser || d.username || '';
+                newMap[udise].udisePass = d.udisePass || d.password || '';
+            }
+        });
+
+        Object.keys(newMap).forEach(k => {
+             const sm = newMap[k];
+             if(!sm.name && sm.rawNameCounts && Object.keys(sm.rawNameCounts).length > 0) {
+                  sm.name = Object.keys(sm.rawNameCounts).sort((a,b)=>sm.rawNameCounts[b]-sm.rawNameCounts[a])[0];
+             }
+        });
+
+        schoolsMap = newMap;
+        lastSyncId = maxId;
+        localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        localStorage.setItem('adminLastSyncId', lastSyncId.toString());
+        renderDashboard();
+    } catch(err) {
+        showMsg("Error rebuilding dashboard: " + err.message);
+    } finally {
+        if(btn) { btn.innerHTML = "🔄 Full Refresh"; btn.disabled = false; }
+    }
+}
+
+async function quickSync() {
+    const btn = document.getElementById('quickSyncBtn');
+    if(btn) btn.textContent = "Syncing...";
+    
+    try {
+        let hasChanges = false;
+        let maxId = lastSyncId;
+
+        // Fetch School Updates (Including Credentials)
+        const schoolQs = await db.collection('schools').where('lastModified', '>', lastSyncId).get();
+        schoolQs.forEach(doc => {
+            const d = doc.data();
+            let udise = doc.id;
+            if(!schoolsMap[udise]) {
+                schoolsMap[udise] = { completedCount:0, pendingCount:0, sources:{}, rawNameCounts:{}, missingUdise:false };
+            }
+            Object.assign(schoolsMap[udise], {
+                name: d.name, block: d.block, district: d.district, pin: d.pin,
+                udise: udise, phone: d.phone || d.hmPhone, signature: d.hmSignature,
+                udiseUser: d.udiseUser || d.username || '',
+                udisePass: d.udisePass || d.password || '',
+                latestActivity: Math.max(schoolsMap[udise].latestActivity || 0, d.lastModified || 0)
+            });
+            hasChanges = true;
+        });
+
+        const queries = [db.collection('students').where('lastModified', '>', lastSyncId).get()];
+        if (lastSyncId > 0) {
+            const syncDate = new Date(lastSyncId);
+            queries.push(db.collection('students').where('createdAt', '>', syncDate).get());
+            queries.push(db.collection('students').where('submittedAt', '>', syncDate).get());
+        }
+
+        const results = await Promise.allSettled(queries);
+        const updatedUdises = new Set();
+        
+        results.forEach(res => {
+            if(res.status === 'fulfilled' && res.value) {
+                res.value.forEach(doc => {
+                    const d = doc.data();
+                    const udise = d.udise || (d.schoolName ? `NO_UDISE:${d.schoolName}` : 'UNKNOWN');
+                    if(udise !== 'UNKNOWN') updatedUdises.add(udise);
+                    
+                    let docTime = 0;
+                    if(d.lastModified) docTime = Number(d.lastModified) || 0;
+                    else if(d.createdAt && d.createdAt.toMillis) docTime = d.createdAt.toMillis();
+                    else if(d.submittedAt && d.submittedAt.toMillis) docTime = d.submittedAt.toMillis();
+                    else if(typeof d.id === 'number') docTime = d.id;
+                    
+                    if(!isNaN(docTime)) {
+                        maxId = Math.max(maxId, docTime);
+                        hasChanges = true;
+                    }
+                });
+            }
+        });
+
+        for(let udise of updatedUdises) {
+            const field = udise.startsWith('NO_UDISE:') ? 'schoolName' : 'udise';
+            const value = udise.replace('NO_UDISE:', '');
+            const snap = await db.collection('students').where(field, '==', value).get();
+            
+            let comp = 0, pend = 0;
+            let vars = {};
+            let rawCounts = {};
+            
+            snap.forEach(doc => { 
+                const d = doc.data();
+                const src = getStudentSource(d);
+                if(!vars[src]) vars[src] = { completed: 0, pending: 0 };
+                
+                const rName = d.schoolName || 'Unknown';
+                rawCounts[rName] = (rawCounts[rName] || 0) + 1;
+                
+                if(d.finalised !== false) {
+                    comp++; 
+                    vars[src].completed++;
+                } else {
+                    pend++; 
+                    vars[src].pending++;
+                }
+            });
+            
+            if(schoolsMap[udise]) {
+                schoolsMap[udise].completedCount = comp;
+                schoolsMap[udise].pendingCount = pend;
+                schoolsMap[udise].sources = vars;
+                schoolsMap[udise].rawNameCounts = rawCounts;
+            } else if (comp > 0 || pend > 0) {
+                const best = Object.keys(rawCounts).sort((a,b)=>rawCounts[b]-rawCounts[a])[0];
+                schoolsMap[udise] = {
+                    name: best, completedCount: comp, pendingCount: pend,
+                    block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
+                    latestActivity: maxId, sources: vars, rawNameCounts: rawCounts, missingUdise: field==='schoolName'
+                };
+            } else {
+                delete schoolsMap[udise];
+            }
+        }
+        
+        if (hasChanges) {
+            lastSyncId = maxId;
+            localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+            localStorage.setItem('adminLastSyncId', lastSyncId.toString());
+            renderDashboard();
+        }
+    } catch(err) { console.error("Quick Sync Error:", err); } finally { if(btn) btn.innerHTML = "⚡ Quick Sync"; }
+}
+
+function renderDashboard(){
+    const grid = document.getElementById('schoolGrid');
+    grid.innerHTML = '';
+    const udises = Object.keys(schoolsMap).sort((a, b) => schoolsMap[b].latestActivity - schoolsMap[a].latestActivity);
+    
+    if(udises.length === 0){ 
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; background: white; border-radius: 12px; border: 1px dashed #ccc;"><i class="fas fa-folder-open fa-3x" style="color: #ccc; margin-bottom: 15px;"></i><p style="color: #777;">No schools found in the database. Use Full Refresh if missing.</p></div>'; 
+        return; 
+    }
+    
+    udises.forEach(udise => {
+        const s = schoolsMap[udise];
+        const div = document.createElement('div');
+        div.className = 'school-card';
+
+        let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(udise)}`;
+
+        let credsHtml = '';
+        if (s.udiseUser || s.udisePass) {
+            credsHtml = `<div style="margin-top: 10px; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffe69c; border-radius: 8px; font-size: 13px; color: #856404; display: flex; flex-direction: column; gap: 4px;">
+                            <div><i class="fas fa-user-circle"></i> <b>User:</b> ${escapeHtml(s.udiseUser || 'N/A')}</div>
+                            <div><i class="fas fa-key"></i> <b>Pass:</b> ${escapeHtml(s.udisePass || 'N/A')}</div>
+                         </div>`;
+        }
+
+        div.innerHTML = `
+            <div class="school-card-content" onclick="openSchoolDetail('${escapeJs(udise)}')">
+                <h3 title="${escapeHtml(udiseTitle)}" style="color:#0b53a0; font-family:monospace; font-size:1.3rem; letter-spacing:1px; margin:0 0 10px 0;">${escapeHtml(udiseTitle)}</h3>
+                <div class="school-meta" style="color:#E85C0D; font-weight:bold; font-size:15px; display:flex; align-items:center;">
+                    <i class="fas fa-school" style="margin-right:5px;"></i> <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(s.name || 'Unknown')}</span>
+                </div>
+                ${credsHtml}
+            </div>
+            <div class="school-actions">
+                <button class="btn btn-outline" style="padding: 6px 14px; font-size:13px; display:flex; align-items:center; gap:5px;" onclick="openSchoolEdit('${escapeJs(udise)}')"><i class="fas fa-cog text-xs"></i> Master Profile</button>
+            </div>
+        `;
+        grid.appendChild(div);
+    });
+}
+
+function showDashboard(){
+    document.getElementById('detailView').classList.add('hidden');
+    document.getElementById('dashboardView').classList.remove('hidden');
+    activeUdise = null;
+    activeSource = null;
+    renderDashboard();
+}
+
+function openSchoolDetail(udise){
+    let s = schoolsMap[udise];
+    if(!s) return;
+    
+    activeUdise = udise;
+    activeSource = null; // Detail view now shows all sources combined; filtered client-side.
+    
+    document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
+    
+    document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas fa-school" style="color:#007bff; margin-right:8px;"></i>${escapeHtml(s.name || 'Unnamed School')}`;
+    
+    const credEl = document.getElementById('viewCredentials');
+    if(s.udiseUser || s.udisePass) {
+        credEl.innerHTML = `<div style="background:#fff3cd; color:#856404; padding:8px 12px; border-radius:6px; font-size:13.5px; margin-top:8px; display:inline-block; border:1px solid #ffe69c;">
+                              <i class="fas fa-user-circle"></i> <b>${escapeHtml(s.udiseUser || 'N/A')}</b> &nbsp;&nbsp;|&nbsp;&nbsp; <i class="fas fa-key"></i> <b>${escapeHtml(s.udisePass || 'N/A')}</b>
+                            </div>`;
+        credEl.style.display = 'block';
+    } else {
+        credEl.style.display = 'none';
+    }
+
+    document.getElementById('viewAddress').innerHTML = `<i class="fas fa-map-marker-alt" style="color:#dc3545"></i> ${s.block}, ${s.district} - ${s.pin}`;
+    document.getElementById('viewContact').innerHTML = `<i class="fas fa-phone-alt"></i> ${s.phone || 'No phone provided'}`;
+    
+    const sign = document.getElementById('viewHmSign');
+    const downloadBtn = document.getElementById('downloadSignBtn');
+    if(s.signature) { 
+        sign.src = s.signature; 
+        sign.style.display='block'; 
+        downloadBtn.style.display='inline-block';
+    } else { 
+        sign.style.display='none'; 
+        downloadBtn.style.display='none';
+    }
+    
+    document.getElementById('dashboardView').classList.add('hidden');
+    document.getElementById('detailView').classList.remove('hidden');
+
+    const classFilterSelect = document.getElementById('classFilterSelect');
+    classFilterSelect.innerHTML = '<option value="all">All Classes</option>';
+    document.getElementById('printFilterSelect').value = 'all';
+    document.getElementById('sourceFilterSelect').value = 'all';
+    document.getElementById('reviewFilterSelect').value = 'all';
+    document.getElementById('reviewFilterSelect').disabled = false;
+
+    document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="12" style="text-align:center; padding: 40px;"><i class="fas fa-spinner fa-spin fa-2x" style="color: #007bff; margin-bottom: 10px;"></i><br>Loading students from Firebase...</td></tr>';
+    
+    const field = s.udise.startsWith('NO_UDISE:') ? 'schoolName' : 'udise';
+    const value = s.udise.replace('NO_UDISE:', '');
+
+    db.collection('students').where(field, '==', value).get().then(qs => {
+        currentSchoolStudents = [];
+        const classes = new Set();
+        
+        qs.forEach(doc => {
+            const data = doc.data();
+            if (s.udise.startsWith('NO_UDISE:') && data.udise) return;
+            
+            data._source = getStudentSource(data);
+            currentSchoolStudents.push(data);
+            if(data.class) classes.add(normalizeClass(data.class));
+        });
+        currentSchoolStudents.sort((a,b) => b.id - a.id);
+        
+        Array.from(classes).sort().forEach(cls => {
+            const opt = document.createElement('option');
+            opt.value = cls; opt.textContent = 'Class: ' + cls;
+            classFilterSelect.appendChild(opt);
+        });
+
+        renderTable();
+        
+    }).catch(e => {
+        document.getElementById('studentTable').querySelector('tbody').innerHTML = `<tr><td colspan="12" style="color:red; text-align:center; padding: 20px;">Error loading students: ${e.message}</td></tr>`;
+    });
+    
+    updateSelection();
+}
+
+// Review filter only makes sense for Excel data (manual data has no review step).
+// Disable it automatically when the source filter is set to Manual.
+function onSourceFilterChange(){
+    const sourceFilter = document.getElementById('sourceFilterSelect').value;
+    const reviewSelect = document.getElementById('reviewFilterSelect');
+    if(sourceFilter === 'manual') {
+        reviewSelect.value = 'all';
+        reviewSelect.disabled = true;
+    } else {
+        reviewSelect.disabled = false;
+    }
+    renderTable();
+}
+
+function downloadHmSignature() {
+    if(!activeUdise || !schoolsMap[activeUdise] || !schoolsMap[activeUdise].signature) {
+        showMsg("No signature available to download.");
+        return;
+    }
+    const s = schoolsMap[activeUdise];
+    const a = document.createElement('a');
+    a.href = s.signature;
+    const safeName = (s.name || 'School').replace(/[^a-zA-Z0-9]/g, '_');
+    a.download = `HM_Signature_${safeName}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function renderTable(){
+    const tbody = document.querySelector('#studentTable tbody');
+    const classFilter = document.getElementById('classFilterSelect').value;
+    const printFilter = document.getElementById('printFilterSelect').value;
+    const sourceFilter = document.getElementById('sourceFilterSelect').value;
+    const reviewFilter = document.getElementById('reviewFilterSelect').value;
+    
+    let filteredStudents = currentSchoolStudents;
+
+    if (sourceFilter !== 'all') filteredStudents = filteredStudents.filter(s => s._source === sourceFilter);
+
+    // Review status only applies to Excel data; Manual data never requires review, so it's excluded
+    // whenever a specific review status is picked (it can't be "reviewed" or "not reviewed").
+    if (reviewFilter === 'not_reviewed') filteredStudents = filteredStudents.filter(s => s._source === 'excel' && s.finalised === false);
+    else if (reviewFilter === 'reviewed') filteredStudents = filteredStudents.filter(s => s._source === 'excel' && s.finalised !== false);
+
+    if (classFilter !== 'all') filteredStudents = filteredStudents.filter(s => normalizeClass(s.class) === classFilter);
+    
+    if (printFilter === 'printed') filteredStudents = filteredStudents.filter(s => s.isPrinted);
+    else if (printFilter === 'unprinted') filteredStudents = filteredStudents.filter(s => !s.isPrinted);
+
+    tbody.innerHTML = '';
+    document.getElementById('selectAll').checked = false;
+    
+    if(filteredStudents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding: 40px; color: #777; font-style: italic;">No students found matching your filters.</td></tr>';
+        updateSelection();
+        return;
+    }
+
+    filteredStudents.forEach((s, i) => {
+        const tr = document.createElement('tr');
+        
+        let printStatusBadge = '';
+        if (s._source === 'excel' && s.finalised === false) {
+            printStatusBadge = `<span class="badge-pending"><i class="fas fa-exclamation-triangle"></i> Not Reviewed</span>`;
+        } else if (s.isPrinted) {
+            printStatusBadge = `<span class="badge-printed"><i class="fas fa-check"></i> Printed</span>`;
+        } else {
+            printStatusBadge = `<span class="badge-ready"><i class="fas fa-print"></i> Ready Print</span>`;
+        }
+
+        const sourceBadge = s._source === 'excel'
+            ? `<span style="font-size:11px; background:#f3e8ff; color:#6b21a8; padding:3px 8px; border-radius:5px; font-weight:600; white-space:nowrap;"><i class="fas fa-file-excel"></i> Excel</span>`
+            : `<span style="font-size:11px; background:#e6f2ff; color:#0056b3; padding:3px 8px; border-radius:5px; font-weight:600; white-space:nowrap;"><i class="fas fa-mobile-alt"></i> Manual</span>`;
+        
+        const photoSrc = s.photoBase64 && s.photoBase64.startsWith('http') ? s.photoBase64 : (s.photoBase64 || '');
+
+        tr.innerHTML = `<td style="text-align: center;"><input type="checkbox" class="sel" value="${s.id}" style="transform: scale(1.2);"></td><td><b>${i+1}</b></td>
+        <td><img class="thumb" src="${photoSrc}" crossorigin="anonymous" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'%23ccc\\' stroke-width=\\'2\\' stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\'%3E%3Cpath d=\\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\\'/%3E%3Ccircle cx=\\'12\\' cy=\\'7\\' r=\\'4\\'/%3E%3C/svg%3E'"></td>
+        <td style="font-weight: 600; color: #111;">${escapeHtml(s.name)}</td>
+        <td>${normalizeClass(s.class)}</td><td>${escapeHtml(s.roll)}</td><td>${escapeHtml(s.dob)}</td><td>${escapeHtml(s.bloodGroup)||'-'}</td>
+        <td>${escapeHtml(s.mobile || s.phone || '-')}</td> 
+        <td>${sourceBadge}</td>
+        <td>${printStatusBadge}</td>
+        <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;" onclick="openEditModal('${s.id}')" title="Edit Student"><i class="fas fa-pen"></i></button> 
+        </td>`;
+        
+        tbody.appendChild(tr);
+    });
+    
+    document.querySelectorAll('.sel').forEach(c => c.onchange = updateSelection);
+    updateSelection();
+}
+
+document.getElementById('selectAll').onchange = e => {
+    document.querySelectorAll('.sel').forEach(c => c.checked = e.target.checked);
+    updateSelection();
+};
+
+function updateSelection(){
+    const selectedCheckboxes = document.querySelectorAll('.sel:checked');
+    const n = selectedCheckboxes.length;
+    const countEl = document.getElementById('selectionCount');
+    
+    if (n === 0) {
+        countEl.textContent = "0 selected";
+        countEl.style.background = "#f4f6f8";
+        countEl.style.color = "#666";
+    } else {
+        countEl.textContent = `${n} students selected`;
+        countEl.style.background = "#e6f2ff";
+        countEl.style.color = "#007bff";
+    }
+    
+    const genBtn = document.getElementById('generateBtn');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const markPBtn = document.getElementById('markPrintedBtn');
+    const markUBtn = document.getElementById('markUnprintedBtn');
+    const bulkDelBtn = document.getElementById('bulkDeleteBtn');
+    
+    if(n > 0) {
+        bulkDelBtn.disabled = false;
+        
+        let hasPendingData = false;
+        selectedCheckboxes.forEach(c => {
+            const st = currentSchoolStudents.find(x => x.id.toString() === c.value);
+            if(st && st.finalised === false) hasPendingData = true;
+        });
+
+        if (hasPendingData) {
+            markPBtn.disabled = true;
+            markUBtn.disabled = true;
+            genBtn.disabled = true;
+            verifyBtn.disabled = true;
+            genBtn.innerHTML = `⚠️ Cannot generate Pending Data`;
+        } else {
+            markPBtn.disabled = false;
+            markUBtn.disabled = false;
+            if(window.assets.font && window.assets.template) {
+                genBtn.disabled = false;
+                verifyBtn.disabled = false;
+                genBtn.innerHTML = `<i class="fas fa-print mr-1"></i> Generate <b>${n}</b> Cards`;
+            } else {
+                genBtn.disabled = true;
+                verifyBtn.disabled = true;
+            }
+        }
+    } else {
+        bulkDelBtn.disabled = true;
+        genBtn.disabled = true;
+        verifyBtn.disabled = true;
+        genBtn.innerHTML = `🖨 Generate Cards`;
+        markPBtn.disabled = true;
+        markUBtn.disabled = true;
+    }
+}
+
+async function bulkDeleteSelected() {
+    const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
+    if(ids.length === 0) return;
+    
+    if(!(await showMsg(`Are you sure you want to permanently delete these <b>${ids.length}</b> selected students?<br><br>This is useful for clearing out fake or mistake uploads.`, true, true))) return;
+    
+    const btn = document.getElementById('bulkDeleteBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Deleting...`;
+    btn.disabled = true;
+    
+    try {
+        const chunks = [];
+        for (let i = 0; i < ids.length; i += 400) chunks.push(ids.slice(i, i + 400));
+        
+        for (const chunk of chunks) {
+            const batch = db.batch();
+            chunk.forEach(id => {
+                const ref = db.collection('students').doc(id.toString());
+                batch.delete(ref);
+            });
+            await batch.commit();
+        }
+
+        currentSchoolStudents = currentSchoolStudents.filter(s => !ids.includes(s.id.toString()));
+
+        if(activeUdise && schoolsMap[activeUdise]) {
+             await quickSync(); 
+        }
+
+        renderTable(); 
+    } catch (e) {
+        showMsg("Error deleting students: " + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        updateSelection();
+    }
+}
+
+async function markSelectedPrinted(status) {
+    const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
+    if(ids.length === 0) return;
+    
+    const btn = status ? document.getElementById('markPrintedBtn') : document.getElementById('markUnprintedBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Updating...`;
+    btn.disabled = true;
+    
+    try {
+        const chunks = [];
+        for (let i = 0; i < ids.length; i += 400) chunks.push(ids.slice(i, i + 400));
+        
+        for (const chunk of chunks) {
+            const batch = db.batch();
+            chunk.forEach(id => {
+                const ref = db.collection('students').doc(id.toString());
+                batch.update(ref, { isPrinted: status, lastModified: Date.now() });
+            });
+            await batch.commit();
+        }
+
+        ids.forEach(id => {
+            const s = currentSchoolStudents.find(x => x.id == id);
+            if(s) s.isPrinted = status;
+        });
+
+        renderTable(); 
+    } catch (e) {
+        showMsg("Error updating print status: " + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        updateSelection();
+    }
+}
+
+document.getElementById('fontInput').onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    const buf = await f.arrayBuffer();
+    const font = new FontFace('OdiaFont', buf);
+    await font.load(); document.fonts.add(font);
+    window.assets.font = true;
+    document.getElementById('fontStatus').className = 'status-badge status-ok';
+    document.getElementById('fontStatus').textContent = 'Manual Load';
+    updateSelection();
+};
+
+document.getElementById('templateInput').onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    const img = new Image(); img.src = URL.createObjectURL(f);
+    img.onload = () => {
+        window.assets.template = img;
+        window.assets.mode = 'manual'; 
+        document.getElementById('tplStatus').className = 'status-badge status-ok';
+        document.getElementById('tplStatus').textContent = 'Manual Load';
+        updateSelection();
+    }
+};
+
+let FaceDetector = null, FilesetResolver = null, faceDetector = null;
+async function importVision(url){ try{ return await import(url); }catch(e){ return null; } }
+async function loadVisionBundle(){
+  const c = ["https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs", "https://unpkg.com/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs"];
+  for(const u of c){ const m = await importVision(u); if(m) return m; }
+  throw new Error("Vision Bundle Failed");
+}
+async function initializeFaceDetector(){
+  window.assets.aiModel = 'pending'; updateSelection();
+  try{
+    const mod = await loadVisionBundle(); 
+    FaceDetector = mod.FaceDetector; FilesetResolver = mod.FilesetResolver;
+    const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+    faceDetector = await FaceDetector.createFromOptions(fileset, { baseOptions:{ modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite", delegate:"GPU" }, minDetectionConfidence:0.5, runningMode:"IMAGE" });
+    window.assets.aiModel = 'loaded'; document.getElementById('aiStatus').innerHTML = "✅ AI Crop Active";
+  }catch(err){ 
+    window.assets.aiModel = 'failed'; document.getElementById('aiStatus').innerHTML = "⚠️ AI Failed (Basic Crop)";
+  }
+  updateSelection();
+}
+
+const canvas = document.getElementById('cardCanvas');
+const ctx = canvas.getContext('2d');
+
+async function drawCard(s) {
+    canvas.width = CARD_W; canvas.height = CARD_H;
+    
+    // FIX APPLIED HERE: Fill base canvas completely with solid white to eliminate 
+    // any transparent cutouts in the template that would otherwise turn black during JPEG/PDF export.
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, CARD_W, CARD_H);
+
+    ctx.drawImage(window.assets.template, 0, 0, CARD_W, CARD_H);
+
+    // Guaranteed to use Master School Details for printing
+    const targetUdise = activeUdise || s.udise || ('NO_UDISE:' + s.schoolName);
+    const sm = schoolsMap[targetUdise];
+
+    if(window.assets.mode === 'auto') {
+        const centerHeadX = SCHOOL_NAME_POS.x + (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) / 2;
+        ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; 
+        
+        const printSchoolName = sm && sm.name ? sm.name : (s.schoolName || '');
+        
+        let fs = 45; ctx.font = `bold ${fs}px OdiaFont`;
+        while (ctx.measureText(printSchoolName).width > (SCHOOL_NAME_POS.maxX - SCHOOL_NAME_POS.x) && fs > 10) { fs--; ctx.font = `bold ${fs}px OdiaFont`; }
+        ctx.fillText(printSchoolName, centerHeadX, SCHOOL_NAME_POS.y);
+        
+        ctx.font = '30px OdiaFont'; 
+        let addr = [];
+        if(sm && sm.block) addr.push(sm.block);
+        if(sm && sm.district) addr.push(sm.district);
+        let addrTxt = addr.join(', ');
+        if(sm && sm.pin) addrTxt += ' - ' + toOdiaDigits(sm.pin);
+        ctx.fillText(addrTxt, centerHeadX, ADDR_POS.y);
+
+        if(sm && sm.udise) {
+            ctx.font = '26px OdiaFont';
+            ctx.fillText('UDISE- ' + toOdiaDigits(sm.udise), centerHeadX, ADDR_POS.y + 36);
+        }
+
+        if(sm && sm.signature) {
+            const signImg = new Image(); 
+            signImg.crossOrigin = "Anonymous"; 
+            signImg.src = sm.signature;
+            await new Promise(r => signImg.onload=r);
+            const ratio = Math.min(SIGN_POS.maxW / signImg.width, SIGN_POS.maxH / signImg.height);
+            ctx.drawImage(signImg, SIGN_POS.x, SIGN_POS.y, signImg.width * ratio, signImg.height * ratio);
+        }
+    }
+
+    const tplW = window.assets.template.width || CARD_W;
+    const scale = CARD_W / tplW;
+    const px = Math.round(222 * scale), py = Math.round(250 * scale);
+    const pw = Math.round(187 * scale), ph = Math.round(225 * scale);
+    const border = Math.max(2, Math.round(3 * scale));
+
+    ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
+
+    if(s.photoBase64) {
+        const photo = new Image(); 
+        photo.crossOrigin = "Anonymous";
+        photo.src = s.photoBase64;
+        await new Promise((resolve, reject) => {
+             photo.onload = resolve;
+             photo.onerror = () => { console.warn("Failed to load image for", s.name); resolve(); }
+        });
+        
+        if (photo.width > 0) { 
+            let sx=0, sy=0, sw=photo.width, sh=photo.height;
+            if(window.assets.aiModel === 'loaded' && faceDetector) {
+                try {
+                    const det = faceDetector.detect(photo);
+                    if(det.detections.length > 0) {
+                        const b = det.detections[0].boundingBox;
+                        const ax=b.width*0.6, ay=b.height*1.4;
+                        sx=Math.max(0,b.originX-ax/2); sy=Math.max(0,b.originY-ay/2);
+                        sw=Math.min(photo.width-sx, b.width+ax); sh=Math.min(photo.height-sy, b.height+ay);
+                    }
+                } catch(e){}
+            }
+            ctx.drawImage(photo, sx, sy, sw, sh, px, py, pw, ph);
+        } else {
+             ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
+             ctx.fillStyle = '#999'; ctx.textAlign='center'; ctx.font = '20px Arial';
+             ctx.fillText('No Photo', px+pw/2, py+ph/2);
+        }
+    } else {
+        ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
+        ctx.fillStyle = '#999'; ctx.textAlign='center'; ctx.font = '20px Arial';
+        ctx.fillText('No Photo', px+pw/2, py+ph/2);
+    }
+
+    ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.font = `${Math.round(38*scale)}px OdiaFont`;
+    const tx = Math.round(227*scale);
+    let dob = s.dob || ''; try{ const [y,m,d] = dob.split('-'); if(y&&m&&d) dob = `${d}/${m}/${y}`; } catch(e){}
+    
+    ctx.fillText(s.name||'', tx, Math.round((505+38)*scale));
+    ctx.fillText(toOdiaClass(s.class||''), tx, Math.round((575+38)*scale));
+    ctx.fillText(toOdiaDigits(dob), tx, Math.round((647+38)*scale));
+    ctx.fillText(toOdiaDigits(s.roll), tx, Math.round((718+38)*scale));
+    const phNum = s.mobile || s.phone || '';
+    ctx.fillText(toOdiaDigits(phNum), tx, Math.round((789+38)*scale));
+    
+    if(s.bloodGroup){
+        ctx.fillStyle = 'white'; ctx.font = `${Math.round(23*scale)}px OdiaFont`;
+        ctx.fillText(s.bloodGroup, Math.round(480*scale), Math.round((360+23)*scale));
+    }
+
+    return await new Promise(r => canvas.toBlob(r, 'image/png'));
+}
+
+document.getElementById('verifyBtn').onclick = async () => {
+    const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
+    const targets = currentSchoolStudents.filter(s => ids.includes(s.id.toString()));
+    const btn = document.getElementById('verifyBtn');
+    
+    btn.disabled = true; 
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Creating PDF...`;
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const verifyPdf = new jsPDF({ unit:'px', format:[CARD_W, CARD_H] });
+
+        for(let i=0; i<targets.length; i++) {
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Drawing ${i+1}/${targets.length}...`;
+            const blob = await drawCard(targets[i]);
+            
+            const imgUrl = URL.createObjectURL(blob);
+            const imgObj = new Image(); imgObj.src = imgUrl;
+            await new Promise(r => imgObj.onload=r);
+
+            const tempCvs = document.createElement('canvas');
+            tempCvs.width = CARD_W;
+            tempCvs.height = CARD_H;
+            const tctx = tempCvs.getContext('2d');
+            tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+            tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
+            const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.90);
+
+            if(i>0) verifyPdf.addPage([CARD_W, CARD_H], 'portrait');
+            verifyPdf.addImage(jpegUrl, 'JPEG', 0, 0, CARD_W, CARD_H, undefined, 'FAST');
+            
+            verifyPdf.saveGraphicsState();
+            verifyPdf.setGState(new verifyPdf.GState({opacity: 0.3}));
+            verifyPdf.setTextColor(255, 0, 0); verifyPdf.setFontSize(30);
+            for(let r=-50; r<CARD_H+50; r+=150) { 
+                for(let c=-50; c<CARD_W+50; c+=200) {
+                    verifyPdf.text("VERIFICATION ONLY", c, r, {angle:45}); 
+                }
+            }
+            verifyPdf.restoreGraphicsState();
+        }
+
+        btn.innerHTML = `<i class="fas fa-download"></i> Downloading...`;
+        const safeName = (schoolsMap[activeUdise]?.name || 'School').replace(/[^a-zA-Z0-9]/g, '_');
+        verifyPdf.save(`${safeName}_Verification_Proof.pdf`);
+
+    } catch (error) {
+        showMsg("Error generating verification PDF: " + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `👀 Verify PDF`;
+        updateSelection();
+    }
+};
+
+document.getElementById('generateBtn').onclick = async () => {
+    const ids = Array.from(document.querySelectorAll('.sel:checked')).map(c => c.value);
+    const targets = currentSchoolStudents.filter(s => ids.includes(s.id.toString()));
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
+
+    const zip = new JSZip();
+    const folder = zip.folder("PNGs");
+    const folderA4WithGaps = zip.folder("A4_Sheets_With_Gaps");
+    const folderA4NoGaps = zip.folder("A4_Sheets_No_Gaps");
+    
+    const { jsPDF } = window.jspdf;
+    const verifyPdf = new jsPDF({ unit:'px', format:[CARD_W, CARD_H] });
+
+    const imgs = [];
+    try {
+    for(let i = 0; i < targets.length; i++) {
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Drawing ${i+1}/${targets.length}...`;
+        const blob = await drawCard(targets[i]);
+        folder.file(`${targets[i].name}_${targets[i].roll}.png`, blob);
+        
+        const imgUrl = URL.createObjectURL(blob);
+        const imgObj = new Image(); imgObj.src = imgUrl;
+        await new Promise(r => imgObj.onload=r);
+        imgs.push(imgObj);
+
+        const tempCvs = document.createElement('canvas');
+        tempCvs.width = CARD_W;
+        tempCvs.height = CARD_H;
+        const tctx = tempCvs.getContext('2d');
+        tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tempCvs.width, tempCvs.height);
+        tctx.drawImage(imgObj, 0, 0, tempCvs.width, tempCvs.height);
+        const jpegUrl = tempCvs.toDataURL('image/jpeg', 0.90);
+
+        if(i>0) verifyPdf.addPage([CARD_W, CARD_H], 'portrait');
+        verifyPdf.addImage(jpegUrl, 'JPEG', 0, 0, CARD_W, CARD_H, undefined, 'FAST');
+        
+        verifyPdf.saveGraphicsState();
+        verifyPdf.setGState(new verifyPdf.GState({opacity: 0.3}));
+        verifyPdf.setTextColor(255, 0, 0); verifyPdf.setFontSize(30);
+        for(let r=-50; r<CARD_H+50; r+=150) { for(let c=-50; c<CARD_W+50; c+=200) verifyPdf.text("VERIFICATION ONLY", c, r, {angle:45}); }
+        verifyPdf.restoreGraphicsState();
+    }
+
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Building Sheets...`;
+    const pageCvs = document.createElement('canvas'); pageCvs.width=A4_W; pageCvs.height=A4_H;
+    const pctx = pageCvs.getContext('2d');
+    
+    const GAP_X = 40, GAP_Y = 150;
+    const startX_Gaps = (A4_W - ((5*CARD_W)+(4*GAP_X)))/2;
+    const startY_Gaps = (A4_H - ((2*CARD_H)+(1*GAP_Y)))/2;
+    const startX_NoGaps = (A4_W - (5*CARD_W))/2;
+    const startY_NoGaps = (A4_H - (2*CARD_H))/2;
+
+    for(let i=0; i<imgs.length; i+=10) {
+        const chunk = imgs.slice(i, i+10);
+        
+        pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
+        chunk.forEach((img, idx) => {
+            const c = idx % 5; const r = Math.floor(idx/5);
+            const x = startX_Gaps + c*(CARD_W+GAP_X);
+            const y = startY_Gaps + r*(CARD_H+GAP_Y);
+            pctx.drawImage(img, x, y);
+            pctx.strokeStyle='#ccc'; pctx.lineWidth=2; pctx.strokeRect(x,y,CARD_W,CARD_H);
+        });
+        const pBlobGaps = await new Promise(r => pageCvs.toBlob(r, 'image/jpeg', 0.9));
+        folderA4WithGaps.file(`A4_Print_Sheet_${Math.floor(i/10)+1}.jpg`, pBlobGaps);
+
+        pctx.fillStyle='#fff'; pctx.fillRect(0,0,A4_W,A4_H);
+        chunk.forEach((img, idx) => {
+            const c = idx % 5; const r = Math.floor(idx/5);
+            const x = startX_NoGaps + c*CARD_W;
+            const y = startY_NoGaps + r*CARD_H;
+            pctx.drawImage(img, x, y);
+            pctx.strokeStyle='#ccc'; pctx.lineWidth=2; pctx.strokeRect(x,y,CARD_W,CARD_H);
+        });
+        const pBlobNoGaps = await new Promise(r => pageCvs.toBlob(r, 'image/jpeg', 0.9));
+        folderA4NoGaps.file(`A4_Print_Sheet_NoGaps_${Math.floor(i/10)+1}.jpg`, pBlobNoGaps);
+    }
+
+    zip.file("Verify_Proof.pdf", verifyPdf.output('arraybuffer'));
+    
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Zipping...`;
+    const zipBlob = await zip.generateAsync({type:'blob'});
+    const dlLink = document.createElement('a'); dlLink.href = URL.createObjectURL(zipBlob);
+    dlLink.download = `ID_Cards_${Date.now()}.zip`; dlLink.click();
+
+    } catch(genErr) {
+        showMsg("Error generating ID cards: " + genErr.message);
+    } finally {
+        btn.disabled = false;
+        updateSelection();
+    }
+    
+    setTimeout(async () => {
+        if(await showMsg("ID Cards generated successfully!<br><br>Do you want to mark these selected students as 'Printed' so they disappear from the Pending list?", true)) {
+            await markSelectedPrinted(true);
+        }
+    }, 500);
+};
+
+async function openSchoolEdit(udise){
+    const s = schoolsMap[udise];
+    if(!s) {
+        await showMsg("School data missing");
+        return;
+    }
+    
+    document.getElementById('esOldUdise').value = udise;
+    document.getElementById('esName').value = s.name;
+    document.getElementById('esPhone').value = s.phone || '';
+    document.getElementById('esBlock').value = s.block || '';
+    document.getElementById('esDistrict').value = s.district || '';
+    document.getElementById('esPin').value = s.pin || '';
+    document.getElementById('esUdise').value = s.udise || '';
+    document.getElementById('esSignInput').value = ''; 
+    
+    const delContainer = document.getElementById('deleteOptionsContainer');
+    delContainer.innerHTML = '';
+    
+    const sources = Object.keys(s.sources || {});
+    if (sources.includes('manual')) {
+        delContainer.innerHTML += `<button type="button" onclick="executeBatchDelete('${escapeJs(udise)}', 'manual')" class="btn btn-outline" style="flex:1; border-color:#dc3545; color:#dc3545; font-weight:bold; padding: 12px 10px;">🗑 Delete Manual Data</button>`;
+    }
+    if (sources.includes('excel')) {
+        delContainer.innerHTML += `<button type="button" onclick="executeBatchDelete('${escapeJs(udise)}', 'excel')" class="btn btn-outline" style="flex:1; border-color:#dc3545; color:#dc3545; font-weight:bold; padding: 12px 10px;">🗑 Delete Excel Data</button>`;
+    }
+    
+    delContainer.innerHTML += `<button type="button" onclick="executeBatchDelete('${escapeJs(udise)}', 'all')" class="btn btn-danger" style="flex:1; min-width: 100%; padding: 12px 10px; background:#bb2d3b;">🗑 Delete Entire UDISE (All Data)</button>`;
+
+    document.getElementById('editSchoolModal').style.display = 'flex';
+}
+
+document.getElementById('saveSchoolBtn').onclick = async () => {
+    const btn = document.getElementById('saveSchoolBtn');
+    btn.disabled = true; btn.textContent = "Updating...";
+    
+    const oldUdise = document.getElementById('esOldUdise').value;
+    const newName = document.getElementById('esName').value.trim();
+    const newUdise = document.getElementById('esUdise').value.trim();
+    const updates = {
+        name: newName,
+        phone: document.getElementById('esPhone').value.trim(),
+        block: document.getElementById('esBlock').value.trim(),
+        district: document.getElementById('esDistrict').value.trim(),
+        pin: document.getElementById('esPin').value.trim(),
+        udise: newUdise,
+        lastModified: Date.now() 
+    };
+    
+    const file = document.getElementById('esSignInput').files[0];
+    if(file) {
+        try {
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error("Image load failed")); });
+            
+            const sigCanvas = document.createElement('canvas');
+            const cx = sigCanvas.getContext('2d');
+            const maxW = 400;
+            let w = img.width, h = img.height;
+            if(w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
+            sigCanvas.width = w; sigCanvas.height = h;
+            cx.clearRect(0, 0, w, h);
+            cx.drawImage(img, 0, 0, w, h);
+            
+            const compressedBlob = await new Promise(r => sigCanvas.toBlob(r, 'image/png'));
+            
+            const ref = window.storage.ref(`school_signatures/${newUdise}_signature.png`);
+            const metadata = { contentType: 'image/png' };
+            await ref.put(compressedBlob, metadata);
+            updates.hmSignature = await ref.getDownloadURL();
+        } catch(uploadErr) {
+            await showMsg("Signature upload failed: " + uploadErr.message + ". Other changes will still be saved.");
+        }
+    }
+    
+    try {
+        await db.collection('schools').doc(newUdise).set(updates, { merge: true });
+        if(oldUdise !== newUdise) {
+            await db.collection('schools').doc(oldUdise).delete();
+        }
+
+        const studentUpdates = {
+            schoolName: updates.name,
+            hmPhone: updates.phone,
+            block: updates.block,
+            district: updates.district,
+            pin: updates.pin,
+            udise: updates.udise,
+            lastModified: Date.now()
+        };
+        if (updates.hmSignature) studentUpdates.hmSignature = updates.hmSignature;
+
+        const isLegacyNoUdise = oldUdise.startsWith('NO_UDISE:');
+        const legacyOldName = isLegacyNoUdise ? oldUdise.slice('NO_UDISE:'.length) : null;
+
+        const snap = isLegacyNoUdise
+            ? await db.collection('students').where('schoolName', '==', legacyOldName).get()
+            : await db.collection('students').where('udise', '==', oldUdise).get();
+        
+        let docs = snap.docs;
+        if (isLegacyNoUdise) docs = docs.filter(doc => !doc.data().udise);
+        
+        const chunks = [];
+        for (let i = 0; i < docs.length; i += 400) {
+            chunks.push(docs.slice(i, i + 400));
+        }
+
+        for (const chunk of chunks) {
+            const batch = db.batch();
+            chunk.forEach(doc => batch.update(doc.ref, studentUpdates));
+            await batch.commit();
+        }
+
+        await showMsg("School updated successfully!");
+        document.getElementById('editSchoolModal').style.display='none';
+        
+        if(oldUdise !== newUdise) {
+             schoolsMap[newUdise] = schoolsMap[oldUdise];
+             delete schoolsMap[oldUdise];
+        }
+        schoolsMap[newUdise].name = newName;
+        Object.assign(schoolsMap[newUdise], {
+            phone: updates.phone, block: updates.block, district: updates.district, pin: updates.pin, udise: newUdise
+        });
+        if(updates.hmSignature) schoolsMap[newUdise].signature = updates.hmSignature;
+        
+        localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        renderDashboard();
+        
+        if (activeUdise === oldUdise) {
+            openSchoolDetail(newUdise);
+        }
+
+    } catch(e) { showMsg("Error updating school: " + e.message); } 
+    finally { btn.disabled = false; btn.textContent = "Save Master Profile"; }
+};
+
+window.executeBatchDelete = async function(udise, targetSource) {
+    const s = schoolsMap[udise];
+    if(!s) return;
+
+    let confirmMsg = "";
+    if (targetSource === 'all') {
+        confirmMsg = `<b>Warning: This action cannot be undone!</b><br><br>You are about to permanently delete <b>ALL data</b> for UDISE: ${escapeHtml(udise)} (${escapeHtml(s.name)}).`;
+    } else {
+        const label = targetSource === 'excel' ? 'Excel Upload' : 'Manual App';
+        confirmMsg = `<b>Warning!</b><br><br>You are about to permanently delete ONLY the <b>${label}</b> data for UDISE: ${escapeHtml(udise)}.<br>The other data will remain untouched.`;
+    }
+
+    if(!(await showMsg(confirmMsg, true, true))) return;
+
+    const modalContent = document.querySelector('#editSchoolModal .modal-content');
+    modalContent.style.opacity = '0.5';
+    modalContent.style.pointerEvents = 'none';
+
+    try {
+        const isLegacyNoUdise = udise.startsWith('NO_UDISE:');
+        const legacyOldName = isLegacyNoUdise ? udise.slice('NO_UDISE:'.length) : null;
+
+        const snap = isLegacyNoUdise
+            ? await db.collection('students').where('schoolName', '==', legacyOldName).get()
+            : await db.collection('students').where('udise', '==', udise).get();
+            
+        let docs = snap.docs;
+        if (isLegacyNoUdise) docs = docs.filter(doc => !doc.data().udise);
+        
+        if (targetSource !== 'all') {
+            docs = docs.filter(doc => getStudentSource(doc.data()) === targetSource);
+        }
+
+        const chunks = [];
+        for (let i = 0; i < docs.length; i += 400) {
+            chunks.push(docs.slice(i, i + 400));
+        }
+
+        for (const chunk of chunks) {
+            const batch = db.batch();
+            chunk.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        }
+        
+        await quickSync(); 
+        
+        if (targetSource === 'all' || !schoolsMap[udise]) {
+            try { if (!isLegacyNoUdise) await db.collection('schools').doc(udise).delete(); } catch(e) {}
+            try { if (!isLegacyNoUdise) await window.storage.ref(`school_signatures/${udise}_signature.png`).delete(); } catch(e) {}
+            delete schoolsMap[udise];
+            localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+            
+            document.getElementById('editSchoolModal').style.display='none';
+            await showMsg("All data deleted successfully!");
+            showDashboard(); 
+        } else {
+            document.getElementById('editSchoolModal').style.display='none';
+            await showMsg(`${targetSource === 'excel' ? 'Excel' : 'Manual'} data deleted successfully!`);
+            
+            if (activeUdise === udise) {
+                if (schoolsMap[udise]) openSchoolDetail(udise);
+                else showDashboard();
+            }
+        }
+
+    } catch(e) {
+        showMsg("Error deleting: " + e.message);
+    } finally {
+        modalContent.style.opacity = '1';
+        modalContent.style.pointerEvents = 'auto';
+    }
+}
+
+function openEditModal(id){
+    const s = currentSchoolStudents.find(x => x.id == id);
+    if(!s) return;
+    document.getElementById('editId').value = s.id;
+    document.getElementById('editName').value = s.name;
+    document.getElementById('editClass').value = normalizeClass(s.class);
+    document.getElementById('editRoll').value = s.roll;
+    document.getElementById('editDob').value = s.dob;
+    document.getElementById('editBlood').value = s.bloodGroup;
+    document.getElementById('editPhone').value = s.mobile || s.phone || '';
+
+    // Undo Review is only relevant for Excel-sourced students that are currently reviewed/finalised.
+    // Manual entries have no review step, so the option never appears for them.
+    const showUndo = s._source === 'excel' && s.finalised !== false;
+    document.getElementById('undoReviewBox').classList.toggle('hidden', !showUndo);
+
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+document.getElementById('undoReviewBtn').onclick = async () => {
+    const id = document.getElementById('editId').value;
+    const s = currentSchoolStudents.find(x => x.id == id);
+    if(!s) return;
+
+    if(!(await showMsg("Send this student back to <b>Pending Review</b>? It will disappear from Ready-to-Print/Printed lists and show as pending in the user's app until re-reviewed.", true))) return;
+
+    const btn = document.getElementById('undoReviewBtn');
+    const oldText = btn.textContent;
+    btn.innerHTML = "Undoing...";
+    btn.disabled = true;
+
+    try {
+        await db.collection('students').doc(id.toString()).update({ finalised: false, lastModified: Date.now() });
+        s.finalised = false;
+        document.getElementById('editModal').style.display = 'none';
+        renderTable();
+    } catch(e) {
+        showMsg("Error: " + e.message);
+    } finally {
+        btn.innerHTML = oldText;
+        btn.disabled = false;
+    }
+};
+
+document.getElementById('saveEditBtn').onclick = async () => {
+    const btn = document.getElementById('saveEditBtn');
+    const oldText = btn.textContent;
+    btn.innerHTML = "Saving...";
+    btn.disabled = true;
+
+    const id = document.getElementById('editId').value;
+    const data = {
+        name: document.getElementById('editName').value,
+        class: document.getElementById('editClass').value,
+        roll: document.getElementById('editRoll').value,
+        dob: document.getElementById('editDob').value,
+        bloodGroup: document.getElementById('editBlood').value,
+        mobile: document.getElementById('editPhone').value,
+        lastModified: Date.now()
+    };
+    try {
+        await db.collection('students').doc(id.toString()).update(data);
+        const s = currentSchoolStudents.find(x => x.id == id);
+        if(s) Object.assign(s, data);
+        document.getElementById('editModal').style.display='none';
+        renderTable();
+    } catch(e) { showMsg("Error: "+e.message); }
+    finally {
+        btn.innerHTML = oldText;
+        btn.disabled = false;
+    }
+};
+
+document.getElementById('previewEditBtn').onclick = async () => {
+    if(!window.assets.font || !window.assets.template) {
+        await showMsg("Please ensure 'OdiaFont' and a Background PNG are loaded first in the config panel.");
+        return;
+    }
+    
+    document.getElementById('previewEditBtn').textContent = "Generating...";
+    const id = document.getElementById('editId').value;
+    const s = currentSchoolStudents.find(x => x.id == id);
+    
+    const tempStudent = {
+        ...s,
+        name: document.getElementById('editName').value,
+        class: document.getElementById('editClass').value,
+        roll: document.getElementById('editRoll').value,
+        dob: document.getElementById('editDob').value,
+        bloodGroup: document.getElementById('editBlood').value,
+        mobile: document.getElementById('editPhone').value
+    };
+
+    const blob = await drawCard(tempStudent);
+
+    const cvs = document.createElement('canvas');
+    cvs.width = CARD_W; cvs.height = CARD_H;
+    const pctx = cvs.getContext('2d');
+    
+    const img = new Image(); img.src = URL.createObjectURL(blob);
+    await new Promise(r => img.onload = r);
+    pctx.drawImage(img, 0, 0);
+    
+    pctx.save();
+    pctx.translate(CARD_W/2, CARD_H/2);
+    pctx.rotate(-Math.PI / 4);
+    pctx.font = 'bold 70px Arial';
+    pctx.textAlign = 'center';
+    pctx.textBaseline = 'middle';
+    
+    const diag = Math.sqrt(CARD_W*CARD_W + CARD_H*CARD_H);
+    for(let x = -diag; x <= diag; x += 350) {
+        for(let y = -diag; y <= diag; y += 150) {
+            pctx.fillStyle = 'rgba(255, 0, 0, 0.25)';
+            pctx.fillText('PREVIEW ONLY', x, y);
+            pctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            pctx.fillText('PREVIEW ONLY', x+2, y+2);
+        }
+    }
+    pctx.restore();
+
+    document.getElementById('adminPreviewImg').src = cvs.toDataURL('image/png');
+    document.getElementById('adminPreviewModal').style.display = 'flex';
+    document.getElementById('previewEditBtn').textContent = "👁 Preview Card";
+};
+
+</script>
+</body>
+</html>
