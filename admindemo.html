@@ -311,9 +311,12 @@
 
         <!-- DANGER ZONE -->
         <div class="danger-zone">
-            <h4 style="margin: 0 0 10px 0; color: #dc3545; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Danger Zone (Delete Data)</h4>
-            <div id="deleteOptionsContainer" style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <h4 style="margin: 0 0 10px 0; color: #dc3545; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Danger Zone (Data Management)</h4>
+            <div id="deleteOptionsContainer" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
                 <!-- Dynamically injected buttons go here -->
+            </div>
+            <div id="mergeOptionsContainer" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <!-- Dynamically injected merge buttons go here -->
             </div>
         </div>
     </div>
@@ -1461,6 +1464,8 @@ async function openSchoolEdit(udise){
     
     const delContainer = document.getElementById('deleteOptionsContainer');
     delContainer.innerHTML = '';
+    const mergeContainer = document.getElementById('mergeOptionsContainer');
+    mergeContainer.innerHTML = '';
     
     const sources = Object.keys(s.sources || {});
     if (sources.includes('manual')) {
@@ -1471,6 +1476,11 @@ async function openSchoolEdit(udise){
     }
     
     delContainer.innerHTML += `<button type="button" onclick="executeBatchDelete('${escapeJs(udise)}', 'all')" class="btn btn-danger" style="flex:1; min-width: 100%; padding: 12px 10px; background:#bb2d3b;">🗑 Delete Entire UDISE (All Data)</button>`;
+
+    // Add Merger Button if BOTH sources exist
+    if (sources.includes('manual') && sources.includes('excel')) {
+        mergeContainer.innerHTML = `<button type="button" onclick="mergeExcelToManual('${escapeJs(udise)}')" class="btn btn-warning" style="flex:1; min-width: 100%; padding: 12px 10px; font-weight:bold;"><i class="fas fa-object-group"></i> Merge Excel Batch into Manual</button>`;
+    }
 
     document.getElementById('editSchoolModal').style.display = 'flex';
 }
@@ -1648,6 +1658,68 @@ window.executeBatchDelete = async function(udise, targetSource) {
 
     } catch(e) {
         showMsg("Error deleting: " + e.message);
+    } finally {
+        modalContent.style.opacity = '1';
+        modalContent.style.pointerEvents = 'auto';
+    }
+}
+
+window.mergeExcelToManual = async function(udise) {
+    const s = schoolsMap[udise];
+    if(!s) return;
+
+    if(!(await showMsg(`Are you sure you want to merge the Excel batch into the Manual batch for UDISE: ${escapeHtml(udise)}?<br><br>This will change the source of all Excel students to "manual" so the school can view and edit them in their app immediately.<br><br><b>Note: This action cannot be undone.</b>`, true, true))) return;
+
+    const modalContent = document.querySelector('#editSchoolModal .modal-content');
+    modalContent.style.opacity = '0.5';
+    modalContent.style.pointerEvents = 'none';
+
+    try {
+        const isLegacyNoUdise = udise.startsWith('NO_UDISE:');
+        const legacyOldName = isLegacyNoUdise ? udise.slice('NO_UDISE:'.length) : null;
+
+        const snap = isLegacyNoUdise
+            ? await db.collection('students').where('schoolName', '==', legacyOldName).get()
+            : await db.collection('students').where('udise', '==', udise).get();
+            
+        let docs = snap.docs;
+        if (isLegacyNoUdise) docs = docs.filter(doc => !doc.data().udise);
+        
+        // Filter only excel students to convert
+        docs = docs.filter(doc => getStudentSource(doc.data()) === 'excel');
+
+        if (docs.length === 0) {
+             await showMsg("No Excel data found to merge.");
+             return;
+        }
+
+        const chunks = [];
+        for (let i = 0; i < docs.length; i += 400) {
+            chunks.push(docs.slice(i, i + 400));
+        }
+
+        let updatedCount = 0;
+        for (const chunk of chunks) {
+            const batch = db.batch();
+            chunk.forEach(doc => {
+                batch.update(doc.ref, { source: 'manual', lastModified: Date.now() });
+                updatedCount++;
+            });
+            await batch.commit();
+        }
+        
+        await quickSync(); 
+        
+        document.getElementById('editSchoolModal').style.display='none';
+        await showMsg(`Successfully merged ${updatedCount} students into the Manual batch!`);
+        
+        if (activeUdise === udise) {
+            if (schoolsMap[udise]) openSchoolDetail(udise);
+            else showDashboard();
+        }
+
+    } catch(e) {
+        showMsg("Error merging: " + e.message);
     } finally {
         modalContent.style.opacity = '1';
         modalContent.style.pointerEvents = 'auto';
