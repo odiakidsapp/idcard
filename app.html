@@ -23,28 +23,25 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; }
         
-        /* Toast Animations */
         .toast-enter { transform: translateY(100%); opacity: 0; }
         .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .toast-exit { transform: translateY(0); opacity: 1; }
         .toast-exit-active { transform: translateY(100%); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        /* Hide number input arrows */
         input[type="number"]::-webkit-inner-spin-button, 
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
         
-        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-
-        /* Sidebar Overlay */
-        #sidebarOverlay {
-            background-color: rgba(0, 0, 0, 0.5);
-            transition: opacity 0.3s ease;
+        #sidebarOverlay { background-color: rgba(0, 0, 0, 0.5); transition: opacity 0.3s ease; }
+        #sidebar { transition: transform 0.3s ease; }
+        
+        /* Floating WhatsApp Button Animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
         }
-        /* Sidebar transition */
-        #sidebar {
-            transition: transform 0.3s ease;
-        }
+        .fab-hover { animation: float 3s ease-in-out infinite; }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
@@ -63,16 +60,13 @@
         <button onclick="window.location.reload()" class="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow hover:bg-gray-100 transition">Refresh Now</button>
     </div>
 
-    <!-- App Navigation Header (Unified) -->
+    <!-- App Navigation Header -->
     <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white sticky top-0 z-50 shadow-md transition-all duration-300" id="mainHeader">
         <div class="w-full max-w-lg mx-auto px-4 py-3 flex justify-between items-center">
-            
-            <!-- Left: Hamburger Icon -->
             <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
                 <i class="fas fa-bars text-xl"></i>
             </button>
 
-            <!-- Center: School Profile & Live Indicator -->
             <div class="flex-1 min-w-0 px-3 text-center flex flex-col items-center justify-center">
                 <div class="flex items-center justify-center gap-2 mb-0.5 w-full">
                     <h3 id="currentSchoolHeader" class="m-0 font-bold text-lg truncate flex items-center justify-center">ID Cards Pro</h3>
@@ -83,18 +77,14 @@
                 <p id="currentSchoolSubHeader" class="text-blue-100 text-xs truncate w-full text-center">Data Entry Portal</p>
             </div>
 
-            <!-- Right: Edit School Button (Hidden by default, shown when school is loaded) -->
             <button id="editSchoolBtn" onclick="openEditSchoolModal()" class="hidden bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Edit School">
                 <i class="fas fa-pen text-xs"></i>
             </button>
-            
-            <!-- Spacer to balance header before school is loaded -->
             <div id="headerSpacer" class="w-9 h-9 flex-shrink-0"></div>
-
         </div>
     </header>
 
-    <!-- Sidebar / Drawer Menu -->
+    <!-- Sidebar Menu -->
     <div id="sidebarOverlay" class="fixed inset-0 z-[100] hidden opacity-0" onclick="toggleSidebar()"></div>
     <div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-[110] transform -translate-x-full flex flex-col">
         <div class="p-5 bg-blue-600 text-white flex justify-between items-center">
@@ -102,9 +92,6 @@
             <button onclick="toggleSidebar()" class="text-white hover:text-gray-200"><i class="fas fa-times text-xl"></i></button>
         </div>
         <div class="flex-1 p-4 flex flex-col gap-2">
-            <button onclick="openRecycleBin(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
-                <i class="fas fa-trash-restore w-5 text-center text-red-500"></i> Recycle Bin
-            </button>
             <a href="catalogue.html" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fas fa-book-open w-5 text-center text-blue-500"></i> View Catalog
             </a>
@@ -114,7 +101,6 @@
             <button onclick="shareApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fas fa-share-nodes w-5 text-center text-gray-500"></i> Share App
             </button>
-            
             <div class="mt-auto border-t border-gray-200 pt-4">
                <button onclick="hardResetApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-red-50 text-red-600 transition text-left font-bold">
                     <i class="fas fa-sign-out-alt w-5 text-center"></i> Logout
@@ -122,7 +108,6 @@
             </div>
         </div>
     </div>
-
 
     <!-- Main Container -->
     <div class="max-w-lg mx-auto p-4 pt-4">
@@ -136,11 +121,12 @@
                 <h2 class="text-2xl font-bold text-gray-900">School Registration</h2>
             </div>
             
+            <!-- Restore Existing -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-dashed border-blue-300 mb-6">
-                <label class="block text-sm font-bold text-gray-700 mb-2">Restore Admin Uploaded Data</label>
+                <label class="block text-sm font-bold text-gray-700 mb-2">Existing User? Enter UDISE</label>
                 <input type="text" id="restoreUdiseInput" placeholder="Enter UDISE Number (11 digits)" maxlength="11" inputmode="numeric" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
                 <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl transition flex justify-center items-center gap-2" id="restoreUdiseBtn">
-                    <i class="fas fa-cloud-download-alt"></i> Check & Restore Data
+                    <i class="fas fa-cloud-download-alt"></i> Login & Restore Data
                 </button>
                 <div id="restoreStatus" class="text-sm mt-3 font-medium hidden"></div>
             </div>
@@ -151,6 +137,7 @@
                 <div class="flex-1 h-px bg-gray-300"></div>
             </div>
 
+            <!-- New Registration -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-800 mb-4">New School Details</h3>
                 <input type="text" id="newSchoolName" placeholder="Enter School Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
@@ -165,6 +152,11 @@
                     <input type="text" id="newUdise" placeholder="UDISE (11 digits) *" maxlength="11" inputmode="numeric" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 </div>
 
+                <div class="mb-5 pt-4 border-t border-gray-100">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">UDISE Password <span class="text-gray-400 font-normal text-xs">(Optional, for auto-load)</span></label>
+                    <input type="password" id="newUdisePass" placeholder="Enter UDISE Password" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+
                 <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-md" id="addSchoolBtn">Save School</button>
             </div>
         </div>
@@ -172,66 +164,101 @@
         <!-- ================= ENTRY SECTION ================= -->
         <div id="entrySection" class="hidden">
 
-            <!-- Stats Dashboard -->
-            <div class="grid grid-cols-3 gap-2 mb-4">
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
-                    <div class="text-xs text-gray-500 font-bold mb-1">TOTAL</div>
-                    <div class="text-xl font-black text-gray-800" id="statTotal">0</div>
+            <!-- Waiting State Card (Shown if Auto-Load is pending) -->
+            <div id="pendingImportCard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center mb-6 relative overflow-hidden">
+                <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 text-2xl animate-pulse">
+                    <i class="fas fa-hourglass-half"></i>
                 </div>
-                <div class="bg-green-50/50 p-3 rounded-xl shadow-sm border border-green-100 text-center">
-                    <div class="text-xs text-green-600 font-bold mb-1">COMPLETED</div>
-                    <div class="text-xl font-black text-green-700" id="statCompleted">0</div>
-                </div>
-                <div class="bg-amber-50/50 p-3 rounded-xl shadow-sm border border-amber-100 text-center">
-                    <div class="text-xs text-amber-600 font-bold mb-1">PENDING</div>
-                    <div class="text-xl font-black text-amber-700" id="statPending">0</div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Data Extraction in Progress</h3>
+                <p class="text-sm text-gray-600 mb-6">Your students will be automatically loaded here within 24 hours. You can view, edit, or add photos then.</p>
+                
+                <div class="flex justify-center mt-2">
+                    <button onclick="cancelPendingImport()" class="text-xs text-gray-500 hover:text-gray-800 underline font-medium">
+                        Cancel auto enter
+                    </button>
                 </div>
             </div>
 
-            <!-- Search and Filter Bar -->
-            <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-4 flex flex-col sm:flex-row gap-3">
-                <div class="relative flex-1">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-gray-400"></i>
+            <!-- Standard Dashboard Controls (Hidden if pending) -->
+            <div id="standardDashboardControls">
+                
+                <!-- Upgrade to Auto-Load Banner (Shown ONLY if user is in manual mode) -->
+                <div id="upgradeToAutoBanner" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-4 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-blue-900 text-sm"><i class="fas fa-magic text-blue-500 mr-1"></i> Want your students list here automatically?</h4>
+                        <p class="text-[11px] text-blue-700 mt-0.5 leading-tight">We'll fetch them from UDISE within 24 hours.</p>
                     </div>
-                    <input type="text" id="searchInput" placeholder="Search name or roll..." class="block w-full pl-10 p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
+                    <button onclick="requestAutoLoad()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition whitespace-nowrap ml-3">
+                        Auto-Load
+                    </button>
                 </div>
-                <div class="w-full sm:w-1/3">
-                    <select id="filterClass" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
-                        <option value="ALL">All Classes</option>
-                    </select>
-                </div>
-            </div>
 
-            <!-- Add Student Button (Inline Above List) -->
-            <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
-                <i class="fas fa-user-plus"></i> <span>Add New Student Manually</span>
-            </button>
-
-            <!-- Student List Header -->
-            <div class="flex justify-between items-end mb-3 px-1">
-                <div>
-                    <h3 class="font-bold text-gray-900 text-xl m-0">Student List</h3>
-                    <p class="text-xs text-gray-500 m-0" id="listCounter">Loading...</p>
+                <!-- Stats Dashboard -->
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
+                        <div class="text-xs text-gray-500 font-bold mb-1">TOTAL</div>
+                        <div class="text-xl font-black text-gray-800" id="statTotal">0</div>
+                    </div>
+                    <div class="bg-green-50/50 p-3 rounded-xl shadow-sm border border-green-100 text-center">
+                        <div class="text-xs text-green-600 font-bold mb-1">COMPLETED</div>
+                        <div class="text-xl font-black text-green-700" id="statCompleted">0</div>
+                    </div>
+                    <div class="bg-amber-50/50 p-3 rounded-xl shadow-sm border border-amber-100 text-center">
+                        <div class="text-xs text-amber-600 font-bold mb-1">PENDING</div>
+                        <div class="text-xl font-black text-amber-700" id="statPending">0</div>
+                    </div>
                 </div>
-                <button id="manualSyncBtn" onclick="syncAllPending()" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2">
-                    <i class="fas fa-sync-alt"></i> Sync
+
+                <!-- Search and Filter Bar -->
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-4 flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" id="searchInput" placeholder="Search name or roll..." class="block w-full pl-10 p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
+                    </div>
+                    <div class="w-full sm:w-1/3">
+                        <select id="filterClass" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
+                            <option value="ALL">All Classes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Add Student Button -->
+                <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fas fa-user-plus"></i> <span>Add Student</span>
                 </button>
-            </div>
-            
-            <!-- Student List -->
-            <div id="studentList" class="flex flex-col gap-3"></div>
-            
-            <div id="noResultsMsg" class="hidden text-center py-8 text-gray-500">
-                <i class="fas fa-search text-3xl mb-3 opacity-50"></i>
-                <p>No students found matching your search.</p>
+
+                <!-- Student List Header -->
+                <div class="flex justify-between items-end mb-3 px-1">
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-xl m-0">Student List</h3>
+                        <p class="text-xs text-gray-500 m-0" id="listCounter">Loading...</p>
+                    </div>
+                    <button id="manualSyncBtn" onclick="syncAllPending()" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2">
+                        <i class="fas fa-sync-alt"></i> Sync
+                    </button>
+                </div>
+                
+                <!-- Student List -->
+                <div id="studentList" class="flex flex-col gap-3"></div>
+                
+                <div id="noResultsMsg" class="hidden text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-3xl mb-3 opacity-50"></i>
+                    <p>No students found matching your search.</p>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Floating WhatsApp Support Button (Only shown on waiting screen) -->
+    <a href="https://wa.me/917855800205" target="_blank" id="floatingWhatsappBtn" class="hidden fixed bottom-6 right-6 z-[90] w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center text-3xl shadow-[0_4px_12px_rgba(37,211,102,0.4)] hover:bg-[#1ebd5a] hover:scale-105 transition-all duration-300 fab-hover" title="WhatsApp Support">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
     <!-- ================= MODALS ================= -->
 
-    <!-- UDISE Source Selector Modal -->
+    <!-- UDISE Source Selector Modal (Used during manual restore if multiple sources exist) -->
     <div id="udiseSelectorModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
             <h3 class="text-xl font-bold text-blue-800 mb-2">Select Data Source</h3>
@@ -242,6 +269,21 @@
             </div>
             
             <button onclick="document.getElementById('udiseSelectorModal').classList.add('hidden')" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Upgrade to Auto-Load Modal (Only pops up if password wasn't given during registration) -->
+    <div id="upgradeAutoModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <h3 class="text-xl font-bold text-blue-800 mb-2">Request Auto-Load</h3>
+            <p class="text-sm text-gray-600 mb-5">Provide your official UDISE password. We will extract and load your students within 24 hours.</p>
+            
+            <input type="password" id="upgradeUdisePass" placeholder="UDISE Password" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('upgradeAutoModal').classList.add('hidden')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
+                <button id="submitUpgradeBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition">Submit Request</button>
+            </div>
         </div>
     </div>
 
@@ -308,11 +350,9 @@
 
             <div class="flex flex-col gap-2">
                 <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
-                <button onclick="resetForm()" id="cancelEditBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition hidden">Cancel</button>
             </div>
         </div>
     </div>
-
 
     <!-- Edit School Modal -->
     <div id="editSchoolModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
@@ -361,7 +401,6 @@
         <div class="relative flex-1 w-full h-full overflow-hidden flex items-center justify-center bg-black">
             <video id="cameraVideo" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline></video>
             
-            <!-- Target Overlay mask -->
             <div id="cameraOverlay" class="pointer-events-none absolute z-10 w-[70vw] max-w-[280px] aspect-[3/4] border-2 border-dashed border-white/80 rounded-xl flex flex-col items-center justify-end pb-8 mb-16 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]">
                  <svg class="w-[85%] h-[85%] text-white/60 mb-2" viewBox="0 0 100 120" fill="none" stroke="currentColor" stroke-width="2.5">
                      <ellipse cx="50" cy="45" rx="28" ry="34" />
@@ -371,15 +410,14 @@
             </div>
         </div>
         
-        <!-- Controls -->
         <div class="bg-black/90 pb-8 pt-4 px-6 flex justify-between items-center absolute bottom-0 w-full z-[160]">
             <button onclick="closeCam()" class="text-white text-lg px-4 py-2 hover:bg-white/20 rounded-lg transition">Cancel</button>
             <button id="snap" class="w-16 h-16 rounded-full bg-white border-4 border-gray-300 flex-shrink-0 active:scale-90 transition transform"></button>
-            <div class="w-16"></div> <!-- Spacer -->
+            <div class="w-16"></div> 
         </div>
     </div>
 
-    <!-- Cropper Modal (Only for Gallery Uploads) -->
+    <!-- Cropper Modal -->
     <div id="cropperModal" class="hidden fixed inset-0 bg-black/90 z-[200] flex flex-col items-center justify-center p-4">
         <div class="w-full max-w-md bg-white rounded-xl overflow-hidden shadow-2xl flex flex-col">
             <div class="p-3 border-b flex justify-between items-center bg-gray-50">
@@ -392,25 +430,6 @@
             <div class="p-4 bg-gray-50 flex gap-3">
                 <button onclick="closeCropper()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-bold">Cancel</button>
                 <button id="cropSaveBtn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-bold">Save Crop</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recycle Bin Modal -->
-    <div id="recycleBinModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                <div class="flex items-center gap-2 text-red-600 font-bold">
-                    <i class="fas fa-trash-restore"></i> Recycle Bin
-                </div>
-                <button onclick="closeRecycleBin()" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="px-4 py-2 bg-red-50 border-b border-red-100 flex justify-between items-center text-sm">
-                <span class="text-red-600 font-medium">Items keep for 30 days.</span>
-                <button onclick="emptyRecycleBin()" class="text-red-700 font-bold hover:underline bg-white/50 px-2 py-1 rounded">Empty Bin</button>
-            </div>
-            <div class="p-4 overflow-y-auto flex-1 bg-gray-50" id="recycleBinList">
-                <!-- Deleted items will go here -->
             </div>
         </div>
     </div>
@@ -435,7 +454,7 @@
 
     <script>
         // ==========================================
-        // UI INTERACTION (Sidebar)
+        // UI INTERACTION
         // ==========================================
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -455,6 +474,95 @@
                 }, 300);
             }
         }
+
+        window.requestAutoLoad = async function() {
+            if (!navigator.onLine) return alert("Internet required to check/request Auto-Load.");
+            
+            const btn = document.querySelector('#upgradeToAutoBanner button');
+            const origTxt = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>";
+            btn.disabled = true;
+
+            try {
+                // SMART CHECK: Does an Excel batch already exist for this UDISE?
+                const snap = await firestore.collection('students')
+                    .where('udise', '==', currentSchoolData.udise)
+                    .limit(100)
+                    .get();
+
+                let hasExcel = false;
+                snap.forEach(doc => {
+                    if (getStudentSource(doc.data()) === 'excel') hasExcel = true;
+                });
+
+                if (hasExcel) {
+                    // Instantly switch to Excel mode without any prompts!
+                    currentSchoolData.source = 'excel';
+                    currentSchoolData.importStatus = 'manual';
+                    
+                    const tx = db.transaction(['schools'], 'readwrite');
+                    tx.objectStore('schools').put(currentSchoolData);
+                    
+                    showToast("Switched to Auto-Loaded students!", "success");
+                    enterSchool(currentSchoolData);
+                    return;
+                }
+
+                // NO EXCEL BATCH YET: Start the request flow
+                if (currentSchoolData.udisePass) {
+                    // Password already known from registration
+                    await startAutoLoadProcess(currentSchoolData.udisePass);
+                } else {
+                    // Need to ask for password
+                    document.getElementById('upgradeUdisePass').value = '';
+                    document.getElementById('upgradeAutoModal').classList.remove('hidden');
+                }
+            } catch (err) {
+                alert("Error checking data: " + err.message);
+            } finally {
+                btn.innerHTML = origTxt;
+                btn.disabled = false;
+            }
+        };
+
+        async function startAutoLoadProcess(uPass) {
+            showToast("Requesting Auto-Load...", "info");
+            try {
+                currentSchoolData.importStatus = 'pending';
+                currentSchoolData.udisePass = uPass;
+
+                const tx = db.transaction(['schools'], 'readwrite');
+                tx.objectStore('schools').put(currentSchoolData);
+
+                await firestore.collection('schools').doc(currentSchoolData.udise).set({
+                    importStatus: 'pending',
+                    udiseUser: currentSchoolData.udise, // UDISE is the username
+                    udisePass: uPass,
+                    lastModified: Date.now()
+                }, {merge: true});
+
+                showToast("Auto-Load requested successfully!");
+                document.getElementById('upgradeAutoModal').classList.add('hidden');
+                enterSchool(currentSchoolData); 
+            } catch (err) {
+                alert("Error submitting request: " + err.message);
+            }
+        }
+
+        document.getElementById('submitUpgradeBtn').onclick = async () => {
+            const uPass = document.getElementById('upgradeUdisePass').value.trim();
+            if (!uPass) return alert("Please provide the Password.");
+
+            const btn = document.getElementById('submitUpgradeBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Submitting...";
+            btn.disabled = true;
+
+            await startAutoLoadProcess(uPass);
+
+            btn.innerHTML = origText;
+            btn.disabled = false;
+        };
 
         // ==========================================
         // DATA NORMALIZATION (Excel Mappers)
@@ -480,13 +588,11 @@
             if (!dateStr) return '';
             dateStr = String(dateStr).trim();
             if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-            
             if (/^\d{5}$/.test(dateStr)) {
                 const excelEpoch = new Date(1899, 11, 30);
                 const dateObj = new Date(excelEpoch.getTime() + (parseInt(dateStr) * 86400000));
                 return dateObj.toISOString().split('T')[0];
             }
-            
             const parts = dateStr.split(/[\/\-\.]/);
             if (parts.length === 3) {
                 let p0 = parts[0], p1 = parts[1], p2 = parts[2];
@@ -583,6 +689,7 @@
 
         // Live Sync State
         let unsubscribeRealtime = null;
+        let unsubscribeSchool = null;
 
         function updateOnlineStatus() {
             const banner = document.getElementById('offlineBanner');
@@ -605,6 +712,7 @@
         window.addEventListener('offline', () => {
             updateOnlineStatus();
             if(unsubscribeRealtime) { unsubscribeRealtime(); unsubscribeRealtime = null; }
+            if(unsubscribeSchool) { unsubscribeSchool(); unsubscribeSchool = null; }
             const liveIndicator = document.getElementById('liveIndicator');
             if(liveIndicator) liveIndicator.classList.add('hidden');
         });
@@ -644,7 +752,6 @@
 
         let db, currentSchool = null, currentSchoolData = null, students = [];
         let filteredStudents = [];
-        let deletedStudents = [];
         let currentPhotoBlob = null;
         let visibleCount = 50; 
         let cropper = null;
@@ -657,24 +764,14 @@
                 const st = db.createObjectStore('students', {keyPath:'id'});
                 st.createIndex('schoolName', 'schoolName', {unique:false});
             }
-            if(!db.objectStoreNames.contains('deleted_students')) {
-                const dst = db.createObjectStore('deleted_students', {keyPath:'id'});
-                dst.createIndex('schoolName', 'schoolName', {unique:false});
-            }
         };
         
         req.onsuccess = e => {
             db = e.target.result;
-            cleanupRecycleBin(); 
             loadSchools();
             updateOnlineStatus();
             if (navigator.onLine) {
                 syncAllPending();
-                const pending = localStorage.getItem('pendingSchoolRename');
-                if (pending) {
-                    const { oldName, updates } = JSON.parse(pending);
-                    pushSchoolRenameToFirestore(oldName, updates);
-                }
             }
         };
 
@@ -685,22 +782,25 @@
             if(!currentSchoolData || !currentSchoolData.udise || !navigator.onLine) return;
             
             if(unsubscribeRealtime) unsubscribeRealtime();
+            if(unsubscribeSchool) unsubscribeSchool();
 
             const liveIndicator = document.getElementById('liveIndicator');
             if(liveIndicator) liveIndicator.classList.remove('hidden');
 
+            // 1. Listen to Students (Also unlocks 24-hour waiting state)
             unsubscribeRealtime = firestore.collection('students')
                 .where('udise', '==', currentSchoolData.udise)
                 .onSnapshot(snapshot => {
-                    const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
+                    const tx = db.transaction(['students'], 'readwrite');
                     const studentStore = tx.objectStore('students');
-                    const deletedStore = tx.objectStore('deleted_students');
                     let hasUpdates = false;
+                    let foundExcel = false; 
 
                     snapshot.docChanges().forEach(change => {
                         const data = change.doc.data();
-                        
                         const actualSource = getStudentSource(data);
+                        
+                        if (actualSource === 'excel') foundExcel = true;
                         
                         const student = { ...data, id: Number(change.doc.id), synced: true, source: actualSource };
                         delete student.submittedAt;
@@ -708,32 +808,58 @@
                         if(student.finalised === undefined) student.finalised = true;
 
                         if (change.type === 'added' || change.type === 'modified') {
-                            if (!data.deleted) {
-                                studentStore.put(student);
-                                deletedStore.delete(student.id);
-                            } else {
-                                studentStore.delete(student.id);
-                                deletedStore.put(student);
-                            }
+                            studentStore.put(student);
                             hasUpdates = true;
                         }
                         if (change.type === 'removed') {
                             studentStore.delete(student.id);
-                            deletedStore.delete(student.id);
                             hasUpdates = true;
                         }
                     });
 
                     tx.oncomplete = () => {
-                        if (hasUpdates) {
+                        // SMART INTERCEPTION: If waiting for data and excel data arrives, break out of waiting state!
+                        if (currentSchoolData.importStatus === 'pending' && foundExcel) {
+                            currentSchoolData.source = 'excel';
+                            currentSchoolData.importStatus = 'manual';
+                            
+                            const sTx = db.transaction(['schools'], 'readwrite');
+                            sTx.objectStore('schools').put(currentSchoolData);
+                            
+                            showToast("Excel data automatically loaded!", "success");
+                            enterSchool(currentSchoolData); 
+                        } else if (hasUpdates && currentSchoolData.importStatus !== 'pending') {
                             loadStudents();
-                            loadRecycleBin();
                         }
                     };
                 }, error => {
                     console.error("Live sync error:", error);
                     if(liveIndicator) liveIndicator.classList.add('hidden');
                 });
+                
+            // 2. Listen to Master School Profile for updates
+            unsubscribeSchool = firestore.collection('schools').doc(currentSchoolData.udise)
+                .onSnapshot(doc => {
+                    if (doc.exists) {
+                        const adminData = doc.data();
+                        let needsUpdate = false;
+                        
+                        if (adminData.name && adminData.name !== currentSchoolData.realSchoolName) {
+                            currentSchoolData.realSchoolName = adminData.name;
+                            needsUpdate = true;
+                        }
+                        if (adminData.district !== undefined && adminData.district !== currentSchoolData.district) {
+                            currentSchoolData.district = adminData.district;
+                            needsUpdate = true;
+                        }
+
+                        if (needsUpdate) {
+                            const tx = db.transaction(['schools'], 'readwrite');
+                            tx.objectStore('schools').put(currentSchoolData);
+                            updateSchoolHeader();
+                        }
+                    }
+                }, err => console.log("School sync error:", err));
         }
 
 
@@ -746,29 +872,6 @@
             reader.onload = () => resolve(reader.result);
             reader.onerror = reject;
         });
-
-        function compressImageToDataURL(imgElement, quality = 0.8) {
-            return new Promise((resolve) => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const MAX_WIDTH = 400; 
-                let width = imgElement.width;
-                let height = imgElement.height;
-                if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                canvas.width = width; canvas.height = height;
-                ctx.drawImage(imgElement, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', quality));
-            });
-        }
-
-        function recompressBase64(dataUrl) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(compressImageToDataURL(img, 0.7));
-                img.onerror = reject;
-                img.src = dataUrl;
-            });
-        }
 
         function openCropper(imageSrc) {
             const modal = document.getElementById('cropperModal');
@@ -822,7 +925,7 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                 document.getElementById('cameraVideo').srcObject = stream;
             } catch(e) {
-                showToast("Camera access denied or unavailable", "error");
+                showToast("Camera access denied", "error");
                 closeCam();
             }
         };
@@ -882,9 +985,7 @@
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (event) => {
-                    openCropper(event.target.result);
-                };
+                reader.onload = (event) => openCropper(event.target.result);
                 reader.readAsDataURL(file);
             }
         };
@@ -922,19 +1023,7 @@
                 cursorReq.onsuccess = e => {
                     const cursor = e.target.result;
                     if (cursor) {
-                        if (!cursor.value.synced) unsyncedIds.push({id: cursor.value.id, store: 'students'});
-                        cursor.continue();
-                    } else resolve();
-                };
-            });
-
-            await new Promise((resolve) => {
-                const tx = db.transaction(['deleted_students'], 'readonly');
-                const cursorReq = tx.objectStore('deleted_students').openCursor();
-                cursorReq.onsuccess = e => {
-                    const cursor = e.target.result;
-                    if (cursor) {
-                        if (!cursor.value.synced) unsyncedIds.push({id: cursor.value.id, store: 'deleted_students'});
+                        if (!cursor.value.synced) unsyncedIds.push(cursor.value.id);
                         cursor.continue();
                     } else resolve();
                 };
@@ -960,34 +1049,32 @@
                 for (let i = 0; i < unsyncedIds.length; i++) {
                     if (btn) btn.innerHTML = `<i class='fas fa-spinner fa-spin'></i> ${i + 1}/${unsyncedIds.length}`;
                     try {
-                        const storeName = unsyncedIds[i].store;
                         const student = await new Promise((resolve) => {
-                            const tx = db.transaction([storeName], 'readonly');
-                            const getReq = tx.objectStore(storeName).get(unsyncedIds[i].id);
+                            const tx = db.transaction(['students'], 'readonly');
+                            const getReq = tx.objectStore('students').get(unsyncedIds[i]);
                             getReq.onsuccess = () => resolve(getReq.result);
                         });
                         
                         if (!student || student.synced) continue; 
                         
-                        await syncToFirebase(student, storeName);
+                        await syncToFirebase(student);
                         successCount++;
 
                         if (student.syncError) {
                             delete student.syncError;
-                            const tx2 = db.transaction([storeName], 'readwrite');
-                            tx2.objectStore(storeName).put(student);
+                            const tx2 = db.transaction(['students'], 'readwrite');
+                            tx2.objectStore('students').put(student);
                         }
                     } catch (err) {
                         failCount++;
                         try {
-                            const storeName = unsyncedIds[i].store;
-                            const tx3 = db.transaction([storeName], 'readwrite');
-                            const getReq2 = tx3.objectStore(storeName).get(unsyncedIds[i].id);
+                            const tx3 = db.transaction(['students'], 'readwrite');
+                            const getReq2 = tx3.objectStore('students').get(unsyncedIds[i]);
                             getReq2.onsuccess = () => {
                                 const rec = getReq2.result;
                                 if (rec) {
                                     rec.syncError = (err && err.message) ? err.message : String(err);
-                                    tx3.objectStore(storeName).put(rec);
+                                    tx3.objectStore('students').put(rec);
                                 }
                             };
                         } catch (e2) {}
@@ -1016,7 +1103,7 @@
             }
         }
 
-        async function syncToFirebase(student, storeName = 'students') {
+        async function syncToFirebase(student) {
             try {
                 if (student.photoBase64 && !student.photoBase64.startsWith('http')) {
                     const storageRef = firebaseStorage.ref(`student_photos/${student.udise}_${student.id}.jpg`);
@@ -1027,8 +1114,8 @@
                     student.photoBase64 = downloadURL;
                     
                     await new Promise((resolve, reject) => {
-                        const tx = db.transaction([storeName], 'readwrite');
-                        tx.objectStore(storeName).put(student);
+                        const tx = db.transaction(['students'], 'readwrite');
+                        tx.objectStore('students').put(student);
                         tx.oncomplete = resolve;
                         tx.onerror = reject;
                     });
@@ -1038,8 +1125,8 @@
 
                 student.synced = true;
                 await new Promise((resolve, reject) => {
-                    const tx = db.transaction([storeName], 'readwrite');
-                    tx.objectStore(storeName).put(student);
+                    const tx = db.transaction(['students'], 'readwrite');
+                    tx.objectStore('students').put(student);
                     tx.oncomplete = resolve;
                     tx.onerror = reject;
                 });
@@ -1051,7 +1138,7 @@
         }
 
         // ==========================================
-        // SCHOOL LOGIC
+        // SCHOOL LOGIC (Registration, Restore, Intercept)
         // ==========================================
         function loadSchools() {
             const tx = db.transaction(['schools'], 'readonly');
@@ -1069,7 +1156,6 @@
         }
 
         function performRestore(docs, schoolName, udise, source, statusEl) {
-            
             const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
             
             const schoolObj = {
@@ -1082,42 +1168,44 @@
                 pin: docs[0].data.pin || '', 
                 udise: udise,
                 hmSignature: docs[0].data.hmSignature || '', 
-                createdAt: Date.now()
+                createdAt: Date.now(),
+                importStatus: 'manual' 
             };
 
             statusEl.className = 'text-sm mt-3 font-medium text-blue-600 block';
             statusEl.textContent = `Restoring ${docs.length} student(s)...`;
 
-            const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
             
             tx.objectStore('schools').delete(localId);
             tx.objectStore('schools').put(schoolObj);
 
             const studentStore = tx.objectStore('students');
-            const deletedStore = tx.objectStore('deleted_students');
             let restoreCount = 0;
             
             docs.forEach(({ id, data }) => {
                 const student = { ...data, id: Number(id), synced: true, source: source };
                 delete student.submittedAt;
-
-                if (!data.deleted) {
-                    if(student.finalised === undefined) student.finalised = true;
-                    studentStore.put(student);
-                    restoreCount++;
-                } else {
-                    deletedStore.put(student);
-                }
+                if(student.finalised === undefined) student.finalised = true;
+                studentStore.put(student);
+                restoreCount++;
             });
 
             tx.oncomplete = () => {
                 showToast(`Restored ${restoreCount} students successfully!`);
+                document.getElementById('restoreUdiseInput').value = '';
                 
+                // Fetch the password from Firebase to keep it synced locally
                 if(navigator.onLine) {
-                    firestore.collection('schools').doc(schoolObj.udise).set({
-                        name: schoolObj.realSchoolName, phone: schoolObj.phone, block: schoolObj.block, district: schoolObj.district,
-                        pin: schoolObj.pin, udise: schoolObj.udise, hmSignature: schoolObj.hmSignature, createdAt: schoolObj.createdAt, lastModified: Date.now()
-                    }, {merge:true}).catch(e => console.error(e));
+                    firestore.collection('schools').doc(udise).get().then(doc => {
+                        if(doc.exists) {
+                            const data = doc.data();
+                            schoolObj.udiseUser = data.udiseUser || udise;
+                            schoolObj.udisePass = data.udisePass || '';
+                            const tx2 = db.transaction(['schools'], 'readwrite');
+                            tx2.objectStore('schools').put(schoolObj);
+                        }
+                    });
                 }
 
                 setTimeout(() => enterSchool(schoolObj), 800);
@@ -1142,65 +1230,93 @@
             btn.disabled = true;
 
             try {
+                const schoolDoc = await firestore.collection('schools').doc(udise).get();
                 const snapshot = await firestore.collection('students').where('udise', '==', udise).get();
 
-                if (snapshot.empty) {
+                if (!schoolDoc.exists && snapshot.empty) {
                     statusEl.className = 'text-sm mt-3 font-medium text-red-600 block';
                     statusEl.textContent = "No records found for this UDISE.";
                     btn.disabled = false;
                     return;
                 }
 
-                const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
-                
-                const groups = {};
-                docs.forEach(d => {
-                    const src = getStudentSource(d.data);
-                    const rName = d.data.schoolName || '(Unnamed School)';
-                    const key = src + '|' + rName;
-                    if(!groups[key]) groups[key] = { source: src, name: rName, docs: [] };
-                    groups[key].docs.push(d);
-                });
-                
-                const keys = Object.keys(groups);
-
-                if (keys.length === 1) {
-                    const g = groups[keys[0]];
-                    performRestore(g.docs, g.name, udise, g.source, statusEl);
-                    return;
-                }
-
-                document.getElementById('schoolSection').classList.add('hidden');
-                
-                const list = document.getElementById('udiseSelectorList');
-                list.innerHTML = '';
-                
-                keys.forEach(key => {
-                    const g = groups[key];
-                    const btnHtml = document.createElement('button');
+                if (!snapshot.empty) {
+                    const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
                     
-                    if(g.source === 'excel') {
-                        btnHtml.className = 'w-full text-left bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 p-4 rounded-xl transition';
-                        btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-file-excel text-purple-600 mr-2"></i>Excel Upload Data</div>
-                                             <div class="text-xs text-purple-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
-                    } else {
-                        btnHtml.className = 'w-full text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 p-4 rounded-xl transition';
-                        btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-mobile-alt text-blue-600 mr-2"></i>App Manual Data</div>
-                                             <div class="text-xs text-blue-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
-                    }
+                    const groups = {};
+                    docs.forEach(d => {
+                        const src = getStudentSource(d.data);
+                        const rName = d.data.schoolName || '(Unnamed School)';
+                        const key = src + '|' + rName;
+                        if(!groups[key]) groups[key] = { source: src, name: rName, docs: [] };
+                        groups[key].docs.push(d);
+                    });
                     
-                    btnHtml.onclick = () => {
-                        document.getElementById('udiseSelectorModal').classList.add('hidden');
-                        document.getElementById('schoolSection').classList.remove('hidden');
+                    const keys = Object.keys(groups);
+
+                    if (keys.length === 1) {
+                        const g = groups[keys[0]];
                         performRestore(g.docs, g.name, udise, g.source, statusEl);
+                        btn.disabled = false;
+                        statusEl.innerHTML = "";
+                        return;
+                    }
+
+                    document.getElementById('schoolSection').classList.add('hidden');
+                    
+                    const list = document.getElementById('udiseSelectorList');
+                    list.innerHTML = '';
+                    
+                    keys.forEach(key => {
+                        const g = groups[key];
+                        const btnHtml = document.createElement('button');
+                        
+                        if(g.source === 'excel') {
+                            btnHtml.className = 'w-full text-left bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 p-4 rounded-xl transition';
+                            btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-file-excel text-purple-600 mr-2"></i>Excel Upload Data</div>
+                                                 <div class="text-xs text-purple-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
+                        } else {
+                            btnHtml.className = 'w-full text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 p-4 rounded-xl transition';
+                            btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-mobile-alt text-blue-600 mr-2"></i>App Manual Data</div>
+                                                 <div class="text-xs text-blue-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
+                        }
+                        
+                        btnHtml.onclick = () => {
+                            document.getElementById('udiseSelectorModal').classList.add('hidden');
+                            document.getElementById('schoolSection').classList.remove('hidden');
+                            performRestore(g.docs, g.name, udise, g.source, statusEl);
+                        };
+                        list.appendChild(btnHtml);
+                    });
+                    
+                    document.getElementById('udiseSelectorModal').classList.remove('hidden');
+                    btn.disabled = false;
+                    statusEl.innerHTML = "";
+                } else {
+                    const sData = schoolDoc.data();
+                    const localId = `[Manual] ${sData.name}_${udise}`;
+                    const schoolObj = {
+                        name: localId,
+                        realSchoolName: sData.name,
+                        source: 'manual',
+                        phone: sData.phone || '', block: sData.block || '', district: sData.district || '',
+                        pin: sData.pin || '', udise: udise, hmSignature: sData.hmSignature || '',
+                        createdAt: sData.createdAt || Date.now(),
+                        importStatus: sData.importStatus || 'manual',
+                        udiseUser: sData.udiseUser || udise,
+                        udisePass: sData.udisePass || ''
                     };
-                    list.appendChild(btnHtml);
-                });
-                
-                document.getElementById('udiseSelectorModal').classList.remove('hidden');
-                btn.disabled = false;
-                statusEl.innerHTML = "";
-                
+                    
+                    const tx = db.transaction(['schools'], 'readwrite');
+                    tx.objectStore('schools').put(schoolObj);
+                    tx.oncomplete = () => {
+                        showToast("Profile loaded successfully!");
+                        document.getElementById('restoreUdiseInput').value = '';
+                        enterSchool(schoolObj);
+                        btn.disabled = false;
+                        statusEl.innerHTML = "";
+                    };
+                }
             } catch (err) {
                 statusEl.className = 'text-sm mt-3 font-medium text-red-600 block';
                 statusEl.textContent = "Server error. Check connection.";
@@ -1208,13 +1324,14 @@
             }
         };
 
-        document.getElementById('addSchoolBtn').onclick = () => {
+        document.getElementById('addSchoolBtn').onclick = async () => {
             const name = document.getElementById('newSchoolName').value.trim();
             const phone = document.getElementById('newSchoolPhone').value.trim();
             const block = document.getElementById('newBlock').value.trim();
             const district = document.getElementById('newDistrict').value.trim();
             const pin = document.getElementById('newPin').value.trim();
             const udise = document.getElementById('newUdise').value.trim();
+            const uPass = document.getElementById('newUdisePass').value.trim();
 
             if(!name) return alert("Enter School Name");
             if(!udise) return alert("UDISE Number is mandatory.");
@@ -1222,6 +1339,31 @@
             
             const btn = document.getElementById('addSchoolBtn');
             const origText = btn.innerHTML;
+            
+            // SMART INTERCEPTION
+            if (navigator.onLine) {
+                btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Checking UDISE...";
+                btn.disabled = true;
+                
+                try {
+                    const schoolSnap = await firestore.collection('schools').doc(udise).get();
+                    const studentSnap = await firestore.collection('students').where('udise', '==', udise).limit(1).get();
+                    
+                    if (schoolSnap.exists || !studentSnap.empty) {
+                        btn.innerHTML = origText;
+                        btn.disabled = false;
+                        
+                        await showConfirm("You are already an existing user. We will load your profile.", "Existing Profile Found", "Login", "bg-blue-600 hover:bg-blue-700");
+                        
+                        document.getElementById('restoreUdiseInput').value = udise;
+                        document.getElementById('restoreUdiseBtn').click();
+                        return;
+                    }
+                } catch (err) {
+                    console.warn("Pre-check failed", err);
+                }
+            }
+
             btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Processing...";
             btn.disabled = true;
 
@@ -1241,7 +1383,10 @@
                     realSchoolName: name,
                     source: 'manual',
                     phone: phone, block: block, district: district,
-                    pin: pin, udise: udise, hmSignature: '', createdAt: Date.now()
+                    pin: pin, udise: udise, hmSignature: '', createdAt: Date.now(),
+                    importStatus: 'manual', 
+                    udiseUser: udise, 
+                    udisePass: uPass
                 };
 
                 const tx = db.transaction(['schools'], 'readwrite');
@@ -1250,10 +1395,18 @@
                     showToast("School created successfully!");
                     
                     if(navigator.onLine) {
-                        firestore.collection('schools').doc(udise).set({
+                        let fbData = {
                             name: name, phone: phone, block: block, district: district,
-                            pin: pin, udise: udise, hmSignature: '', createdAt: schoolObj.createdAt, lastModified: Date.now()
-                        }, {merge:true}).catch(err => console.error(err));
+                            pin: pin, udise: udise, hmSignature: '', createdAt: schoolObj.createdAt, lastModified: Date.now(),
+                            importStatus: 'manual'
+                        };
+                        
+                        if (uPass) {
+                            fbData.udiseUser = udise; 
+                            fbData.udisePass = uPass;
+                        }
+
+                        firestore.collection('schools').doc(udise).set(fbData, {merge:true}).catch(err => console.error(err));
                     }
 
                     enterSchool(schoolObj); 
@@ -1262,6 +1415,26 @@
                 };
             };
         };
+
+        window.cancelPendingImport = async function() {
+            if(!currentSchoolData) return;
+            
+            currentSchoolData.importStatus = 'manual';
+            
+            const tx = db.transaction(['schools'], 'readwrite');
+            tx.objectStore('schools').put(currentSchoolData);
+            
+            if(navigator.onLine) {
+                // Ensure we KEEP the udisePass in Firebase even if they cancel
+                firestore.collection('schools').doc(currentSchoolData.udise).set({
+                    importStatus: 'manual',
+                    lastModified: Date.now()
+                }, {merge: true}).catch(err => console.error(err));
+            }
+            
+            showToast("Switched to manual entry mode.", "info");
+            enterSchool(currentSchoolData);
+        }
 
         window.hardResetApp = async function() {
             const checkTx = db.transaction(['students'], 'readonly');
@@ -1276,11 +1449,11 @@
                 if(!confirmed) return;
                 
                 if(unsubscribeRealtime) unsubscribeRealtime();
+                if(unsubscribeSchool) unsubscribeSchool();
 
-                const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
+                const tx = db.transaction(['schools', 'students'], 'readwrite');
                 tx.objectStore('schools').clear();
                 tx.objectStore('students').clear();
-                tx.objectStore('deleted_students').clear();
                 tx.oncomplete = () => { location.reload(); };
             };
         }
@@ -1290,6 +1463,7 @@
             currentSchoolData = schoolObj;
             if (!currentSchoolData.realSchoolName) currentSchoolData.realSchoolName = currentSchoolData.name;
             if (!currentSchoolData.source) currentSchoolData.source = 'manual';
+            if (!currentSchoolData.importStatus) currentSchoolData.importStatus = 'manual';
 
             document.getElementById('schoolSection').classList.add('hidden');
             document.getElementById('entrySection').classList.remove('hidden');
@@ -1298,12 +1472,34 @@
             document.getElementById('headerSpacer').classList.add('hidden');
 
             updateSchoolHeader();
-            visibleCount = 50; 
             
+            const fab = document.getElementById('floatingWhatsappBtn');
+
+            if (currentSchoolData.importStatus === 'pending') {
+                document.getElementById('standardDashboardControls').classList.add('hidden');
+                document.getElementById('pendingImportCard').classList.remove('hidden');
+                if(fab) fab.classList.remove('hidden');
+            } else {
+                document.getElementById('standardDashboardControls').classList.remove('hidden');
+                document.getElementById('pendingImportCard').classList.add('hidden');
+                if(fab) fab.classList.add('hidden');
+                
+                // Toggle Banner
+                const upgradeBanner = document.getElementById('upgradeToAutoBanner');
+                if (upgradeBanner) {
+                    if (currentSchoolData.source === 'manual' && currentSchoolData.importStatus === 'manual') {
+                        upgradeBanner.classList.remove('hidden');
+                    } else {
+                        upgradeBanner.classList.add('hidden');
+                    }
+                }
+                
+                visibleCount = 50; 
+                loadStudents();
+            }
+            
+            // ALWAYS setup the listener so we can catch background updates from the admin while waiting!
             setupRealtimeListener();
-            
-            loadStudents();
-            loadRecycleBin();
         }
 
         function updateSchoolHeader() {
@@ -1363,7 +1559,7 @@
                  }
             }
 
-            const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
             tx.objectStore('schools').put(updatedSchool);
 
             const targetUdise = currentSchoolData.udise;
@@ -1389,21 +1585,6 @@
                     }
                 });
             };
-            
-            const delStore = tx.objectStore('deleted_students');
-            delStore.getAll().onsuccess = (e) => {
-                e.target.result.forEach(s => {
-                    if( (!s.udise && s.schoolName === currentSchoolData.name) || 
-                        (s.udise === targetUdise && getStudentSource(s) === targetSource)) {
-                        
-                        s.schoolName = newName; 
-                        s.block = newBlock; s.district = newDistrict;
-                        s.pin = newPin; s.udise = newUdise; s.hmPhone = newPhone;
-                        s.source = targetSource;
-                        delStore.put(s); 
-                    }
-                });
-            };
 
             tx.oncomplete = () => {
                 showToast("School Details Updated!");
@@ -1414,14 +1595,10 @@
                 btn.disabled = false;
                 
                 setupRealtimeListener(); 
-                
                 loadStudents();
             };
         };
 
-        // ==========================================
-        // STUDENT LOGIC, STATS, & FILTERS
-        // ==========================================
         function loadStudents() {
             const tx = db.transaction(['students'], 'readonly');
             tx.objectStore('students').getAll().onsuccess = e => {
@@ -1551,7 +1728,7 @@
                         </div>
                         <div class="flex-shrink-0 pl-1 flex items-center gap-3 border-l border-gray-100 ml-1 pl-3">
                             <button onclick="editStudent('${s.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Edit Student"><i class="fas fa-pen"></i></button>
-                            <button onclick="deleteStudent('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Move to Recycle Bin"><i class="fas fa-trash"></i></button>
+                            <button onclick="deleteStudentForever('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Permanently Delete"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
@@ -1720,173 +1897,21 @@
         }
 
         // ==========================================
-        // RECYCLE BIN LOGIC (Soft Delete & Hard Delete)
+        // HARD DELETE LOGIC
         // ==========================================
-        window.deleteStudent = async function(idStr) {
+        window.deleteStudentForever = async function(idStr) {
             const id = Number(idStr);
-            const confirmed = await showConfirm("Move this student to the Recycle Bin? You can restore them within 30 days.", "Delete Student?", "Yes, Move to Bin");
+            const confirmed = await showConfirm("Are you sure you want to permanently delete this student? This action CANNOT be undone.", "Delete Student?", "Yes, Delete");
             if(!confirmed) return;
             
-            const student = students.find(s => s.id === id);
-            if(!student) return;
-
-            student.deleted = true;
-            student.deletedAt = Date.now();
-            student.synced = false; 
-
-            const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
+            const tx = db.transaction(['students'], 'readwrite');
             tx.objectStore('students').delete(id);
-            tx.objectStore('deleted_students').put(student);
 
             tx.oncomplete = () => {
-                showToast("Moved to Recycle Bin", "info");
-                resetForm(); 
-
+                showToast("Student deleted permanently", "success");
                 loadStudents();
-                loadRecycleBin();
-                if(navigator.onLine) {
-                    syncToFirebase(student, 'deleted_students').then(() => loadStudents()).catch(console.error);
-                }
-            };
-        }
-
-        window.openRecycleBin = function() {
-            document.getElementById('recycleBinModal').classList.remove('hidden');
-            loadRecycleBin();
-        }
-        
-        window.closeRecycleBin = function() {
-            document.getElementById('recycleBinModal').classList.add('hidden');
-        }
-
-        function loadRecycleBin() {
-            if(!db || !currentSchoolData) return;
-            const tx = db.transaction(['deleted_students'], 'readonly');
-            tx.objectStore('deleted_students').getAll().onsuccess = e => {
-                const targetUdise = currentSchoolData.udise;
-                const targetSource = currentSchoolData.source || 'manual';
-                
-                let all = e.target.result;
-                
-                deletedStudents = all.filter(s => {
-                    if (!targetUdise || !s.udise) return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
-                    return s.udise === targetUdise && getStudentSource(s) === targetSource;
-                });
-
-                deletedStudents.sort((a,b) => b.deletedAt - a.deletedAt);
-                renderRecycleBin();
-            };
-        }
-
-        function renderRecycleBin() {
-            const list = document.getElementById('recycleBinList');
-            list.innerHTML = '';
-
-            if (deletedStudents.length === 0) {
-                list.innerHTML = `<div class="text-center py-8 text-gray-400"><i class="fas fa-trash mb-2 text-2xl"></i><p>Recycle Bin is empty.</p></div>`;
-                return;
-            }
-
-            deletedStudents.forEach(s => {
-                const daysPassed = Math.floor((Date.now() - s.deletedAt) / (1000 * 60 * 60 * 24));
-                const daysLeft = Math.max(0, 30 - daysPassed);
-
-                const div = document.createElement('div');
-                div.className = 'bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-2 flex items-center justify-between gap-2';
-                
-                div.innerHTML = `
-                    <div class="flex-1 min-w-0 pr-1">
-                        <div class="font-bold text-gray-800 text-sm truncate line-through opacity-70">${escapeHtml(s.name)}</div>
-                        <div class="text-xs text-red-500 font-medium"><i class="fas fa-history"></i> ${daysLeft} days left</div>
-                    </div>
-                    <button onclick="restoreStudent(${s.id})" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex-shrink-0 shadow-sm">
-                        Restore
-                    </button>
-                    <button onclick="hardDeleteStudent(${s.id})" class="bg-red-50 hover:bg-red-100 text-red-500 px-2 py-1.5 rounded-lg text-sm transition flex-shrink-0 shadow-sm" title="Delete Permanently">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `;
-                list.appendChild(div);
-            });
-        }
-
-        window.restoreStudent = function(id) {
-            const student = deletedStudents.find(s => s.id === id);
-            if(!student) return;
-
-            delete student.deleted;
-            delete student.deletedAt;
-            student.synced = false; 
-            student.lastModified = Date.now();
-
-            const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
-            tx.objectStore('students').put(student);
-            tx.objectStore('deleted_students').delete(id);
-
-            tx.oncomplete = () => {
-                showToast("Student Restored!", "success");
-                loadStudents();
-                loadRecycleBin();
-                if(navigator.onLine) {
-                    syncToFirebase(student, 'students').then(() => loadStudents()).catch(console.error);
-                }
-            };
-        }
-
-        window.hardDeleteStudent = async function(id) {
-            const confirmed = await showConfirm("Are you sure you want to permanently delete this student? This action CANNOT be undone.", "Permanent Delete", "Delete Forever");
-            if(!confirmed) return;
-
-            const tx = db.transaction(['deleted_students'], 'readwrite');
-            tx.objectStore('deleted_students').delete(id);
-            tx.oncomplete = () => {
-                showToast("Student deleted permanently", "info");
-                loadRecycleBin();
                 if(navigator.onLine) {
                     firestore.collection('students').doc(String(id)).delete().catch(console.error);
-                }
-            };
-        }
-
-        window.emptyRecycleBin = async function() {
-            if(deletedStudents.length === 0) return;
-            const confirmed = await showConfirm(`Are you sure you want to permanently delete ALL ${deletedStudents.length} students in the Recycle Bin?`, "Empty Bin", "Empty Bin");
-            if(!confirmed) return;
-
-            const tx = db.transaction(['deleted_students'], 'readwrite');
-            const store = tx.objectStore('deleted_students');
-            
-            deletedStudents.forEach(s => {
-                store.delete(s.id);
-                if(navigator.onLine) {
-                    firestore.collection('students').doc(String(s.id)).delete().catch(console.error);
-                }
-            });
-
-            tx.oncomplete = () => {
-                showToast("Recycle bin emptied", "success");
-                loadRecycleBin();
-            }
-        }
-
-        function cleanupRecycleBin() {
-            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-            const now = Date.now();
-            
-            const tx = db.transaction(['deleted_students'], 'readwrite');
-            const store = tx.objectStore('deleted_students');
-            
-            store.openCursor().onsuccess = e => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    const student = cursor.value;
-                    if (student.deletedAt && (now - student.deletedAt > THIRTY_DAYS_MS)) {
-                        cursor.delete();
-                        if(navigator.onLine) {
-                             firestore.collection('students').doc(String(student.id)).delete().catch(console.error);
-                        }
-                    }
-                    cursor.continue();
                 }
             };
         }
