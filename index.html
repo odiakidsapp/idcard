@@ -5,19 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Data App</title>
     <link rel="manifest" href="manifest.json">
-    <script>
-        // PWA "Infinite Install" Fix: Redirect immediately if already installed
-        // Checks both: (a) currently running in standalone mode, and (b) a remembered flag
-        // from a previous successful install — covers users who open the plain URL
-        // in a normal browser tab even though the app is already installed.
-        if (
-            window.matchMedia('(display-mode: standalone)').matches ||
-            window.navigator.standalone === true ||
-            localStorage.getItem('pwaInstalled') === 'true'
-        ) {
-            window.location.replace('app.html');
-        }
-    </script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -97,15 +84,13 @@
         const statusText = document.getElementById('statusText');
 
         // 1. CHECK IF ALREADY INSTALLED
-        // Covers two cases: (a) normal standalone detection, (b) safety-net fallback —
-        // if the head-level redirect somehow didn't fire (e.g. browser blocked it),
-        // we still show the "Open App" button instead of leaving an installed user stuck.
+        // If they are in the standalone app OR we remember they installed it, just show the Open button.
         if (
             window.matchMedia('(display-mode: standalone)').matches ||
             window.navigator.standalone === true ||
             localStorage.getItem('pwaInstalled') === 'true'
         ) {
-            localStorage.setItem('pwaInstalled', 'true'); // self-heals for users who installed via the browser's own menu
+            localStorage.setItem('pwaInstalled', 'true'); 
             installBtn.style.display = 'none';
             openBtn.style.display = 'block';
         }
@@ -113,7 +98,6 @@
         // 2. LISTEN FOR INSTALL PROMPT
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
-            // Safety: never show "Install" to a user we already know is installed
             if (localStorage.getItem('pwaInstalled') === 'true') return;
             deferredPrompt = e;
             installBtn.style.display = 'block';
@@ -140,18 +124,19 @@
 
         // 4. LISTEN FOR SUCCESSFUL INSTALL
         window.addEventListener('appinstalled', () => {
-            localStorage.setItem('pwaInstalled', 'true'); // 🚀 remember install for future visits, even outside standalone mode
+            localStorage.setItem('pwaInstalled', 'true'); 
             installBtn.style.display = 'none';
             openBtn.style.display = 'block';
             statusText.style.display = 'block';
             statusText.textContent = "✅ App Installed Successfully!";
             
+            // Give them a moment to see the success message, then open the app.
             setTimeout(() => {
                 window.location.href = 'app.html';
-            }, 1500);
+            }, 1000);
         });
 
-        // 5. HANDLE OPEN CLICK
+        // 5. HANDLE OPEN CLICK (Manual entry to the app)
         openBtn.addEventListener('click', () => {
             window.location.href = 'app.html';
         });
