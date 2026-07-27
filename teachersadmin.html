@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - ID Card Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3b82f6;
+            width: 24px;
+            height: 24px;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
+
+    <nav class="bg-blue-600 text-white shadow-md z-10 flex-shrink-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
+                    <span class="font-bold text-xl tracking-tight hidden sm:block">ID Card Portal</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div id="toast-container" class="fixed top-20 right-5 z-50 flex flex-col gap-2"></div>
+
+    <div class="flex-1 overflow-y-auto w-full relative">
+        <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 transition-opacity duration-300 pb-20">
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+                    <p class="text-gray-500 text-sm">Manage and view teacher records grouped by school.</p>
+                </div>
+                <button onclick="loadDashboardData()" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Refresh Data
+                </button>
+            </div>
+
+            <!-- Dashboard Main Container -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 min-h-[400px] relative">
+                
+                <div id="admin-loader" class="absolute inset-0 bg-white/80 z-10 flex items-center justify-center rounded-xl hidden">
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="loader !w-8 !h-8 !border-blue-200 !border-t-blue-600"></div>
+                        <p class="text-gray-500 font-medium">Loading records...</p>
+                    </div>
+                </div>
+
+                <!-- Step 1: School List View -->
+                <div id="school-list-view" class="p-6 block">
+                    <div id="empty-state" class="w-full text-center py-12 text-gray-500 hidden">
+                        No schools data found yet.
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="schoolsGrid">
+                        <!-- School Cards will be dynamically injected here -->
+                    </div>
+                </div>
+
+                <!-- Step 2: Teacher Detail View (Hidden by default) -->
+                <div id="teacher-list-view" class="hidden flex-col h-full">
+                    <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center gap-4">
+                        <button onclick="closeSchoolDetails()" class="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        </button>
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-800" id="detail-school-name">School Name</h2>
+                            <p class="text-sm text-gray-500" id="detail-school-meta">UDISE: 12345 • District</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-gray-200 text-sm text-gray-500 uppercase tracking-wider">
+                                    <th class="pb-3 font-medium">Photo</th>
+                                    <th class="pb-3 font-medium">Name & Code</th>
+                                    <th class="pb-3 font-medium">Designation</th>
+                                    <th class="pb-3 font-medium">Blood Grp</th>
+                                    <th class="pb-3 font-medium">Contact</th>
+                                    <th class="pb-3 font-medium">Qualification</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teacherTableBody" class="text-sm">
+                                <!-- Teacher rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+            authDomain: "idcard-60586.firebaseapp.com",
+            projectId: "idcard-60586",
+            storageBucket: "idcard-60586.firebasestorage.app",
+            messagingSenderId: "331979663377",
+            appId: "1:331979663377:web:026e537a7fcaca813129b0",
+            measurementId: "G-PXVV87C78S"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let dashboardData = {};
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+            const icon = type === 'success' 
+                ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+                : `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white ${bgColor} transform transition-all duration-300 translate-x-full opacity-0`;
+            toast.innerHTML = `${icon}<span class="font-medium text-sm">${message}</span>`;
+            
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('translate-x-full', 'opacity-0'));
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function loadDashboardData() {
+            const loader = document.getElementById('admin-loader');
+            const schoolsGrid = document.getElementById('schoolsGrid');
+            const emptyState = document.getElementById('empty-state');
+            
+            loader.classList.remove('hidden');
+            closeSchoolDetails();
+
+            try {
+                const q = query(collection(db, "teachers"));
+                const querySnapshot = await getDocs(q);
+                
+                dashboardData = {};
+                let count = 0;
+                
+                querySnapshot.forEach((doc) => {
+                    count++;
+                    const data = doc.data();
+                    const id = doc.id;
+                    const udise = data.udiseCode;
+                    
+                    if (!dashboardData[udise]) {
+                        dashboardData[udise] = {
+                            schoolName: data.schoolName,
+                            udiseCode: data.udiseCode,
+                            block: data.block,
+                            district: data.district,
+                            pin: data.pin,
+                            teachers: []
+                        };
+                    }
+                    dashboardData[udise].teachers.push({ id, ...data });
+                });
+
+                schoolsGrid.innerHTML = '';
+                
+                if (count === 0) {
+                    emptyState.style.display = 'block';
+                } else {
+                    emptyState.style.display = 'none';
+                    
+                    Object.values(dashboardData).forEach(school => {
+                        const card = document.createElement('div');
+                        card.className = "bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group flex flex-col justify-between";
+                        card.onclick = () => openSchoolDetails(school.udiseCode);
+                        
+                        card.innerHTML = `
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="font-bold text-gray-800 text-lg leading-tight group-hover:text-blue-600 transition-colors">${school.schoolName}</h3>
+                                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap">${school.teachers.length} Teachers</span>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-1">UDISE: <span class="font-medium text-gray-700">${school.udiseCode}</span></p>
+                                <p class="text-sm text-gray-500 line-clamp-1">${school.block}, ${school.district}</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-gray-100 flex items-center text-sm font-medium text-blue-600">
+                                View Details 
+                                <svg class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </div>
+                        `;
+                        schoolsGrid.appendChild(card);
+                    });
+                }
+                
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                if (error.code === 'permission-denied') {
+                    showToast("Permission Denied: Unable to read 'teachers' collection. Check Firestore Rules.", "error");
+                } else {
+                    showToast("Failed to load dashboard data.", "error");
+                }
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        function openSchoolDetails(udiseCode) {
+            const school = dashboardData[udiseCode];
+            if (!school) return;
+
+            document.getElementById('school-list-view').classList.replace('block', 'hidden');
+            document.getElementById('teacher-list-view').classList.replace('hidden', 'flex');
+
+            document.getElementById('detail-school-name').textContent = school.schoolName;
+            document.getElementById('detail-school-meta').textContent = `UDISE: ${school.udiseCode} • Block: ${school.block} • District: ${school.district} • PIN: ${school.pin}`;
+
+            const tbody = document.getElementById('teacherTableBody');
+            tbody.innerHTML = '';
+
+            if (school.teachers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">No teachers found for this school.</td></tr>`;
+                return;
+            }
+
+            school.teachers.forEach(teacher => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-100 hover:bg-gray-50 transition-colors";
+                
+                const photoSrc = teacher.photoUrl ? teacher.photoUrl : 'https://placehold.co/40x40/e2e8f0/94a3b8?text=N/A';
+
+                tr.innerHTML = `
+                    <td class="py-3 px-2">
+                        <img src="${photoSrc}" alt="Photo" class="w-12 h-12 rounded-lg object-cover border border-gray-200 shadow-sm" onerror="this.src='https://placehold.co/40x40/e2e8f0/94a3b8?text=Error'">
+                    </td>
+                    <td class="py-3 px-2">
+                        <div class="font-medium text-gray-800">${teacher.teacherName}</div>
+                        <div class="text-xs text-gray-500">Code: ${teacher.teacherCode || 'N/A'}</div>
+                    </td>
+                    <td class="py-3 px-2 text-gray-600">${teacher.designation}</td>
+                    <td class="py-3 px-2 font-medium ${teacher.bloodGroup ? 'text-red-500' : 'text-gray-600'}">${teacher.bloodGroup || 'N/A'}</td>
+                    <td class="py-3 px-2 text-gray-600">${teacher.mobileNo}</td>
+                    <td class="py-3 px-2 text-gray-600 truncate max-w-[150px]" title="${teacher.qualification}">${teacher.qualification}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function closeSchoolDetails() {
+            document.getElementById('teacher-list-view').classList.replace('flex', 'hidden');
+            document.getElementById('school-list-view').classList.replace('hidden', 'block');
+        }
+
+        // Make functions globally available for HTML inline events
+        window.loadDashboardData = loadDashboardData;
+        window.openSchoolDetails = openSchoolDetails;
+        window.closeSchoolDetails = closeSchoolDetails;
+
+        // Load data automatically when admin page loads
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+
+    </script>
+</body>
+</html>
