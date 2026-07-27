@@ -23,28 +23,25 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; }
         
-        /* Toast Animations */
         .toast-enter { transform: translateY(100%); opacity: 0; }
         .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .toast-exit { transform: translateY(0); opacity: 1; }
         .toast-exit-active { transform: translateY(100%); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        /* Hide number input arrows */
         input[type="number"]::-webkit-inner-spin-button, 
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
         
-        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-
-        /* Sidebar Overlay */
-        #sidebarOverlay {
-            background-color: rgba(0, 0, 0, 0.5);
-            transition: opacity 0.3s ease;
+        #sidebarOverlay { background-color: rgba(0, 0, 0, 0.5); transition: opacity 0.3s ease; }
+        #sidebar { transition: transform 0.3s ease; }
+        
+        /* Floating WhatsApp Button Animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
         }
-        /* Sidebar transition */
-        #sidebar {
-            transition: transform 0.3s ease;
-        }
+        .fab-hover { animation: float 3s ease-in-out infinite; }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
@@ -54,25 +51,13 @@
         <i class="fas fa-wifi-slash mr-2"></i> You are offline. Data will be saved locally.
     </div>
 
-    <!-- Update Banner -->
-    <div id="updateBanner" class="hidden fixed top-0 inset-x-0 z-[60] bg-blue-600 text-white px-4 py-3 shadow-lg flex justify-between items-center transform transition-transform duration-300">
-        <div class="flex items-center gap-3">
-            <i class="fas fa-cloud-arrow-down text-xl"></i>
-            <span class="text-sm font-medium">A new version is available!</span>
-        </div>
-        <button onclick="window.location.reload()" class="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow hover:bg-gray-100 transition">Refresh Now</button>
-    </div>
-
-    <!-- App Navigation Header (Unified) -->
+    <!-- App Navigation Header -->
     <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white sticky top-0 z-50 shadow-md transition-all duration-300" id="mainHeader">
         <div class="w-full max-w-lg mx-auto px-4 py-3 flex justify-between items-center">
-            
-            <!-- Left: Hamburger Icon -->
             <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
                 <i class="fas fa-bars text-xl"></i>
             </button>
 
-            <!-- Center: School Profile & Live Indicator -->
             <div class="flex-1 min-w-0 px-3 text-center flex flex-col items-center justify-center">
                 <div class="flex items-center justify-center gap-2 mb-0.5 w-full">
                     <h3 id="currentSchoolHeader" class="m-0 font-bold text-lg truncate flex items-center justify-center">ID Cards Pro</h3>
@@ -83,18 +68,14 @@
                 <p id="currentSchoolSubHeader" class="text-blue-100 text-xs truncate w-full text-center">Data Entry Portal</p>
             </div>
 
-            <!-- Right: Edit School Button (Hidden by default, shown when school is loaded) -->
             <button id="editSchoolBtn" onclick="openEditSchoolModal()" class="hidden bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Edit School">
                 <i class="fas fa-pen text-xs"></i>
             </button>
-            
-            <!-- Spacer to balance header before school is loaded -->
             <div id="headerSpacer" class="w-9 h-9 flex-shrink-0"></div>
-
         </div>
     </header>
 
-    <!-- Sidebar / Drawer Menu -->
+    <!-- Sidebar Menu -->
     <div id="sidebarOverlay" class="fixed inset-0 z-[100] hidden opacity-0" onclick="toggleSidebar()"></div>
     <div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-[110] transform -translate-x-full flex flex-col">
         <div class="p-5 bg-blue-600 text-white flex justify-between items-center">
@@ -102,9 +83,6 @@
             <button onclick="toggleSidebar()" class="text-white hover:text-gray-200"><i class="fas fa-times text-xl"></i></button>
         </div>
         <div class="flex-1 p-4 flex flex-col gap-2">
-            <button onclick="openRecycleBin(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
-                <i class="fas fa-trash-restore w-5 text-center text-red-500"></i> Recycle Bin
-            </button>
             <a href="catalogue.html" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fas fa-book-open w-5 text-center text-blue-500"></i> View Catalog
             </a>
@@ -114,7 +92,6 @@
             <button onclick="shareApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fas fa-share-nodes w-5 text-center text-gray-500"></i> Share App
             </button>
-            
             <div class="mt-auto border-t border-gray-200 pt-4">
                <button onclick="hardResetApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-red-50 text-red-600 transition text-left font-bold">
                     <i class="fas fa-sign-out-alt w-5 text-center"></i> Logout
@@ -136,11 +113,12 @@
                 <h2 class="text-2xl font-bold text-gray-900">School Registration</h2>
             </div>
             
+            <!-- Restore Existing -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-dashed border-blue-300 mb-6">
-                <label class="block text-sm font-bold text-gray-700 mb-2">Restore Admin Uploaded Data</label>
+                <label class="block text-sm font-bold text-gray-700 mb-2">Existing User? Enter UDISE</label>
                 <input type="text" id="restoreUdiseInput" placeholder="Enter UDISE Number (11 digits)" maxlength="11" inputmode="numeric" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
                 <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl transition flex justify-center items-center gap-2" id="restoreUdiseBtn">
-                    <i class="fas fa-cloud-download-alt"></i> Check & Restore Data
+                    <i class="fas fa-cloud-download-alt"></i> Login & Restore Data
                 </button>
                 <div id="restoreStatus" class="text-sm mt-3 font-medium hidden"></div>
             </div>
@@ -151,6 +129,7 @@
                 <div class="flex-1 h-px bg-gray-300"></div>
             </div>
 
+            <!-- New Registration -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-800 mb-4">New School Details</h3>
                 <input type="text" id="newSchoolName" placeholder="Enter School Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
@@ -165,12 +144,9 @@
                     <input type="text" id="newUdise" placeholder="UDISE (11 digits) *" maxlength="11" inputmode="numeric" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 </div>
 
-                <!-- Simple Optional UDISE Login -->
                 <div class="mb-5 pt-4 border-t border-gray-100">
-                    <label class="block text-sm font-bold text-gray-700 mb-1">UDISE Login <span class="text-gray-400 font-normal">(Optional)</span></label>
-                    <p class="text-xs text-gray-500 mb-3">Provide this if you want us to automatically fetch your students.</p>
-                    <input type="text" id="newUdiseUser" placeholder="UDISE Username (Optional)" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
-                    <input type="password" id="newUdisePass" placeholder="UDISE Password (Optional)" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">UDISE Password <span class="text-gray-400 font-normal text-xs">(Optional, for auto-load)</span></label>
+                    <input type="password" id="newUdisePass" placeholder="Enter UDISE Password" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 </div>
 
                 <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-md" id="addSchoolBtn">Save School</button>
@@ -181,19 +157,15 @@
         <div id="entrySection" class="hidden">
 
             <!-- Waiting State Card (Shown if Auto-Load is pending) -->
-            <div id="pendingImportCard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center mb-6">
+            <div id="pendingImportCard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center mb-6 relative overflow-hidden">
                 <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 text-2xl animate-pulse">
                     <i class="fas fa-hourglass-half"></i>
                 </div>
                 <h3 class="text-xl font-bold text-gray-900 mb-2">Data Extraction in Progress</h3>
                 <p class="text-sm text-gray-600 mb-6">Your students will be automatically loaded here within 24 hours. You can view, edit, or add photos then.</p>
                 
-                <div class="flex flex-col gap-4">
-                    <a href="https://wa.me/917855800205" target="_blank" class="w-full bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 border border-[#25D366]/30">
-                        <i class="fab fa-whatsapp text-xl"></i> Having trouble? Contact us
-                    </a>
-                    
-                    <button onclick="cancelPendingImport()" class="text-xs text-gray-400 hover:text-gray-600 underline">
+                <div class="flex justify-center mt-2">
+                    <button onclick="cancelPendingImport()" class="text-xs text-gray-500 hover:text-gray-800 underline font-medium">
                         Cancel auto enter
                     </button>
                 </div>
@@ -244,9 +216,9 @@
                     </div>
                 </div>
 
-                <!-- Add Student Button (Inline Above List) -->
+                <!-- Add Student Button -->
                 <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
-                    <i class="fas fa-user-plus"></i> <span>Add New Student Manually</span>
+                    <i class="fas fa-user-plus"></i> <span>Add Student</span>
                 </button>
 
                 <!-- Student List Header -->
@@ -271,9 +243,14 @@
         </div>
     </div>
 
+    <!-- Floating WhatsApp Support Button (Only shown on waiting screen) -->
+    <a href="https://wa.me/917855800205" target="_blank" id="floatingWhatsappBtn" class="hidden fixed bottom-6 right-6 z-[90] w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center text-3xl shadow-[0_4px_12px_rgba(37,211,102,0.4)] hover:bg-[#1ebd5a] hover:scale-105 transition-all duration-300 fab-hover" title="WhatsApp Support">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
     <!-- ================= MODALS ================= -->
 
-    <!-- UDISE Source Selector Modal -->
+    <!-- UDISE Source Selector Modal (Used during manual restore if multiple sources exist) -->
     <div id="udiseSelectorModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
             <h3 class="text-xl font-bold text-blue-800 mb-2">Select Data Source</h3>
@@ -287,13 +264,12 @@
         </div>
     </div>
 
-    <!-- Upgrade to Auto-Load Modal (Only pops up if credentials weren't given) -->
+    <!-- Upgrade to Auto-Load Modal (Only pops up if password wasn't given during registration) -->
     <div id="upgradeAutoModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
             <h3 class="text-xl font-bold text-blue-800 mb-2">Request Auto-Load</h3>
-            <p class="text-sm text-gray-600 mb-5">Provide your official UDISE credentials. We will extract and load your students within 24 hours.</p>
+            <p class="text-sm text-gray-600 mb-5">Provide your official UDISE password. We will extract and load your students within 24 hours.</p>
             
-            <input type="text" id="upgradeUdiseUser" placeholder="UDISE Username" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
             <input type="password" id="upgradeUdisePass" placeholder="UDISE Password" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
             
             <div class="flex gap-3">
@@ -366,11 +342,9 @@
 
             <div class="flex flex-col gap-2">
                 <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
-                <button onclick="resetForm()" id="cancelEditBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition hidden">Cancel</button>
             </div>
         </div>
     </div>
-
 
     <!-- Edit School Modal -->
     <div id="editSchoolModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
@@ -419,7 +393,6 @@
         <div class="relative flex-1 w-full h-full overflow-hidden flex items-center justify-center bg-black">
             <video id="cameraVideo" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline></video>
             
-            <!-- Target Overlay mask -->
             <div id="cameraOverlay" class="pointer-events-none absolute z-10 w-[70vw] max-w-[280px] aspect-[3/4] border-2 border-dashed border-white/80 rounded-xl flex flex-col items-center justify-end pb-8 mb-16 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]">
                  <svg class="w-[85%] h-[85%] text-white/60 mb-2" viewBox="0 0 100 120" fill="none" stroke="currentColor" stroke-width="2.5">
                      <ellipse cx="50" cy="45" rx="28" ry="34" />
@@ -429,15 +402,14 @@
             </div>
         </div>
         
-        <!-- Controls -->
         <div class="bg-black/90 pb-8 pt-4 px-6 flex justify-between items-center absolute bottom-0 w-full z-[160]">
             <button onclick="closeCam()" class="text-white text-lg px-4 py-2 hover:bg-white/20 rounded-lg transition">Cancel</button>
             <button id="snap" class="w-16 h-16 rounded-full bg-white border-4 border-gray-300 flex-shrink-0 active:scale-90 transition transform"></button>
-            <div class="w-16"></div> <!-- Spacer -->
+            <div class="w-16"></div> 
         </div>
     </div>
 
-    <!-- Cropper Modal (Only for Gallery Uploads) -->
+    <!-- Cropper Modal -->
     <div id="cropperModal" class="hidden fixed inset-0 bg-black/90 z-[200] flex flex-col items-center justify-center p-4">
         <div class="w-full max-w-md bg-white rounded-xl overflow-hidden shadow-2xl flex flex-col">
             <div class="p-3 border-b flex justify-between items-center bg-gray-50">
@@ -450,25 +422,6 @@
             <div class="p-4 bg-gray-50 flex gap-3">
                 <button onclick="closeCropper()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-bold">Cancel</button>
                 <button id="cropSaveBtn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-bold">Save Crop</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recycle Bin Modal -->
-    <div id="recycleBinModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                <div class="flex items-center gap-2 text-red-600 font-bold">
-                    <i class="fas fa-trash-restore"></i> Recycle Bin
-                </div>
-                <button onclick="closeRecycleBin()" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="px-4 py-2 bg-red-50 border-b border-red-100 flex justify-between items-center text-sm">
-                <span class="text-red-600 font-medium">Items keep for 30 days.</span>
-                <button onclick="emptyRecycleBin()" class="text-red-700 font-bold hover:underline bg-white/50 px-2 py-1 rounded">Empty Bin</button>
-            </div>
-            <div class="p-4 overflow-y-auto flex-1 bg-gray-50" id="recycleBinList">
-                <!-- Deleted items will go here -->
             </div>
         </div>
     </div>
@@ -493,7 +446,7 @@
 
     <script>
         // ==========================================
-        // UI INTERACTION (Sidebar, Upgrade & Import)
+        // UI INTERACTION
         // ==========================================
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -514,25 +467,56 @@
             }
         }
 
-        window.requestAutoLoad = function() {
-            if (currentSchoolData.udiseUser && currentSchoolData.udisePass) {
-                // If they already gave us credentials during registration or a previous session, skip the modal
-                startAutoLoadProcess(currentSchoolData.udiseUser, currentSchoolData.udisePass);
-            } else {
-                // Ask for credentials
-                document.getElementById('upgradeUdiseUser').value = '';
-                document.getElementById('upgradeUdisePass').value = '';
-                document.getElementById('upgradeAutoModal').classList.remove('hidden');
+        window.requestAutoLoad = async function() {
+            if (!navigator.onLine) return alert("Internet required to check/request Auto-Load.");
+            
+            const btn = document.querySelector('#upgradeToAutoBanner button');
+            const origTxt = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>";
+            btn.disabled = true;
+
+            try {
+                // SMART CHECK: Does an Excel batch already exist for this UDISE?
+                const snap = await firestore.collection('students')
+                    .where('udise', '==', currentSchoolData.udise)
+                    .where('source', '==', 'excel')
+                    .limit(1)
+                    .get();
+
+                if (!snap.empty) {
+                    // Instantly switch to Excel mode without any prompts!
+                    currentSchoolData.source = 'excel';
+                    currentSchoolData.importStatus = 'manual';
+                    
+                    const tx = db.transaction(['schools'], 'readwrite');
+                    tx.objectStore('schools').put(currentSchoolData);
+                    
+                    showToast("Switched to Auto-Loaded students!", "success");
+                    enterSchool(currentSchoolData);
+                    return;
+                }
+
+                // NO EXCEL BATCH YET: Start the request flow
+                if (currentSchoolData.udisePass) {
+                    // Password already known from registration
+                    await startAutoLoadProcess(currentSchoolData.udisePass);
+                } else {
+                    // Need to ask for password
+                    document.getElementById('upgradeUdisePass').value = '';
+                    document.getElementById('upgradeAutoModal').classList.remove('hidden');
+                }
+            } catch (err) {
+                alert("Error checking data: " + err.message);
+            } finally {
+                btn.innerHTML = origTxt;
+                btn.disabled = false;
             }
         };
 
-        async function startAutoLoadProcess(uUser, uPass) {
-            if (!navigator.onLine) return alert("Internet required to request Auto-Load.");
-            
+        async function startAutoLoadProcess(uPass) {
             showToast("Requesting Auto-Load...", "info");
             try {
                 currentSchoolData.importStatus = 'pending';
-                currentSchoolData.udiseUser = uUser;
                 currentSchoolData.udisePass = uPass;
 
                 const tx = db.transaction(['schools'], 'readwrite');
@@ -540,7 +524,7 @@
 
                 await firestore.collection('schools').doc(currentSchoolData.udise).set({
                     importStatus: 'pending',
-                    udiseUser: uUser,
+                    udiseUser: currentSchoolData.udise, // UDISE is the username
                     udisePass: uPass,
                     lastModified: Date.now()
                 }, {merge: true});
@@ -554,17 +538,15 @@
         }
 
         document.getElementById('submitUpgradeBtn').onclick = async () => {
-            const uUser = document.getElementById('upgradeUdiseUser').value.trim();
             const uPass = document.getElementById('upgradeUdisePass').value.trim();
-
-            if (!uUser || !uPass) return alert("Please provide both Username and Password.");
+            if (!uPass) return alert("Please provide the Password.");
 
             const btn = document.getElementById('submitUpgradeBtn');
             const origText = btn.innerHTML;
             btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Submitting...";
             btn.disabled = true;
 
-            await startAutoLoadProcess(uUser, uPass);
+            await startAutoLoadProcess(uPass);
 
             btn.innerHTML = origText;
             btn.disabled = false;
@@ -594,13 +576,11 @@
             if (!dateStr) return '';
             dateStr = String(dateStr).trim();
             if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-            
             if (/^\d{5}$/.test(dateStr)) {
                 const excelEpoch = new Date(1899, 11, 30);
                 const dateObj = new Date(excelEpoch.getTime() + (parseInt(dateStr) * 86400000));
                 return dateObj.toISOString().split('T')[0];
             }
-            
             const parts = dateStr.split(/[\/\-\.]/);
             if (parts.length === 3) {
                 let p0 = parts[0], p1 = parts[1], p2 = parts[2];
@@ -758,7 +738,6 @@
 
         let db, currentSchool = null, currentSchoolData = null, students = [];
         let filteredStudents = [];
-        let deletedStudents = [];
         let currentPhotoBlob = null;
         let visibleCount = 50; 
         let cropper = null;
@@ -771,15 +750,10 @@
                 const st = db.createObjectStore('students', {keyPath:'id'});
                 st.createIndex('schoolName', 'schoolName', {unique:false});
             }
-            if(!db.objectStoreNames.contains('deleted_students')) {
-                const dst = db.createObjectStore('deleted_students', {keyPath:'id'});
-                dst.createIndex('schoolName', 'schoolName', {unique:false});
-            }
         };
         
         req.onsuccess = e => {
             db = e.target.result;
-            cleanupRecycleBin(); 
             loadSchools();
             updateOnlineStatus();
             if (navigator.onLine) {
@@ -806,14 +780,12 @@
             unsubscribeRealtime = firestore.collection('students')
                 .where('udise', '==', currentSchoolData.udise)
                 .onSnapshot(snapshot => {
-                    const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
+                    const tx = db.transaction(['students'], 'readwrite');
                     const studentStore = tx.objectStore('students');
-                    const deletedStore = tx.objectStore('deleted_students');
                     let hasUpdates = false;
 
                     snapshot.docChanges().forEach(change => {
                         const data = change.doc.data();
-                        
                         const actualSource = getStudentSource(data);
                         
                         const student = { ...data, id: Number(change.doc.id), synced: true, source: actualSource };
@@ -822,27 +794,17 @@
                         if(student.finalised === undefined) student.finalised = true;
 
                         if (change.type === 'added' || change.type === 'modified') {
-                            if (!data.deleted) {
-                                studentStore.put(student);
-                                deletedStore.delete(student.id);
-                            } else {
-                                studentStore.delete(student.id);
-                                deletedStore.put(student);
-                            }
+                            studentStore.put(student);
                             hasUpdates = true;
                         }
                         if (change.type === 'removed') {
                             studentStore.delete(student.id);
-                            deletedStore.delete(student.id);
                             hasUpdates = true;
                         }
                     });
 
                     tx.oncomplete = () => {
-                        if (hasUpdates) {
-                            loadStudents();
-                            loadRecycleBin();
-                        }
+                        if (hasUpdates) loadStudents();
                     };
                 }, error => {
                     console.error("Live sync error:", error);
@@ -860,29 +822,6 @@
             reader.onload = () => resolve(reader.result);
             reader.onerror = reject;
         });
-
-        function compressImageToDataURL(imgElement, quality = 0.8) {
-            return new Promise((resolve) => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const MAX_WIDTH = 400; 
-                let width = imgElement.width;
-                let height = imgElement.height;
-                if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                canvas.width = width; canvas.height = height;
-                ctx.drawImage(imgElement, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', quality));
-            });
-        }
-
-        function recompressBase64(dataUrl) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(compressImageToDataURL(img, 0.7));
-                img.onerror = reject;
-                img.src = dataUrl;
-            });
-        }
 
         function openCropper(imageSrc) {
             const modal = document.getElementById('cropperModal');
@@ -936,7 +875,7 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                 document.getElementById('cameraVideo').srcObject = stream;
             } catch(e) {
-                showToast("Camera access denied or unavailable", "error");
+                showToast("Camera access denied", "error");
                 closeCam();
             }
         };
@@ -996,9 +935,7 @@
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (event) => {
-                    openCropper(event.target.result);
-                };
+                reader.onload = (event) => openCropper(event.target.result);
                 reader.readAsDataURL(file);
             }
         };
@@ -1036,19 +973,7 @@
                 cursorReq.onsuccess = e => {
                     const cursor = e.target.result;
                     if (cursor) {
-                        if (!cursor.value.synced) unsyncedIds.push({id: cursor.value.id, store: 'students'});
-                        cursor.continue();
-                    } else resolve();
-                };
-            });
-
-            await new Promise((resolve) => {
-                const tx = db.transaction(['deleted_students'], 'readonly');
-                const cursorReq = tx.objectStore('deleted_students').openCursor();
-                cursorReq.onsuccess = e => {
-                    const cursor = e.target.result;
-                    if (cursor) {
-                        if (!cursor.value.synced) unsyncedIds.push({id: cursor.value.id, store: 'deleted_students'});
+                        if (!cursor.value.synced) unsyncedIds.push(cursor.value.id);
                         cursor.continue();
                     } else resolve();
                 };
@@ -1074,34 +999,32 @@
                 for (let i = 0; i < unsyncedIds.length; i++) {
                     if (btn) btn.innerHTML = `<i class='fas fa-spinner fa-spin'></i> ${i + 1}/${unsyncedIds.length}`;
                     try {
-                        const storeName = unsyncedIds[i].store;
                         const student = await new Promise((resolve) => {
-                            const tx = db.transaction([storeName], 'readonly');
-                            const getReq = tx.objectStore(storeName).get(unsyncedIds[i].id);
+                            const tx = db.transaction(['students'], 'readonly');
+                            const getReq = tx.objectStore('students').get(unsyncedIds[i]);
                             getReq.onsuccess = () => resolve(getReq.result);
                         });
                         
                         if (!student || student.synced) continue; 
                         
-                        await syncToFirebase(student, storeName);
+                        await syncToFirebase(student);
                         successCount++;
 
                         if (student.syncError) {
                             delete student.syncError;
-                            const tx2 = db.transaction([storeName], 'readwrite');
-                            tx2.objectStore(storeName).put(student);
+                            const tx2 = db.transaction(['students'], 'readwrite');
+                            tx2.objectStore('students').put(student);
                         }
                     } catch (err) {
                         failCount++;
                         try {
-                            const storeName = unsyncedIds[i].store;
-                            const tx3 = db.transaction([storeName], 'readwrite');
-                            const getReq2 = tx3.objectStore(storeName).get(unsyncedIds[i].id);
+                            const tx3 = db.transaction(['students'], 'readwrite');
+                            const getReq2 = tx3.objectStore('students').get(unsyncedIds[i]);
                             getReq2.onsuccess = () => {
                                 const rec = getReq2.result;
                                 if (rec) {
                                     rec.syncError = (err && err.message) ? err.message : String(err);
-                                    tx3.objectStore(storeName).put(rec);
+                                    tx3.objectStore('students').put(rec);
                                 }
                             };
                         } catch (e2) {}
@@ -1130,7 +1053,7 @@
             }
         }
 
-        async function syncToFirebase(student, storeName = 'students') {
+        async function syncToFirebase(student) {
             try {
                 if (student.photoBase64 && !student.photoBase64.startsWith('http')) {
                     const storageRef = firebaseStorage.ref(`student_photos/${student.udise}_${student.id}.jpg`);
@@ -1141,8 +1064,8 @@
                     student.photoBase64 = downloadURL;
                     
                     await new Promise((resolve, reject) => {
-                        const tx = db.transaction([storeName], 'readwrite');
-                        tx.objectStore(storeName).put(student);
+                        const tx = db.transaction(['students'], 'readwrite');
+                        tx.objectStore('students').put(student);
                         tx.oncomplete = resolve;
                         tx.onerror = reject;
                     });
@@ -1152,8 +1075,8 @@
 
                 student.synced = true;
                 await new Promise((resolve, reject) => {
-                    const tx = db.transaction([storeName], 'readwrite');
-                    tx.objectStore(storeName).put(student);
+                    const tx = db.transaction(['students'], 'readwrite');
+                    tx.objectStore('students').put(student);
                     tx.oncomplete = resolve;
                     tx.onerror = reject;
                 });
@@ -1183,7 +1106,6 @@
         }
 
         function performRestore(docs, schoolName, udise, source, statusEl) {
-            
             const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
             
             const schoolObj = {
@@ -1203,37 +1125,37 @@
             statusEl.className = 'text-sm mt-3 font-medium text-blue-600 block';
             statusEl.textContent = `Restoring ${docs.length} student(s)...`;
 
-            const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
             
             tx.objectStore('schools').delete(localId);
             tx.objectStore('schools').put(schoolObj);
 
             const studentStore = tx.objectStore('students');
-            const deletedStore = tx.objectStore('deleted_students');
             let restoreCount = 0;
             
             docs.forEach(({ id, data }) => {
                 const student = { ...data, id: Number(id), synced: true, source: source };
                 delete student.submittedAt;
-
-                if (!data.deleted) {
-                    if(student.finalised === undefined) student.finalised = true;
-                    studentStore.put(student);
-                    restoreCount++;
-                } else {
-                    deletedStore.put(student);
-                }
+                if(student.finalised === undefined) student.finalised = true;
+                studentStore.put(student);
+                restoreCount++;
             });
 
             tx.oncomplete = () => {
                 showToast(`Restored ${restoreCount} students successfully!`);
                 document.getElementById('restoreUdiseInput').value = '';
                 
+                // Fetch the password from Firebase to keep it synced locally, but don't overwrite if it doesn't exist online
                 if(navigator.onLine) {
-                    firestore.collection('schools').doc(schoolObj.udise).set({
-                        name: schoolObj.realSchoolName, phone: schoolObj.phone, block: schoolObj.block, district: schoolObj.district,
-                        pin: schoolObj.pin, udise: schoolObj.udise, hmSignature: schoolObj.hmSignature, createdAt: schoolObj.createdAt, lastModified: Date.now()
-                    }, {merge:true}).catch(e => console.error(e));
+                    firestore.collection('schools').doc(udise).get().then(doc => {
+                        if(doc.exists) {
+                            const data = doc.data();
+                            schoolObj.udiseUser = data.udiseUser || udise;
+                            schoolObj.udisePass = data.udisePass || '';
+                            const tx2 = db.transaction(['schools'], 'readwrite');
+                            tx2.objectStore('schools').put(schoolObj);
+                        }
+                    });
                 }
 
                 setTimeout(() => enterSchool(schoolObj), 800);
@@ -1321,7 +1243,6 @@
                     btn.disabled = false;
                     statusEl.innerHTML = "";
                 } else {
-                    // School exists but 0 students (e.g., they requested Auto-Load recently but haven't gotten data yet)
                     const sData = schoolDoc.data();
                     const localId = `[Manual] ${sData.name}_${udise}`;
                     const schoolObj = {
@@ -1332,7 +1253,7 @@
                         pin: sData.pin || '', udise: udise, hmSignature: sData.hmSignature || '',
                         createdAt: sData.createdAt || Date.now(),
                         importStatus: sData.importStatus || 'manual',
-                        udiseUser: sData.udiseUser || '',
+                        udiseUser: sData.udiseUser || udise,
                         udisePass: sData.udisePass || ''
                     };
                     
@@ -1360,8 +1281,6 @@
             const district = document.getElementById('newDistrict').value.trim();
             const pin = document.getElementById('newPin').value.trim();
             const udise = document.getElementById('newUdise').value.trim();
-            
-            const uUser = document.getElementById('newUdiseUser').value.trim();
             const uPass = document.getElementById('newUdisePass').value.trim();
 
             if(!name) return alert("Enter School Name");
@@ -1371,7 +1290,7 @@
             const btn = document.getElementById('addSchoolBtn');
             const origText = btn.innerHTML;
             
-            // SMART INTERCEPTION: Check if school already exists online before creating a new local shell
+            // SMART INTERCEPTION
             if (navigator.onLine) {
                 btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Checking UDISE...";
                 btn.disabled = true;
@@ -1384,11 +1303,11 @@
                         btn.innerHTML = origText;
                         btn.disabled = false;
                         
-                        await showConfirm("This UDISE is already registered in our system. We will load your existing profile instead.", "Existing Profile Found", "Login", "bg-blue-600 hover:bg-blue-700");
+                        await showConfirm("You are already an existing user. We will load your profile.", "Existing Profile Found", "Login", "bg-blue-600 hover:bg-blue-700");
                         
                         document.getElementById('restoreUdiseInput').value = udise;
                         document.getElementById('restoreUdiseBtn').click();
-                        return; // Halt registration flow entirely
+                        return;
                     }
                 } catch (err) {
                     console.warn("Pre-check failed", err);
@@ -1409,15 +1328,14 @@
                     return; 
                 }
 
-                // Default starting point is ALWAYS manual.
                 const schoolObj = {
                     name: localId, 
                     realSchoolName: name,
                     source: 'manual',
                     phone: phone, block: block, district: district,
                     pin: pin, udise: udise, hmSignature: '', createdAt: Date.now(),
-                    importStatus: 'manual',
-                    udiseUser: uUser,
+                    importStatus: 'manual', 
+                    udiseUser: udise, 
                     udisePass: uPass
                 };
 
@@ -1433,8 +1351,8 @@
                             importStatus: 'manual'
                         };
                         
-                        if (uUser && uPass) {
-                            fbData.udiseUser = uUser;
+                        if (uPass) {
+                            fbData.udiseUser = udise; 
                             fbData.udisePass = uPass;
                         }
 
@@ -1457,6 +1375,7 @@
             tx.objectStore('schools').put(currentSchoolData);
             
             if(navigator.onLine) {
+                // Ensure we KEEP the udisePass in Firebase even if they cancel
                 firestore.collection('schools').doc(currentSchoolData.udise).set({
                     importStatus: 'manual',
                     lastModified: Date.now()
@@ -1481,10 +1400,9 @@
                 
                 if(unsubscribeRealtime) unsubscribeRealtime();
 
-                const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
+                const tx = db.transaction(['schools', 'students'], 'readwrite');
                 tx.objectStore('schools').clear();
                 tx.objectStore('students').clear();
-                tx.objectStore('deleted_students').clear();
                 tx.oncomplete = () => { location.reload(); };
             };
         }
@@ -1504,17 +1422,20 @@
 
             updateSchoolHeader();
             
+            const fab = document.getElementById('floatingWhatsappBtn');
+
             if (currentSchoolData.importStatus === 'pending') {
                 document.getElementById('standardDashboardControls').classList.add('hidden');
                 document.getElementById('pendingImportCard').classList.remove('hidden');
+                fab.classList.remove('hidden');
             } else {
                 document.getElementById('standardDashboardControls').classList.remove('hidden');
                 document.getElementById('pendingImportCard').classList.add('hidden');
+                fab.classList.add('hidden');
                 
-                // Toggle "Upgrade to Auto" Banner
+                // Toggle Banner
                 const upgradeBanner = document.getElementById('upgradeToAutoBanner');
                 if (upgradeBanner) {
-                    // Show it if they are on a purely manual setup and haven't requested auto-load yet
                     if (currentSchoolData.source === 'manual' && currentSchoolData.importStatus === 'manual') {
                         upgradeBanner.classList.remove('hidden');
                     } else {
@@ -1525,7 +1446,6 @@
                 visibleCount = 50; 
                 setupRealtimeListener();
                 loadStudents();
-                loadRecycleBin();
             }
         }
 
@@ -1586,7 +1506,7 @@
                  }
             }
 
-            const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
             tx.objectStore('schools').put(updatedSchool);
 
             const targetUdise = currentSchoolData.udise;
@@ -1612,21 +1532,6 @@
                     }
                 });
             };
-            
-            const delStore = tx.objectStore('deleted_students');
-            delStore.getAll().onsuccess = (e) => {
-                e.target.result.forEach(s => {
-                    if( (!s.udise && s.schoolName === currentSchoolData.name) || 
-                        (s.udise === targetUdise && getStudentSource(s) === targetSource)) {
-                        
-                        s.schoolName = newName; 
-                        s.block = newBlock; s.district = newDistrict;
-                        s.pin = newPin; s.udise = newUdise; s.hmPhone = newPhone;
-                        s.source = targetSource;
-                        delStore.put(s); 
-                    }
-                });
-            };
 
             tx.oncomplete = () => {
                 showToast("School Details Updated!");
@@ -1637,7 +1542,6 @@
                 btn.disabled = false;
                 
                 setupRealtimeListener(); 
-                
                 loadStudents();
             };
         };
@@ -1774,7 +1678,7 @@
                         </div>
                         <div class="flex-shrink-0 pl-1 flex items-center gap-3 border-l border-gray-100 ml-1 pl-3">
                             <button onclick="editStudent('${s.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Edit Student"><i class="fas fa-pen"></i></button>
-                            <button onclick="deleteStudent('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Move to Recycle Bin"><i class="fas fa-trash"></i></button>
+                            <button onclick="deleteStudentForever('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Permanently Delete"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
@@ -1943,173 +1847,21 @@
         }
 
         // ==========================================
-        // RECYCLE BIN LOGIC (Soft Delete & Hard Delete)
+        // HARD DELETE LOGIC
         // ==========================================
-        window.deleteStudent = async function(idStr) {
+        window.deleteStudentForever = async function(idStr) {
             const id = Number(idStr);
-            const confirmed = await showConfirm("Move this student to the Recycle Bin? You can restore them within 30 days.", "Delete Student?", "Yes, Move to Bin");
+            const confirmed = await showConfirm("Are you sure you want to permanently delete this student? This action CANNOT be undone.", "Delete Student?", "Yes, Delete");
             if(!confirmed) return;
             
-            const student = students.find(s => s.id === id);
-            if(!student) return;
-
-            student.deleted = true;
-            student.deletedAt = Date.now();
-            student.synced = false; 
-
-            const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
+            const tx = db.transaction(['students'], 'readwrite');
             tx.objectStore('students').delete(id);
-            tx.objectStore('deleted_students').put(student);
 
             tx.oncomplete = () => {
-                showToast("Moved to Recycle Bin", "info");
-                resetForm(); 
-
+                showToast("Student deleted permanently", "success");
                 loadStudents();
-                loadRecycleBin();
-                if(navigator.onLine) {
-                    syncToFirebase(student, 'deleted_students').then(() => loadStudents()).catch(console.error);
-                }
-            };
-        }
-
-        window.openRecycleBin = function() {
-            document.getElementById('recycleBinModal').classList.remove('hidden');
-            loadRecycleBin();
-        }
-        
-        window.closeRecycleBin = function() {
-            document.getElementById('recycleBinModal').classList.add('hidden');
-        }
-
-        function loadRecycleBin() {
-            if(!db || !currentSchoolData) return;
-            const tx = db.transaction(['deleted_students'], 'readonly');
-            tx.objectStore('deleted_students').getAll().onsuccess = e => {
-                const targetUdise = currentSchoolData.udise;
-                const targetSource = currentSchoolData.source || 'manual';
-                
-                let all = e.target.result;
-                
-                deletedStudents = all.filter(s => {
-                    if (!targetUdise || !s.udise) return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
-                    return s.udise === targetUdise && getStudentSource(s) === targetSource;
-                });
-
-                deletedStudents.sort((a,b) => b.deletedAt - a.deletedAt);
-                renderRecycleBin();
-            };
-        }
-
-        function renderRecycleBin() {
-            const list = document.getElementById('recycleBinList');
-            list.innerHTML = '';
-
-            if (deletedStudents.length === 0) {
-                list.innerHTML = `<div class="text-center py-8 text-gray-400"><i class="fas fa-trash mb-2 text-2xl"></i><p>Recycle Bin is empty.</p></div>`;
-                return;
-            }
-
-            deletedStudents.forEach(s => {
-                const daysPassed = Math.floor((Date.now() - s.deletedAt) / (1000 * 60 * 60 * 24));
-                const daysLeft = Math.max(0, 30 - daysPassed);
-
-                const div = document.createElement('div');
-                div.className = 'bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-2 flex items-center justify-between gap-2';
-                
-                div.innerHTML = `
-                    <div class="flex-1 min-w-0 pr-1">
-                        <div class="font-bold text-gray-800 text-sm truncate line-through opacity-70">${escapeHtml(s.name)}</div>
-                        <div class="text-xs text-red-500 font-medium"><i class="fas fa-history"></i> ${daysLeft} days left</div>
-                    </div>
-                    <button onclick="restoreStudent(${s.id})" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex-shrink-0 shadow-sm">
-                        Restore
-                    </button>
-                    <button onclick="hardDeleteStudent(${s.id})" class="bg-red-50 hover:bg-red-100 text-red-500 px-2 py-1.5 rounded-lg text-sm transition flex-shrink-0 shadow-sm" title="Delete Permanently">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `;
-                list.appendChild(div);
-            });
-        }
-
-        window.restoreStudent = function(id) {
-            const student = deletedStudents.find(s => s.id === id);
-            if(!student) return;
-
-            delete student.deleted;
-            delete student.deletedAt;
-            student.synced = false; 
-            student.lastModified = Date.now();
-
-            const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
-            tx.objectStore('students').put(student);
-            tx.objectStore('deleted_students').delete(id);
-
-            tx.oncomplete = () => {
-                showToast("Student Restored!", "success");
-                loadStudents();
-                loadRecycleBin();
-                if(navigator.onLine) {
-                    syncToFirebase(student, 'students').then(() => loadStudents()).catch(console.error);
-                }
-            };
-        }
-
-        window.hardDeleteStudent = async function(id) {
-            const confirmed = await showConfirm("Are you sure you want to permanently delete this student? This action CANNOT be undone.", "Permanent Delete", "Delete Forever");
-            if(!confirmed) return;
-
-            const tx = db.transaction(['deleted_students'], 'readwrite');
-            tx.objectStore('deleted_students').delete(id);
-            tx.oncomplete = () => {
-                showToast("Student deleted permanently", "info");
-                loadRecycleBin();
                 if(navigator.onLine) {
                     firestore.collection('students').doc(String(id)).delete().catch(console.error);
-                }
-            };
-        }
-
-        window.emptyRecycleBin = async function() {
-            if(deletedStudents.length === 0) return;
-            const confirmed = await showConfirm(`Are you sure you want to permanently delete ALL ${deletedStudents.length} students in the Recycle Bin?`, "Empty Bin", "Empty Bin");
-            if(!confirmed) return;
-
-            const tx = db.transaction(['deleted_students'], 'readwrite');
-            const store = tx.objectStore('deleted_students');
-            
-            deletedStudents.forEach(s => {
-                store.delete(s.id);
-                if(navigator.onLine) {
-                    firestore.collection('students').doc(String(s.id)).delete().catch(console.error);
-                }
-            });
-
-            tx.oncomplete = () => {
-                showToast("Recycle bin emptied", "success");
-                loadRecycleBin();
-            }
-        }
-
-        function cleanupRecycleBin() {
-            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-            const now = Date.now();
-            
-            const tx = db.transaction(['deleted_students'], 'readwrite');
-            const store = tx.objectStore('deleted_students');
-            
-            store.openCursor().onsuccess = e => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    const student = cursor.value;
-                    if (student.deletedAt && (now - student.deletedAt > THIRTY_DAYS_MS)) {
-                        cursor.delete();
-                        if(navigator.onLine) {
-                             firestore.collection('students').doc(String(student.id)).delete().catch(console.error);
-                        }
-                    }
-                    cursor.continue();
                 }
             };
         }
