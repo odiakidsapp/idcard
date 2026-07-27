@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Data Entry - ID Card Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Custom scrollbar for better UI */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3b82f6;
+            width: 24px;
+            height: 24px;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
+
+    <nav class="bg-blue-600 text-white shadow-md z-10 flex-shrink-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
+                    <span class="font-bold text-xl tracking-tight hidden sm:block">ID Card Portal</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div id="toast-container" class="fixed top-20 right-5 z-50 flex flex-col gap-2"></div>
+
+    <div class="flex-1 overflow-y-auto w-full relative">
+        <main class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 block transition-opacity duration-300 pb-20">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800">Teacher Information Form</h2>
+                    <p class="text-sm text-gray-500">Fill in the details for the teacher ID card generation.</p>
+                </div>
+                
+                <form id="teacher-form" class="p-6 space-y-6">
+                    
+                    <!-- School Info Section -->
+                    <div>
+                        <h3 class="text-md font-medium text-blue-600 mb-4 border-b pb-2">School Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">School Name *</label>
+                                <input type="text" id="schoolName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">UDISE Code *</label>
+                                <input type="text" id="udiseCode" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Block *</label>
+                                <input type="text" id="block" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">District *</label>
+                                <input type="text" id="district" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">PIN Code *</label>
+                                <input type="text" id="pin" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Teacher Info Section -->
+                    <div>
+                        <h3 class="text-md font-medium text-blue-600 mb-4 border-b pb-2">Teacher Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Teacher Name *</label>
+                                <input type="text" id="teacherName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Teacher Code (Optional)</label>
+                                <input type="text" id="teacherCode" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Designation *</label>
+                                <input type="text" id="designation" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Mobile Number *</label>
+                                <input type="tel" id="mobileNo" required pattern="[0-9]{10}" placeholder="10 digit number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Blood Group *</label>
+                                <select id="bloodGroup" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white">
+                                    <option value="">Select</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Highest Qualification *</label>
+                                <input type="text" id="qualification" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Photo Section -->
+                    <div>
+                        <h3 class="text-md font-medium text-blue-600 mb-4 border-b pb-2">Photo Capture</h3>
+                        <div class="flex flex-col md:flex-row items-center gap-6">
+                            <div class="w-32 h-32 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden relative shrink-0">
+                                <img id="photoPreview" src="https://placehold.co/128x128/e2e8f0/94a3b8?text=No+Photo" class="w-full h-full object-cover" alt="Preview">
+                            </div>
+                            <div class="flex-1 w-full">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Upload or Take Photo (Max 1MB) *</label>
+                                <input type="file" id="photoInput" accept="image/*" capture="environment" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer">
+                                <p class="text-xs text-gray-500 mt-2">Recommended: Use a clear photo with a plain background.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 flex justify-end">
+                        <button type="submit" id="submitBtn" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors focus:ring-4 focus:ring-blue-300 flex items-center justify-center min-w-[150px]">
+                            <span id="submitText">Save Details</span>
+                            <div id="submitLoader" class="loader hidden ml-2 border-white border-t-blue-600"></div>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+            authDomain: "idcard-60586.firebaseapp.com",
+            projectId: "idcard-60586",
+            storageBucket: "idcard-60586.firebasestorage.app",
+            messagingSenderId: "331979663377",
+            appId: "1:331979663377:web:026e537a7fcaca813129b0",
+            measurementId: "G-PXVV87C78S"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+            const icon = type === 'success' 
+                ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+                : `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white ${bgColor} transform transition-all duration-300 translate-x-full opacity-0`;
+            toast.innerHTML = `${icon}<span class="font-medium text-sm">${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => toast.classList.remove('translate-x-full', 'opacity-0'));
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        const photoInput = document.getElementById('photoInput');
+        const photoPreview = document.getElementById('photoPreview');
+        
+        photoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 1024 * 1024) {
+                    showToast('File is too large! Maximum allowed is 1MB.', 'error');
+                    photoInput.value = '';
+                    photoPreview.src = 'https://placehold.co/128x128/e2e8f0/94a3b8?text=No+Photo';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) { photoPreview.src = e.target.result; }
+                reader.readAsDataURL(file);
+            } else {
+                photoPreview.src = 'https://placehold.co/128x128/e2e8f0/94a3b8?text=No+Photo';
+            }
+        });
+
+        document.getElementById('teacher-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const submitLoader = document.getElementById('submitLoader');
+            
+            const formData = {
+                schoolName: document.getElementById('schoolName').value.trim(),
+                udiseCode: document.getElementById('udiseCode').value.trim(),
+                block: document.getElementById('block').value.trim(),
+                district: document.getElementById('district').value.trim(),
+                pin: document.getElementById('pin').value.trim(),
+                teacherName: document.getElementById('teacherName').value.trim(),
+                teacherCode: document.getElementById('teacherCode').value.trim(),
+                designation: document.getElementById('designation').value.trim(),
+                mobileNo: document.getElementById('mobileNo').value.trim(),
+                bloodGroup: document.getElementById('bloodGroup').value.trim(),
+                qualification: document.getElementById('qualification').value.trim(),
+                createdAt: serverTimestamp()
+            };
+
+            const photoFile = document.getElementById('photoInput').files[0];
+            if (!photoFile) {
+                showToast("Please select a photo.", "error");
+                return;
+            }
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.classList.replace('bg-blue-600', 'bg-blue-400');
+                submitText.textContent = 'Uploading...';
+                submitLoader.classList.remove('hidden');
+
+                const fileExt = photoFile.name.split('.').pop();
+                const uniqueFileName = `teachers/${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+                const storageRef = ref(storage, `student_photos/${uniqueFileName}`);
+                
+                const snapshot = await uploadBytes(storageRef, photoFile);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                
+                formData.photoUrl = downloadURL;
+                submitText.textContent = 'Saving Record...';
+                
+                await addDoc(collection(db, "teachers"), formData);
+                
+                showToast("Teacher record saved successfully!");
+                document.getElementById('teacher-form').reset();
+                photoPreview.src = 'https://placehold.co/128x128/e2e8f0/94a3b8?text=No+Photo';
+                
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                if (error.code === 'permission-denied') {
+                     showToast("Permission Denied. Update Firestore Rules for 'teachers' collection.", "error");
+                } else {
+                     showToast("An error occurred: " + error.message, "error");
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.replace('bg-blue-400', 'bg-blue-600');
+                submitText.textContent = 'Save Details';
+                submitLoader.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
