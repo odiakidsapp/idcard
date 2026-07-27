@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Data Entry App</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+
+    <!-- Cropper.js for Gallery Image Cropping -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; }
+        
+        /* Toast Animations */
+        .toast-enter { transform: translateY(100%); opacity: 0; }
+        .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toast-exit { transform: translateY(0); opacity: 1; }
+        .toast-exit-active { transform: translateY(100%); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Hide number input arrows */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        
+        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+
+        /* Sidebar Overlay */
+        #sidebarOverlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            transition: opacity 0.3s ease;
+        }
+        /* Sidebar transition */
+        #sidebar {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="text-gray-800 pb-20">
+
+    <!-- Offline Banner -->
+    <div id="offlineBanner" class="hidden fixed top-0 inset-x-0 z-[70] bg-red-500 text-white px-4 py-2 shadow-md flex justify-center items-center text-sm font-bold transition-transform duration-300 transform -translate-y-full">
+        <i class="fas fa-wifi-slash mr-2"></i> You are offline. Data will be saved locally.
+    </div>
+
+    <!-- Update Banner -->
+    <div id="updateBanner" class="hidden fixed top-0 inset-x-0 z-[60] bg-blue-600 text-white px-4 py-3 shadow-lg flex justify-between items-center transform transition-transform duration-300">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-cloud-arrow-down text-xl"></i>
+            <span class="text-sm font-medium">A new version is available!</span>
+        </div>
+        <button onclick="window.location.reload()" class="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow hover:bg-gray-100 transition">Refresh Now</button>
+    </div>
+
+    <!-- App Navigation Header (Unified) -->
+    <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white sticky top-0 z-50 shadow-md transition-all duration-300" id="mainHeader">
+        <div class="w-full max-w-lg mx-auto px-4 py-3 flex justify-between items-center">
+            
+            <!-- Left: Hamburger Icon -->
+            <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+
+            <!-- Center: School Profile & Live Indicator -->
+            <div class="flex-1 min-w-0 px-3 text-center flex flex-col items-center justify-center">
+                <div class="flex items-center justify-center gap-2 mb-0.5 w-full">
+                    <h3 id="currentSchoolHeader" class="m-0 font-bold text-lg truncate flex items-center justify-center">ID Cards Pro</h3>
+                    <span id="liveIndicator" class="hidden bg-green-500/20 border border-green-400 text-green-100 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1 flex-shrink-0" title="Live Sync Active">
+                        <i class="fas fa-circle text-[6px] text-green-400 animate-pulse"></i>LIVE
+                    </span>
+                </div>
+                <p id="currentSchoolSubHeader" class="text-blue-100 text-xs truncate w-full text-center">Data Entry Portal</p>
+            </div>
+
+            <!-- Right: Edit School Button (Hidden by default, shown when school is loaded) -->
+            <button id="editSchoolBtn" onclick="openEditSchoolModal()" class="hidden bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Edit School">
+                <i class="fas fa-pen text-xs"></i>
+            </button>
+            
+            <!-- Spacer to balance header before school is loaded -->
+            <div id="headerSpacer" class="w-9 h-9 flex-shrink-0"></div>
+
+        </div>
+    </header>
+
+    <!-- Sidebar / Drawer Menu -->
+    <div id="sidebarOverlay" class="fixed inset-0 z-[100] hidden opacity-0" onclick="toggleSidebar()"></div>
+    <div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-[110] transform -translate-x-full flex flex-col">
+        <div class="p-5 bg-blue-600 text-white flex justify-between items-center">
+            <h2 class="font-bold text-lg"><i class="fas fa-id-badge mr-2"></i> AN ID CARDS</h2>
+            <button onclick="toggleSidebar()" class="text-white hover:text-gray-200"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div class="flex-1 p-4 flex flex-col gap-2">
+            <button onclick="openRecycleBin(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
+                <i class="fas fa-trash-restore w-5 text-center text-red-500"></i> Recycle Bin
+            </button>
+            <a href="catalogue.html" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
+                <i class="fas fa-book-open w-5 text-center text-blue-500"></i> View Catalog
+            </a>
+            <a href="https://wa.me/917855800205" target="_blank" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
+                <i class="fab fa-whatsapp w-5 text-center text-[#25D366] text-lg"></i> WhatsApp Support
+            </a>
+            <button onclick="shareApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
+                <i class="fas fa-share-nodes w-5 text-center text-gray-500"></i> Share App
+            </button>
+            
+            <div class="mt-auto border-t border-gray-200 pt-4">
+               <button onclick="hardResetApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-red-50 text-red-600 transition text-left font-bold">
+                    <i class="fas fa-sign-out-alt w-5 text-center"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Container -->
+    <div class="max-w-lg mx-auto p-4 pt-4">
+        
+        <!-- ================= SCHOOL REGISTRATION SECTION ================= -->
+        <div id="schoolSection" class="hidden animate-fade-in">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-500 text-2xl">
+                    <i class="fas fa-school"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">School Registration</h2>
+            </div>
+            
+            <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-dashed border-blue-300 mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Restore Admin Uploaded Data</label>
+                <input type="text" id="restoreUdiseInput" placeholder="Enter UDISE Number (11 digits)" maxlength="11" inputmode="numeric" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl transition flex justify-center items-center gap-2" id="restoreUdiseBtn">
+                    <i class="fas fa-cloud-download-alt"></i> Check & Restore Data
+                </button>
+                <div id="restoreStatus" class="text-sm mt-3 font-medium hidden"></div>
+            </div>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="flex-1 h-px bg-gray-300"></div>
+                <span class="text-gray-400 font-medium text-sm">OR CREATE NEW</span>
+                <div class="flex-1 h-px bg-gray-300"></div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-800 mb-4">New School Details</h3>
+                <input type="text" id="newSchoolName" placeholder="Enter School Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <input type="tel" id="newSchoolPhone" placeholder="School Contact Number" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                
+                <div class="flex gap-3 mb-3">
+                    <input type="text" id="newBlock" placeholder="Block" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <input type="text" id="newDistrict" placeholder="District" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+                <div class="flex gap-3 mb-4">
+                    <input type="number" id="newPin" placeholder="Pin Code" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <input type="text" id="newUdise" placeholder="UDISE (11 digits) *" maxlength="11" inputmode="numeric" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+
+                <!-- Data Import Preference (NEW FEATURE) -->
+                <div class="mb-4 pt-2 border-t border-gray-100">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">How would you like to add students?</label>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="importMethod" value="manual" class="peer sr-only" checked onchange="toggleUdiseAuth(this.value)">
+                            <div class="text-center p-3 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition">
+                                <i class="fas fa-keyboard text-gray-400 peer-checked:text-blue-500 mb-1"></i>
+                                <div class="font-bold text-sm text-gray-700">Add Manually</div>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="importMethod" value="auto" class="peer sr-only" onchange="toggleUdiseAuth(this.value)">
+                            <div class="text-center p-3 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition">
+                                <i class="fas fa-magic text-gray-400 peer-checked:text-blue-500 mb-1"></i>
+                                <div class="font-bold text-sm text-gray-700">Auto-Load</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Hidden Auth Fields -->
+                    <div id="udiseAuthFields" class="hidden bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                        <p class="text-xs text-blue-800 mb-3"><i class="fas fa-info-circle"></i> Provide your UDISE login. We will securely extract your student data within 24 hours.</p>
+                        <input type="text" id="udiseUser" placeholder="UDISE Username" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 transition">
+                        <input type="password" id="udisePass" placeholder="UDISE Password" class="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 transition">
+                    </div>
+                </div>
+
+                <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-md" id="addSchoolBtn">Save School</button>
+            </div>
+        </div>
+
+        <!-- ================= ENTRY SECTION ================= -->
+        <div id="entrySection" class="hidden">
+
+            <!-- Waiting State Card (Shown if Auto-Load is pending) -->
+            <div id="pendingImportCard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center mb-6">
+                <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 text-2xl animate-pulse">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Data Extraction in Progress</h3>
+                <p class="text-sm text-gray-600 mb-6">Your students will be automatically loaded here within 24 hours. You can view, edit, or add photos then.</p>
+                <button onclick="cancelPendingImport()" class="w-full bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-xl transition">
+                    No, I want to add data manually instead
+                </button>
+            </div>
+
+            <!-- Standard Dashboard Controls (Hidden if pending) -->
+            <div id="standardDashboardControls">
+                <!-- Stats Dashboard -->
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
+                        <div class="text-xs text-gray-500 font-bold mb-1">TOTAL</div>
+                        <div class="text-xl font-black text-gray-800" id="statTotal">0</div>
+                    </div>
+                    <div class="bg-green-50/50 p-3 rounded-xl shadow-sm border border-green-100 text-center">
+                        <div class="text-xs text-green-600 font-bold mb-1">COMPLETED</div>
+                        <div class="text-xl font-black text-green-700" id="statCompleted">0</div>
+                    </div>
+                    <div class="bg-amber-50/50 p-3 rounded-xl shadow-sm border border-amber-100 text-center">
+                        <div class="text-xs text-amber-600 font-bold mb-1">PENDING</div>
+                        <div class="text-xl font-black text-amber-700" id="statPending">0</div>
+                    </div>
+                </div>
+
+                <!-- Search and Filter Bar -->
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-4 flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" id="searchInput" placeholder="Search name or roll..." class="block w-full pl-10 p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
+                    </div>
+                    <div class="w-full sm:w-1/3">
+                        <select id="filterClass" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
+                            <option value="ALL">All Classes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Add Student Button (Inline Above List) -->
+                <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fas fa-user-plus"></i> <span>Add New Student Manually</span>
+                </button>
+
+                <!-- Student List Header -->
+                <div class="flex justify-between items-end mb-3 px-1">
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-xl m-0">Student List</h3>
+                        <p class="text-xs text-gray-500 m-0" id="listCounter">Loading...</p>
+                    </div>
+                    <button id="manualSyncBtn" onclick="syncAllPending()" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2">
+                        <i class="fas fa-sync-alt"></i> Sync
+                    </button>
+                </div>
+                
+                <!-- Student List -->
+                <div id="studentList" class="flex flex-col gap-3"></div>
+                
+                <div id="noResultsMsg" class="hidden text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-3xl mb-3 opacity-50"></i>
+                    <p>No students found matching your search.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- UDISE Source Selector Modal -->
+    <div id="udiseSelectorModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <h3 class="text-xl font-bold text-blue-800 mb-2">Select Data Source</h3>
+            <p class="text-sm text-gray-600 mb-5">This UDISE contains entries from different sources. Which batch would you like to manage?</p>
+            
+            <div id="udiseSelectorList" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1 pb-4">
+                <!-- Dynamically populated -->
+            </div>
+            
+            <button onclick="document.getElementById('udiseSelectorModal').classList.add('hidden')" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Add/Edit Student Modal -->
+    <div id="addStudentModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl p-5 relative" id="addStudentFormContainer">
+            
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                <h4 id="formTitle" class="font-bold text-lg text-gray-800">Add Student</h4>
+                <div class="flex gap-2">
+                    <button onclick="resetForm()" class="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center transition" title="Close"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            
+            <input type="hidden" id="editId">
+            <input type="text" id="sName" placeholder="Full Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            
+            <div class="flex gap-3 mb-3">
+                <select id="sClass" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <option value="">Class</option>
+                    <option value="Shishuvatika">Shishuvatika</option>
+                    <option value="1">Class 1</option>
+                    <option value="2">Class 2</option>
+                    <option value="3">Class 3</option>
+                    <option value="4">Class 4</option>
+                    <option value="5">Class 5</option>
+                    <option value="6">Class 6</option>
+                    <option value="7">Class 7</option>
+                    <option value="8">Class 8</option>
+                    <option value="9">Class 9</option>
+                    <option value="10">Class 10</option>
+                </select>
+                <input type="text" id="sRoll" placeholder="Roll No" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+            
+            <input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+
+            <div class="flex gap-3 mb-4">
+               <input type="text" id="sDob" placeholder="Date of Birth" onpointerdown="(this.type='date')" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <select id="sBlood" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <option value="">Blood Group</option>
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                </select>
+            </div>
+
+            <!-- Photo Area -->
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center mb-5 relative">
+                <div class="flex gap-3 justify-center mb-3">
+                    <button id="openCam" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-camera mr-2"></i> Camera</button>
+                    <input type="file" id="fileInput" accept="image/*" class="hidden">
+                    <button onclick="document.getElementById('fileInput').click()" class="flex-1 bg-white border border-blue-500 text-blue-600 hover:bg-blue-50 font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-image mr-2"></i> Gallery</button>
+                </div>
+                
+                <div class="relative inline-block">
+                    <img id="preview" src="" class="w-24 h-32 object-cover mx-auto rounded-xl shadow-md border-2 border-white hidden">
+                    <button id="removePhotoBtn" onclick="removePhoto()" class="hidden absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-red-600">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
+                <button onclick="resetForm()" id="cancelEditBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition hidden">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Edit School Modal -->
+    <div id="editSchoolModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xl font-bold text-gray-900">Edit School Info</h3>
+                <button onclick="document.getElementById('editSchoolModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <label class="block text-sm font-bold text-gray-700 mb-1">School Name</label>
+            <input type="text" id="editSchoolNameInput" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+
+            <label class="block text-sm font-bold text-gray-700 mb-1">Contact Number</label>
+            <input type="tel" id="editSchoolPhoneInput" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+            
+            <div class="flex gap-3 mb-4">
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Block</label>
+                    <input type="text" id="editSchoolBlock" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">District</label>
+                    <input type="text" id="editSchoolDistrict" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="flex gap-3 mb-6">
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Pin Code</label>
+                    <input type="number" id="editSchoolPin" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">UDISE *</label>
+                    <input type="text" id="editSchoolUdise" maxlength="11" inputmode="numeric" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-3">
+                <button id="saveSchoolEditBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow transition">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Camera Modal -->
+    <div id="cameraModal" class="hidden fixed inset-0 bg-black z-[150] flex flex-col">
+        <div class="relative flex-1 w-full h-full overflow-hidden flex items-center justify-center bg-black">
+            <video id="cameraVideo" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline></video>
+            
+            <!-- Target Overlay mask -->
+            <div id="cameraOverlay" class="pointer-events-none absolute z-10 w-[70vw] max-w-[280px] aspect-[3/4] border-2 border-dashed border-white/80 rounded-xl flex flex-col items-center justify-end pb-8 mb-16 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]">
+                 <svg class="w-[85%] h-[85%] text-white/60 mb-2" viewBox="0 0 100 120" fill="none" stroke="currentColor" stroke-width="2.5">
+                     <ellipse cx="50" cy="45" rx="28" ry="34" />
+                     <path d="M 10 120 C 10 90, 20 80, 50 80 C 80 80, 90 90, 90 120" />
+                 </svg>
+                 <div class="absolute top-4 text-white font-bold tracking-widest text-center w-full uppercase text-xs drop-shadow-md">Align Face Here</div>
+            </div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="bg-black/90 pb-8 pt-4 px-6 flex justify-between items-center absolute bottom-0 w-full z-[160]">
+            <button onclick="closeCam()" class="text-white text-lg px-4 py-2 hover:bg-white/20 rounded-lg transition">Cancel</button>
+            <button id="snap" class="w-16 h-16 rounded-full bg-white border-4 border-gray-300 flex-shrink-0 active:scale-90 transition transform"></button>
+            <div class="w-16"></div> <!-- Spacer -->
+        </div>
+    </div>
+
+    <!-- Cropper Modal (Only for Gallery Uploads) -->
+    <div id="cropperModal" class="hidden fixed inset-0 bg-black/90 z-[200] flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white rounded-xl overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-3 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-gray-800">Crop Photo</h3>
+                <button onclick="closeCropper()" class="text-gray-500 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div id="cropperContainer" class="w-full bg-black flex items-center justify-center overflow-hidden" style="max-height: 60vh;">
+                <img id="imageToCrop" src="" class="max-w-full">
+            </div>
+            <div class="p-4 bg-gray-50 flex gap-3">
+                <button onclick="closeCropper()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-bold">Cancel</button>
+                <button id="cropSaveBtn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-bold">Save Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recycle Bin Modal -->
+    <div id="recycleBinModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <div class="flex items-center gap-2 text-red-600 font-bold">
+                    <i class="fas fa-trash-restore"></i> Recycle Bin
+                </div>
+                <button onclick="closeRecycleBin()" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="px-4 py-2 bg-red-50 border-b border-red-100 flex justify-between items-center text-sm">
+                <span class="text-red-600 font-medium">Items keep for 30 days.</span>
+                <button onclick="emptyRecycleBin()" class="text-red-700 font-bold hover:underline bg-white/50 px-2 py-1 rounded">Empty Bin</button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1 bg-gray-50" id="recycleBinList">
+                <!-- Deleted items will go here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="customConfirmModal" class="hidden fixed inset-0 bg-black/60 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl scale-95 transform transition-transform duration-200" id="confirmBox">
+            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2" id="confirmTitle">Are you sure?</h3>
+            <p id="confirmMsg" class="text-gray-600 mb-6 text-sm"></p>
+            <div class="flex gap-3">
+                <button id="confirmCancelBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-xl font-bold transition">Cancel</button>
+                <button id="confirmOkBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition">Yes, Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fixed Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+
+    <script>
+        // ==========================================
+        // UI INTERACTION (Sidebar & Import Method)
+        // ==========================================
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => {
+                    overlay.classList.remove('opacity-0');
+                    sidebar.classList.remove('-translate-x-full');
+                }, 10);
+            } else {
+                overlay.classList.add('opacity-0');
+                sidebar.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        window.toggleUdiseAuth = function(val) {
+            const authFields = document.getElementById('udiseAuthFields');
+            if (val === 'auto') {
+                authFields.classList.remove('hidden');
+            } else {
+                authFields.classList.add('hidden');
+                document.getElementById('udiseUser').value = '';
+                document.getElementById('udisePass').value = '';
+            }
+        }
+
+        // ==========================================
+        // DATA NORMALIZATION (Excel Mappers)
+        // ==========================================
+        function normalizeClass(cls) {
+            if (!cls) return "";
+            const c = String(cls).toLowerCase().replace(/[\s\-\.]/g, '');
+            if (['1', 'i', '01', '1st', 'class1', 'classi', 'std1'].includes(c)) return "1";
+            if (['2', 'ii', '02', '2nd', 'class2', 'classii', 'std2'].includes(c)) return "2";
+            if (['3', 'iii', '03', '3rd', 'class3', 'classiii', 'std3'].includes(c)) return "3";
+            if (['4', 'iv', '04', '4th', 'class4', 'classiv', 'std4'].includes(c)) return "4";
+            if (['5', 'v', '05', '5th', 'class5', 'classv', 'std5'].includes(c)) return "5";
+            if (['6', 'vi', '06', '6th', 'class6', 'classvi', 'std6'].includes(c)) return "6";
+            if (['7', 'vii', '07', '7th', 'class7', 'classvii', 'std7'].includes(c)) return "7";
+            if (['8', 'viii', '08', '8th', 'class8', 'classviii', 'std8'].includes(c)) return "8";
+            if (['9', 'ix', '09', '9th', 'class9', 'classix', 'std9'].includes(c)) return "9";
+            if (['10', 'x', '10th', 'class10', 'classx', 'std10'].includes(c)) return "10";
+            if (['shishuvatika', 'shishu', 'nursery', 'nursary', 'lkg', 'ukg', 'ukh', 'kg', 'kg1', 'kg2', 'pp1', 'pp2', 'preprimary'].includes(c)) return "Shishuvatika";
+            return cls; 
+        }
+
+        function formatDateForInput(dateStr) {
+            if (!dateStr) return '';
+            dateStr = String(dateStr).trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+            
+            if (/^\d{5}$/.test(dateStr)) {
+                const excelEpoch = new Date(1899, 11, 30);
+                const dateObj = new Date(excelEpoch.getTime() + (parseInt(dateStr) * 86400000));
+                return dateObj.toISOString().split('T')[0];
+            }
+            
+            const parts = dateStr.split(/[\/\-\.]/);
+            if (parts.length === 3) {
+                let p0 = parts[0], p1 = parts[1], p2 = parts[2];
+                if (p0.length === 4) return `${p0}-${p1.padStart(2, '0')}-${p2.padStart(2, '0')}`;
+                if (p2.length === 2 || p2.length === 4) {
+                    let y = p2.length === 2 ? "20" + p2 : p2;
+                    return `${y}-${p1.padStart(2, '0')}-${p0.padStart(2, '0')}`;
+                }
+            }
+            return dateStr;
+        }
+
+        function escapeHtml(s){ 
+            if(!s) return '';
+            return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); 
+        }
+
+        function getStudentSource(d) {
+            if (d.source) return d.source;
+            if (d.batchId || d.isExcel) return 'excel';
+            if (d.synced === undefined && d.photoName === undefined && d.source !== 'manual') return 'excel';
+            return 'manual';
+        }
+
+        // ==========================================
+        // UI UTILITIES
+        // ==========================================
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = type === 'error' ? 'bg-red-600' : 'bg-gray-900';
+            let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-red-400"></i>' : '<i class="fas fa-check-circle text-green-400"></i>';
+
+            toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
+            toast.innerHTML = `${icon} <span class="text-sm font-medium leading-snug">${msg}</span>`;
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-enter-active');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('toast-enter-active');
+                toast.classList.add('toast-exit-active');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function showConfirm(msg, title = "Are you sure?", confirmBtnText = "Yes, Continue", btnClass = "bg-red-600 hover:bg-red-700") {
+            return new Promise(resolve => {
+                const modal = document.getElementById('customConfirmModal');
+                const box = document.getElementById('confirmBox');
+                const okBtn = document.getElementById('confirmOkBtn');
+
+                document.getElementById('confirmTitle').textContent = title;
+                document.getElementById('confirmMsg').textContent = msg;
+                okBtn.textContent = confirmBtnText;
+                okBtn.className = `flex-1 text-white py-3 rounded-xl font-bold transition ${btnClass}`;
+                
+                modal.classList.remove('hidden');
+                setTimeout(() => box.classList.remove('scale-95'), 10);
+
+                const cleanup = () => {
+                    box.classList.add('scale-95');
+                    setTimeout(() => modal.classList.add('hidden'), 200);
+                };
+
+                okBtn.onclick = () => { cleanup(); resolve(true); };
+                document.getElementById('confirmCancelBtn').onclick = () => { cleanup(); resolve(false); };
+            });
+        }
+
+        window.alert = function(msg) { showToast(msg, 'error'); };
+
+        async function shareApp() {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'AN ID CARDS - Data Entry',
+                        text: 'Install this app to collect student ID card data completely offline!',
+                        url: window.location.href
+                    });
+                } catch (err) {
+                    console.log('User cancelled share or error:', err);
+                }
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                showToast("Link copied to clipboard!", "success");
+            }
+        }
+
+        // Live Sync State
+        let unsubscribeRealtime = null;
+
+        function updateOnlineStatus() {
+            const banner = document.getElementById('offlineBanner');
+            if (navigator.onLine) {
+                banner.classList.add('-translate-y-full');
+            } else {
+                banner.classList.remove('hidden');
+                setTimeout(() => {
+                    banner.classList.remove('-translate-y-full');
+                }, 10);
+            }
+        }
+        
+        window.addEventListener('online', () => { 
+            updateOnlineStatus(); 
+            syncAllPending(); 
+            setupRealtimeListener(); 
+        });
+        
+        window.addEventListener('offline', () => {
+            updateOnlineStatus();
+            if(unsubscribeRealtime) { unsubscribeRealtime(); unsubscribeRealtime = null; }
+            const liveIndicator = document.getElementById('liveIndicator');
+            if(liveIndicator) liveIndicator.classList.add('hidden');
+        });
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                document.getElementById('updateBanner').classList.remove('hidden');
+            });
+        }
+
+        window.openAddForm = function() {
+            resetForm(false); 
+            document.getElementById('formTitle').innerHTML = 'Add New Student';
+            document.getElementById('saveBtn').innerHTML = 'Save Student';
+            document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
+            
+            document.getElementById('addStudentModal').classList.remove('hidden');
+        }
+
+        // ==========================================
+        // FIREBASE & INDEXEDDB SETUP
+        // ==========================================
+        const firebaseConfig = {
+              apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+              authDomain: "idcard-60586.firebaseapp.com",
+              projectId: "idcard-60586",
+              storageBucket: "idcard-60586.firebasestorage.app",
+              messagingSenderId: "331979663377",
+              appId: "1:331979663377:web:026e537a7fcaca813129b0",
+              measurementId: "G-PXVV87C78S"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const firestore = firebase.firestore();
+        const firebaseStorage = firebase.storage();
+
+        let db, currentSchool = null, currentSchoolData = null, students = [];
+        let filteredStudents = [];
+        let deletedStudents = [];
+        let currentPhotoBlob = null;
+        let visibleCount = 50; 
+        let cropper = null;
+
+        const req = indexedDB.open('SchoolDataApp', 6); 
+        req.onupgradeneeded = e => {
+            db = e.target.result;
+            if(!db.objectStoreNames.contains('schools')) db.createObjectStore('schools', {keyPath:'name'});
+            if(!db.objectStoreNames.contains('students')) {
+                const st = db.createObjectStore('students', {keyPath:'id'});
+                st.createIndex('schoolName', 'schoolName', {unique:false});
+            }
+            if(!db.objectStoreNames.contains('deleted_students')) {
+                const dst = db.createObjectStore('deleted_students', {keyPath:'id'});
+                dst.createIndex('schoolName', 'schoolName', {unique:false});
+            }
+        };
+        
+        req.onsuccess = e => {
+            db = e.target.result;
+            cleanupRecycleBin(); 
+            loadSchools();
+            updateOnlineStatus();
+            if (navigator.onLine) {
+                syncAllPending();
+                const pending = localStorage.getItem('pendingSchoolRename');
+                if (pending) {
+                    const { oldName, updates } = JSON.parse(pending);
+                    pushSchoolRenameToFirestore(oldName, updates);
+                }
+            }
+        };
+
+        // ==========================================
+        // REALTIME SYNC LISTENER
+        // ==========================================
+        function setupRealtimeListener() {
+            if(!currentSchoolData || !currentSchoolData.udise || !navigator.onLine) return;
+            
+            if(unsubscribeRealtime) unsubscribeRealtime();
+
+            const liveIndicator = document.getElementById('liveIndicator');
+            if(liveIndicator) liveIndicator.classList.remove('hidden');
+
+            unsubscribeRealtime = firestore.collection('students')
+                .where('udise', '==', currentSchoolData.udise)
+                .onSnapshot(snapshot => {
+                    const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
+                    const studentStore = tx.objectStore('students');
+                    const deletedStore = tx.objectStore('deleted_students');
+                    let hasUpdates = false;
+
+                    snapshot.docChanges().forEach(change => {
+                        const data = change.doc.data();
+                        
+                        const actualSource = getStudentSource(data);
+                        
+                        const student = { ...data, id: Number(change.doc.id), synced: true, source: actualSource };
+                        delete student.submittedAt;
+
+                        if(student.finalised === undefined) student.finalised = true;
+
+                        if (change.type === 'added' || change.type === 'modified') {
+                            if (!data.deleted) {
+                                studentStore.put(student);
+                                deletedStore.delete(student.id);
+                            } else {
+                                studentStore.delete(student.id);
+                                deletedStore.put(student);
+                            }
+                            hasUpdates = true;
+                        }
+                        if (change.type === 'removed') {
+                            studentStore.delete(student.id);
+                            deletedStore.delete(student.id);
+                            hasUpdates = true;
+                        }
+                    });
+
+                    tx.oncomplete = () => {
+                        if (hasUpdates) {
+                            loadStudents();
+                            loadRecycleBin();
+                        }
+                    };
+                }, error => {
+                    console.error("Live sync error:", error);
+                    if(liveIndicator) liveIndicator.classList.add('hidden');
+                });
+        }
+
+
+        // ==========================================
+        // IMAGE PROCESSING (CROPPER & CAMERA)
+        // ==========================================
+        const blobToBase64 = blob => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+        });
+
+        function compressImageToDataURL(imgElement, quality = 0.8) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const MAX_WIDTH = 400; 
+                let width = imgElement.width;
+                let height = imgElement.height;
+                if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+                canvas.width = width; canvas.height = height;
+                ctx.drawImage(imgElement, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            });
+        }
+
+        function recompressBase64(dataUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(compressImageToDataURL(img, 0.7));
+                img.onerror = reject;
+                img.src = dataUrl;
+            });
+        }
+
+        function openCropper(imageSrc) {
+            const modal = document.getElementById('cropperModal');
+            const imgElement = document.getElementById('imageToCrop');
+            imgElement.src = imageSrc;
+            modal.classList.remove('hidden');
+
+            setTimeout(() => {
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(imgElement, {
+                    aspectRatio: 3 / 4,
+                    viewMode: 1,
+                    autoCropArea: 0.9,
+                    dragMode: 'move',
+                    background: false,
+                });
+            }, 50);
+        }
+
+        function closeCropper() {
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            document.getElementById('cropperModal').classList.add('hidden');
+            document.getElementById('fileInput').value = '';
+        }
+
+        document.getElementById('cropSaveBtn').onclick = () => {
+            if (!cropper) return;
+            const canvas = cropper.getCroppedCanvas({
+                width: 300,
+                height: 400,
+                fillColor: '#fff'
+            });
+            
+            const croppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            setPreviewImage(croppedBase64);
+            
+            fetch(croppedBase64)
+                .then(res => res.blob())
+                .then(blob => {
+                    currentPhotoBlob = blob;
+                    closeCropper();
+                });
+        };
+
+        document.getElementById('openCam').onclick = async () => {
+            document.getElementById('cameraModal').classList.remove('hidden');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                document.getElementById('cameraVideo').srcObject = stream;
+            } catch(e) {
+                showToast("Camera access denied or unavailable", "error");
+                closeCam();
+            }
+        };
+
+        document.getElementById('snap').onclick = async () => {
+            const video = document.getElementById('cameraVideo');
+            if(!video.videoWidth) return;
+            
+            const overlay = document.getElementById('cameraOverlay');
+            
+            const vidW = video.videoWidth;
+            const vidH = video.videoHeight;
+            const rectW = video.clientWidth;
+            const rectH = video.clientHeight;
+            
+            const scale = Math.max(rectW / vidW, rectH / vidH);
+            const renderW = vidW * scale;
+            const renderH = vidH * scale;
+            
+            const offsetX = (rectW - renderW) / 2;
+            const offsetY = (rectH - renderH) / 2;
+            
+            const overlayRect = overlay.getBoundingClientRect();
+            const videoRect = video.getBoundingClientRect();
+            
+            const overlayLeft = overlayRect.left - videoRect.left;
+            const overlayTop = overlayRect.top - videoRect.top;
+            
+            const cropX = (overlayLeft - offsetX) / scale;
+            const cropY = (overlayTop - offsetY) / scale;
+            const cropW = overlayRect.width / scale;
+            const cropH = overlayRect.height / scale;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 300; 
+            tempCanvas.height = 400;
+            const ctx = tempCanvas.getContext('2d');
+            
+            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, 300, 400);
+            const imgData = tempCanvas.toDataURL('image/jpeg', 0.75);
+            
+            setPreviewImage(imgData);
+            
+            const response = await fetch(imgData);
+            currentPhotoBlob = await response.blob();
+            
+            closeCam();
+        };
+
+        function closeCam() {
+            const s = document.getElementById('cameraVideo').srcObject;
+            if(s) s.getTracks().forEach(t=>t.stop());
+            document.getElementById('cameraModal').classList.add('hidden');
+        }
+
+        document.getElementById('fileInput').onchange = e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    openCropper(event.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        function setPreviewImage(src) {
+            const preview = document.getElementById('preview');
+            const removeBtn = document.getElementById('removePhotoBtn');
+            preview.src = src;
+            preview.classList.remove('hidden');
+            removeBtn.classList.remove('hidden');
+        }
+
+        window.removePhoto = function() {
+            document.getElementById('preview').src = '';
+            document.getElementById('preview').classList.add('hidden');
+            document.getElementById('removePhotoBtn').classList.add('hidden');
+            currentPhotoBlob = null;
+            document.getElementById('fileInput').value = '';
+        }
+
+        // ==========================================
+        // SYNC LOGIC
+        // ==========================================
+        let isSyncing = false;
+        async function syncAllPending() {
+            if(!db || !navigator.onLine) return;
+            if(isSyncing) return;
+            isSyncing = true;
+            const btn = document.getElementById('manualSyncBtn');
+
+            const unsyncedIds = [];
+            await new Promise((resolve) => {
+                const tx = db.transaction(['students'], 'readonly');
+                const cursorReq = tx.objectStore('students').openCursor();
+                cursorReq.onsuccess = e => {
+                    const cursor = e.target.result;
+                    if (cursor) {
+                        if (!cursor.value.synced) unsyncedIds.push({id: cursor.value.id, store: 'students'});
+                        cursor.continue();
+                    } else resolve();
+                };
+            });
+
+            await new Promise((resolve) => {
+                const tx = db.transaction(['deleted_students'], 'readonly');
+                const cursorReq = tx.objectStore('deleted_students').openCursor();
+                cursorReq.onsuccess = e => {
+                    const cursor = e.target.result;
+                    if (cursor) {
+                        if (!cursor.value.synced) unsyncedIds.push({id: cursor.value.id, store: 'deleted_students'});
+                        cursor.continue();
+                    } else resolve();
+                };
+            });
+
+            if (unsyncedIds.length === 0) {
+                if (btn) {
+                    btn.innerHTML = "<i class='fas fa-check'></i> All Synced";
+                    btn.classList.replace('bg-blue-100', 'bg-green-100');
+                    btn.classList.replace('text-blue-600', 'text-green-600');
+                    setTimeout(() => {
+                        btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync";
+                        btn.classList.replace('bg-green-100', 'bg-blue-100');
+                        btn.classList.replace('text-green-600', 'text-blue-600');
+                    }, 2000);
+                }
+                isSyncing = false;
+                return;
+            }
+
+            try {
+                let successCount = 0, failCount = 0;
+                for (let i = 0; i < unsyncedIds.length; i++) {
+                    if (btn) btn.innerHTML = `<i class='fas fa-spinner fa-spin'></i> ${i + 1}/${unsyncedIds.length}`;
+                    try {
+                        const storeName = unsyncedIds[i].store;
+                        const student = await new Promise((resolve) => {
+                            const tx = db.transaction([storeName], 'readonly');
+                            const getReq = tx.objectStore(storeName).get(unsyncedIds[i].id);
+                            getReq.onsuccess = () => resolve(getReq.result);
+                        });
+                        
+                        if (!student || student.synced) continue; 
+                        
+                        await syncToFirebase(student, storeName);
+                        successCount++;
+
+                        if (student.syncError) {
+                            delete student.syncError;
+                            const tx2 = db.transaction([storeName], 'readwrite');
+                            tx2.objectStore(storeName).put(student);
+                        }
+                    } catch (err) {
+                        failCount++;
+                        try {
+                            const storeName = unsyncedIds[i].store;
+                            const tx3 = db.transaction([storeName], 'readwrite');
+                            const getReq2 = tx3.objectStore(storeName).get(unsyncedIds[i].id);
+                            getReq2.onsuccess = () => {
+                                const rec = getReq2.result;
+                                if (rec) {
+                                    rec.syncError = (err && err.message) ? err.message : String(err);
+                                    tx3.objectStore(storeName).put(rec);
+                                }
+                            };
+                        } catch (e2) {}
+                    }
+                }
+
+                if (btn) {
+                    if (failCount === 0) {
+                        btn.innerHTML = "<i class='fas fa-check'></i> Synced";
+                        btn.classList.replace('bg-blue-100', 'bg-green-100');
+                        btn.classList.replace('text-blue-600', 'text-green-600');
+                    }
+                    else {
+                        btn.innerHTML = `<i class='fas fa-exclamation-triangle'></i> ${failCount} failed`;
+                        btn.classList.replace('bg-blue-100', 'bg-amber-100');
+                        btn.classList.replace('text-blue-600', 'text-amber-600');
+                    }
+                    setTimeout(() => {
+                        btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync";
+                        btn.className = "bg-blue-100 text-blue-600 hover:bg-blue-200 px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2";
+                    }, 3000);
+                }
+            } finally {
+                isSyncing = false;
+                loadStudents(); 
+            }
+        }
+
+        async function syncToFirebase(student, storeName = 'students') {
+            try {
+                if (student.photoBase64 && !student.photoBase64.startsWith('http')) {
+                    const storageRef = firebaseStorage.ref(`student_photos/${student.udise}_${student.id}.jpg`);
+                    const metadata = { contentType: 'image/jpeg' };
+                    await storageRef.putString(student.photoBase64, 'data_url', metadata);
+                    
+                    const downloadURL = await storageRef.getDownloadURL();
+                    student.photoBase64 = downloadURL;
+                    
+                    await new Promise((resolve, reject) => {
+                        const tx = db.transaction([storeName], 'readwrite');
+                        tx.objectStore(storeName).put(student);
+                        tx.oncomplete = resolve;
+                        tx.onerror = reject;
+                    });
+                }
+
+                await firestore.collection('students').doc(String(student.id)).set(student);
+
+                student.synced = true;
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction([storeName], 'readwrite');
+                    tx.objectStore(storeName).put(student);
+                    tx.oncomplete = resolve;
+                    tx.onerror = reject;
+                });
+                
+            } catch (err) {
+                console.error(`Sync failed:`, err);
+                throw err;
+            }
+        }
+
+        // ==========================================
+        // SCHOOL LOGIC
+        // ==========================================
+        function loadSchools() {
+            const tx = db.transaction(['schools'], 'readonly');
+            tx.objectStore('schools').getAll().onsuccess = e => {
+                const schools = e.target.result;
+                if(schools.length > 0) {
+                    enterSchool(schools[0]);
+                } else {
+                    document.getElementById('schoolSection').classList.remove('hidden');
+                    document.getElementById('entrySection').classList.add('hidden');
+                    document.getElementById('editSchoolBtn').classList.add('hidden');
+                    document.getElementById('headerSpacer').classList.remove('hidden');
+                }
+            };
+        }
+
+        function performRestore(docs, schoolName, udise, source, statusEl) {
+            
+            const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
+            
+            const schoolObj = {
+                name: localId, 
+                realSchoolName: schoolName, 
+                source: source,
+                phone: docs[0].data.hmPhone || '', 
+                block: docs[0].data.block || '',
+                district: docs[0].data.district || '', 
+                pin: docs[0].data.pin || '', 
+                udise: udise,
+                hmSignature: docs[0].data.hmSignature || '', 
+                createdAt: Date.now(),
+                importStatus: 'manual'
+            };
+
+            statusEl.className = 'text-sm mt-3 font-medium text-blue-600 block';
+            statusEl.textContent = `Restoring ${docs.length} student(s)...`;
+
+            const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
+            
+            tx.objectStore('schools').delete(localId);
+            tx.objectStore('schools').put(schoolObj);
+
+            const studentStore = tx.objectStore('students');
+            const deletedStore = tx.objectStore('deleted_students');
+            let restoreCount = 0;
+            
+            docs.forEach(({ id, data }) => {
+                const student = { ...data, id: Number(id), synced: true, source: source };
+                delete student.submittedAt;
+
+                if (!data.deleted) {
+                    if(student.finalised === undefined) student.finalised = true;
+                    studentStore.put(student);
+                    restoreCount++;
+                } else {
+                    deletedStore.put(student);
+                }
+            });
+
+            tx.oncomplete = () => {
+                showToast(`Restored ${restoreCount} students successfully!`);
+                
+                if(navigator.onLine) {
+                    firestore.collection('schools').doc(schoolObj.udise).set({
+                        name: schoolObj.realSchoolName, phone: schoolObj.phone, block: schoolObj.block, district: schoolObj.district,
+                        pin: schoolObj.pin, udise: schoolObj.udise, hmSignature: schoolObj.hmSignature, createdAt: schoolObj.createdAt, lastModified: Date.now()
+                    }, {merge:true}).catch(e => console.error(e));
+                }
+
+                setTimeout(() => enterSchool(schoolObj), 800);
+            };
+            tx.onerror = () => {
+                showToast("Failed saving locally.", "error");
+                document.getElementById('restoreUdiseBtn').disabled = false;
+            };
+        }
+
+        document.getElementById('restoreUdiseBtn').onclick = async () => {
+            const udise = document.getElementById('restoreUdiseInput').value.trim();
+            const statusEl = document.getElementById('restoreStatus');
+            const btn = document.getElementById('restoreUdiseBtn');
+
+            if (!udise) return alert("Please enter the UDISE Number.");
+            if (!/^\d{11}$/.test(udise)) return alert("UDISE must be exactly 11 digits.");
+            if (!navigator.onLine) return alert("Internet required to restore data.");
+
+            statusEl.className = 'text-sm mt-3 font-medium text-blue-600 block';
+            statusEl.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Searching...";
+            btn.disabled = true;
+
+            try {
+                const snapshot = await firestore.collection('students').where('udise', '==', udise).get();
+
+                if (snapshot.empty) {
+                    statusEl.className = 'text-sm mt-3 font-medium text-red-600 block';
+                    statusEl.textContent = "No records found for this UDISE.";
+                    btn.disabled = false;
+                    return;
+                }
+
+                const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+                
+                const groups = {};
+                docs.forEach(d => {
+                    const src = getStudentSource(d.data);
+                    const rName = d.data.schoolName || '(Unnamed School)';
+                    const key = src + '|' + rName;
+                    if(!groups[key]) groups[key] = { source: src, name: rName, docs: [] };
+                    groups[key].docs.push(d);
+                });
+                
+                const keys = Object.keys(groups);
+
+                if (keys.length === 1) {
+                    const g = groups[keys[0]];
+                    performRestore(g.docs, g.name, udise, g.source, statusEl);
+                    return;
+                }
+
+                document.getElementById('schoolSection').classList.add('hidden');
+                
+                const list = document.getElementById('udiseSelectorList');
+                list.innerHTML = '';
+                
+                keys.forEach(key => {
+                    const g = groups[key];
+                    const btnHtml = document.createElement('button');
+                    
+                    if(g.source === 'excel') {
+                        btnHtml.className = 'w-full text-left bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 p-4 rounded-xl transition';
+                        btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-file-excel text-purple-600 mr-2"></i>Excel Upload Data</div>
+                                             <div class="text-xs text-purple-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
+                    } else {
+                        btnHtml.className = 'w-full text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 p-4 rounded-xl transition';
+                        btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-mobile-alt text-blue-600 mr-2"></i>App Manual Data</div>
+                                             <div class="text-xs text-blue-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
+                    }
+                    
+                    btnHtml.onclick = () => {
+                        document.getElementById('udiseSelectorModal').classList.add('hidden');
+                        document.getElementById('schoolSection').classList.remove('hidden');
+                        performRestore(g.docs, g.name, udise, g.source, statusEl);
+                    };
+                    list.appendChild(btnHtml);
+                });
+                
+                document.getElementById('udiseSelectorModal').classList.remove('hidden');
+                btn.disabled = false;
+                statusEl.innerHTML = "";
+                
+            } catch (err) {
+                statusEl.className = 'text-sm mt-3 font-medium text-red-600 block';
+                statusEl.textContent = "Server error. Check connection.";
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('addSchoolBtn').onclick = () => {
+            const name = document.getElementById('newSchoolName').value.trim();
+            const phone = document.getElementById('newSchoolPhone').value.trim();
+            const block = document.getElementById('newBlock').value.trim();
+            const district = document.getElementById('newDistrict').value.trim();
+            const pin = document.getElementById('newPin').value.trim();
+            const udise = document.getElementById('newUdise').value.trim();
+            
+            const selectedImportMethod = document.querySelector('input[name="importMethod"]:checked').value;
+            const uUser = document.getElementById('udiseUser').value.trim();
+            const uPass = document.getElementById('udisePass').value.trim();
+
+            if(!name) return alert("Enter School Name");
+            if(!udise) return alert("UDISE Number is mandatory.");
+            if(!/^\d{11}$/.test(udise)) return alert("UDISE must be exactly 11 digits.");
+            
+            if(selectedImportMethod === 'auto' && (!uUser || !uPass)) {
+                return alert("Please provide your UDISE Username and Password to enable Auto-Load.");
+            }
+            
+            const btn = document.getElementById('addSchoolBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Processing...";
+            btn.disabled = true;
+
+            const localId = `[Manual] ${name}_${udise}`;
+            
+            const checkTx = db.transaction(['schools'], 'readonly');
+            checkTx.objectStore('schools').get(localId).onsuccess = async (e) => {
+                if (e.target.result) {
+                    alert("You already have this school registered locally.");
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
+                    return; 
+                }
+
+                const schoolObj = {
+                    name: localId, 
+                    realSchoolName: name,
+                    source: 'manual',
+                    phone: phone, block: block, district: district,
+                    pin: pin, udise: udise, hmSignature: '', createdAt: Date.now(),
+                    importStatus: selectedImportMethod === 'auto' ? 'pending' : 'manual'
+                };
+
+                const tx = db.transaction(['schools'], 'readwrite');
+                tx.objectStore('schools').put(schoolObj);
+                tx.oncomplete = () => { 
+                    showToast("School created successfully!");
+                    
+                    if(navigator.onLine) {
+                        let fbData = {
+                            name: name, phone: phone, block: block, district: district,
+                            pin: pin, udise: udise, hmSignature: '', createdAt: schoolObj.createdAt, lastModified: Date.now(),
+                            importStatus: schoolObj.importStatus
+                        };
+                        
+                        if (selectedImportMethod === 'auto') {
+                            fbData.udiseUser = uUser;
+                            fbData.udisePass = uPass;
+                        }
+
+                        firestore.collection('schools').doc(udise).set(fbData, {merge:true}).catch(err => console.error(err));
+                    }
+
+                    enterSchool(schoolObj); 
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
+                };
+            };
+        };
+
+        window.cancelPendingImport = async function() {
+            if(!currentSchoolData) return;
+            
+            const confirmed = await showConfirm(
+                "Are you sure you want to cancel the auto-load request and enter student data manually?", 
+                "Switch to Manual Entry?", 
+                "Yes, Switch to Manual"
+            );
+            if(!confirmed) return;
+            
+            currentSchoolData.importStatus = 'manual';
+            
+            const tx = db.transaction(['schools'], 'readwrite');
+            tx.objectStore('schools').put(currentSchoolData);
+            
+            if(navigator.onLine) {
+                firestore.collection('schools').doc(currentSchoolData.udise).set({
+                    importStatus: 'manual',
+                    udiseUser: firebase.firestore.FieldValue.delete(), 
+                    udisePass: firebase.firestore.FieldValue.delete(),
+                    lastModified: Date.now()
+                }, {merge: true}).catch(err => console.error(err));
+            }
+            
+            showToast("Switched to manual entry mode.", "info");
+            enterSchool(currentSchoolData);
+        }
+
+        window.hardResetApp = async function() {
+            const checkTx = db.transaction(['students'], 'readonly');
+            checkTx.objectStore('students').getAll().onsuccess = async e => {
+                const unsynced = e.target.result.filter(s => !s.synced);
+                if (unsynced.length > 0) {
+                    alert(`WARNING: You have ${unsynced.length} unsynced students! Sync online before logging out.`);
+                    return;
+                }
+                
+                const confirmed = await showConfirm("Logging out will clear the current school and local data from this device. Are you sure?", "Logout?", "Yes, Logout");
+                if(!confirmed) return;
+                
+                if(unsubscribeRealtime) unsubscribeRealtime();
+
+                const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
+                tx.objectStore('schools').clear();
+                tx.objectStore('students').clear();
+                tx.objectStore('deleted_students').clear();
+                tx.oncomplete = () => { location.reload(); };
+            };
+        }
+
+        function enterSchool(schoolObj) {
+            currentSchool = schoolObj.name;
+            currentSchoolData = schoolObj;
+            if (!currentSchoolData.realSchoolName) currentSchoolData.realSchoolName = currentSchoolData.name;
+            if (!currentSchoolData.source) currentSchoolData.source = 'manual';
+            if (!currentSchoolData.importStatus) currentSchoolData.importStatus = 'manual';
+
+            document.getElementById('schoolSection').classList.add('hidden');
+            document.getElementById('entrySection').classList.remove('hidden');
+            
+            document.getElementById('editSchoolBtn').classList.remove('hidden');
+            document.getElementById('headerSpacer').classList.add('hidden');
+
+            updateSchoolHeader();
+            
+            if (currentSchoolData.importStatus === 'pending') {
+                document.getElementById('standardDashboardControls').classList.add('hidden');
+                document.getElementById('pendingImportCard').classList.remove('hidden');
+            } else {
+                document.getElementById('standardDashboardControls').classList.remove('hidden');
+                document.getElementById('pendingImportCard').classList.add('hidden');
+                
+                visibleCount = 50; 
+                setupRealtimeListener();
+                loadStudents();
+                loadRecycleBin();
+            }
+        }
+
+        function updateSchoolHeader() {
+            let display = currentSchoolData.realSchoolName;
+            
+            const srcBadge = currentSchoolData.source === 'excel' 
+                ? `<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2 py-0.5 rounded text-[9px] ml-2 tracking-wide font-black">EXCEL BATCH</span>` 
+                : `<span class="bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded text-[9px] ml-2 tracking-wide font-black">MANUAL</span>`;
+                
+            document.getElementById('currentSchoolHeader').innerHTML = `${escapeHtml(display)} ${srcBadge}`;
+            document.getElementById('currentSchoolSubHeader').textContent = `${currentSchoolData.district || 'Unknown District'} | UDISE: ${currentSchoolData.udise || 'N/A'}`;
+        }
+
+        window.openEditSchoolModal = function() {
+            document.getElementById('editSchoolNameInput').value = currentSchoolData.realSchoolName;
+            document.getElementById('editSchoolPhoneInput').value = currentSchoolData.phone || '';
+            document.getElementById('editSchoolBlock').value = currentSchoolData.block || '';
+            document.getElementById('editSchoolDistrict').value = currentSchoolData.district || '';
+            document.getElementById('editSchoolPin').value = currentSchoolData.pin || '';
+            document.getElementById('editSchoolUdise').value = currentSchoolData.udise || '';
+            document.getElementById('editSchoolModal').classList.remove('hidden');
+        }
+
+        document.getElementById('saveSchoolEditBtn').onclick = async () => {
+            const newName = document.getElementById('editSchoolNameInput').value.trim();
+            const newPhone = document.getElementById('editSchoolPhoneInput').value.trim();
+            const newBlock = document.getElementById('editSchoolBlock').value.trim();
+            const newDistrict = document.getElementById('editSchoolDistrict').value.trim();
+            const newPin = document.getElementById('editSchoolPin').value.trim();
+            const newUdise = document.getElementById('editSchoolUdise').value.trim();
+
+            if(!newName) return alert("Name cannot be empty");
+            if(!newUdise) return alert("UDISE Number is mandatory.");
+            if(!/^\d{11}$/.test(newUdise)) return alert("UDISE must be exactly 11 digits.");
+
+            const btn = document.getElementById('saveSchoolEditBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Saving...";
+            btn.disabled = true;
+
+            const updatedSchool = { 
+                ...currentSchoolData, 
+                realSchoolName: newName, 
+                phone: newPhone, 
+                block: newBlock, 
+                district: newDistrict, 
+                pin: newPin, 
+                udise: newUdise 
+            };
+
+            const firestoreUpdates = { name: newName, phone: newPhone, block: newBlock, district: newDistrict, pin: newPin, udise: newUdise, lastModified: Date.now() };
+            
+            if(navigator.onLine) {
+                 firestore.collection('schools').doc(newUdise).set(firestoreUpdates, {merge:true}).catch(e => console.log(e));
+                 if(currentSchoolData.udise !== newUdise) {
+                     firestore.collection('schools').doc(currentSchoolData.udise).delete().catch(e => console.log(e));
+                 }
+            }
+
+            const tx = db.transaction(['schools', 'students', 'deleted_students'], 'readwrite');
+            tx.objectStore('schools').put(updatedSchool);
+
+            const targetUdise = currentSchoolData.udise;
+            const targetSource = currentSchoolData.source;
+            
+            const stStore = tx.objectStore('students');
+            stStore.getAll().onsuccess = (e) => {
+                e.target.result.forEach(s => {
+                    if( (!s.udise && s.schoolName === currentSchoolData.name) || 
+                        (s.udise === targetUdise && getStudentSource(s) === targetSource)) {
+                        
+                        s.schoolName = newName; 
+                        s.block = newBlock; s.district = newDistrict;
+                        s.pin = newPin; s.udise = newUdise; s.hmPhone = newPhone;
+                        s.source = targetSource; 
+                        stStore.put(s); 
+                        
+                        if(navigator.onLine) {
+                             firestore.collection('students').doc(String(s.id)).update({
+                                  schoolName: newName, block: newBlock, district: newDistrict, pin: newPin, udise: newUdise, hmPhone: newPhone
+                             }).catch(e=>{});
+                        }
+                    }
+                });
+            };
+            
+            const delStore = tx.objectStore('deleted_students');
+            delStore.getAll().onsuccess = (e) => {
+                e.target.result.forEach(s => {
+                    if( (!s.udise && s.schoolName === currentSchoolData.name) || 
+                        (s.udise === targetUdise && getStudentSource(s) === targetSource)) {
+                        
+                        s.schoolName = newName; 
+                        s.block = newBlock; s.district = newDistrict;
+                        s.pin = newPin; s.udise = newUdise; s.hmPhone = newPhone;
+                        s.source = targetSource;
+                        delStore.put(s); 
+                    }
+                });
+            };
+
+            tx.oncomplete = () => {
+                showToast("School Details Updated!");
+                currentSchoolData = updatedSchool;
+                updateSchoolHeader();
+                document.getElementById('editSchoolModal').classList.add('hidden');
+                btn.innerHTML = origText;
+                btn.disabled = false;
+                
+                setupRealtimeListener(); 
+                
+                loadStudents();
+            };
+        };
+
+        // ==========================================
+        // STUDENT LOGIC, STATS, & FILTERS
+        // ==========================================
+        function loadStudents() {
+            const tx = db.transaction(['students'], 'readonly');
+            tx.objectStore('students').getAll().onsuccess = e => {
+                const targetUdise = currentSchoolData.udise;
+                const targetSource = currentSchoolData.source || 'manual';
+                
+                let all = e.target.result;
+                
+                students = all.filter(s => {
+                    if (!targetUdise || !s.udise) {
+                        return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
+                    }
+                    return s.udise === targetUdise && getStudentSource(s) === targetSource;
+                });
+                
+                students.sort((a,b) => {
+                    const timeB = b.lastModified || b.id;
+                    const timeA = a.lastModified || a.id;
+                    return timeB - timeA;
+                });
+                
+                students.forEach(s => {
+                    if (s.finalised === undefined) s.finalised = true; 
+                });
+
+                updateStats();
+                populateClassFilter();
+                applyFilters(); 
+            };
+        }
+
+        function updateStats() {
+            const total = students.length;
+            const completed = students.filter(s => s.finalised).length;
+            const pending = total - completed;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statCompleted').textContent = completed;
+            document.getElementById('statPending').textContent = pending;
+        }
+
+        function populateClassFilter() {
+            const classSelect = document.getElementById('filterClass');
+            const currentVal = classSelect.value;
+            
+            const classes = [...new Set(students.map(s => normalizeClass(s.class)))].filter(Boolean).sort();
+            
+            let optionsHtml = '<option value="ALL">All Classes</option>';
+            classes.forEach(c => {
+                const count = students.filter(s => normalizeClass(s.class) === c).length;
+                optionsHtml += `<option value="${c}">${c} (${count})</option>`;
+            });
+            
+            classSelect.innerHTML = optionsHtml;
+            if (classes.includes(currentVal) || currentVal === 'ALL') {
+                classSelect.value = currentVal;
+            }
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const classFilter = document.getElementById('filterClass').value;
+
+            filteredStudents = students.filter(s => {
+                const matchesSearch = s.name.toLowerCase().includes(searchTerm) || 
+                                      (s.roll && s.roll.toLowerCase().includes(searchTerm));
+                const matchesClass = classFilter === 'ALL' || normalizeClass(s.class) === classFilter;
+                return matchesSearch && matchesClass;
+            });
+
+            visibleCount = 50; 
+            renderList();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('filterClass').addEventListener('change', applyFilters);
+
+        function renderList() {
+            const list = document.getElementById('studentList');
+            const msg = document.getElementById('noResultsMsg');
+            list.innerHTML = '';
+            
+            document.getElementById('listCounter').textContent = `Showing: ${filteredStudents.length} / ${students.length}`;
+            
+            if (filteredStudents.length === 0) {
+                msg.classList.remove('hidden');
+                return;
+            } else {
+                msg.classList.add('hidden');
+            }
+
+            const visibleStudents = filteredStudents.slice(0, visibleCount);
+
+            visibleStudents.forEach((s, index) => {
+                const div = document.createElement('div');
+                div.className = 'bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden';
+                
+                let photoHtml = s.photoBase64 
+                    ? `<img src="${s.photoBase64}" class="w-14 h-14 rounded-lg object-cover shadow-sm flex-shrink-0 border border-gray-200">` 
+                    : `<div class="w-14 h-14 rounded-lg bg-red-50 flex flex-col items-center justify-center text-red-400 border border-red-100 flex-shrink-0"><i class="fas fa-user-slash mb-1"></i><span class="text-[8px] font-bold">NO PHOTO</span></div>`;
+
+                let statusHtml = '';
+                if (!s.finalised) {
+                    statusHtml = `<span class="text-amber-600 font-bold text-[10px] bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fas fa-exclamation-circle"></i> Pending Review</span>`;
+                } else if (!s.synced) {
+                    statusHtml = `<span class="text-blue-500 font-bold text-[10px] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200"><i class="fas fa-cloud-upload-alt"></i> Syncing...</span>`;
+                } else {
+                    statusHtml = `<span class="text-green-600 font-bold text-[10px] bg-green-50 px-1.5 py-0.5 rounded border border-green-200"><i class="fas fa-check-circle"></i> Completed</span>`;
+                }
+                
+                if(s.syncError) statusHtml += `<div class="text-red-500 font-bold text-[10px] mt-1 line-clamp-1 truncate w-full" title="${s.syncError}"><i class="fas fa-exclamation-triangle"></i> ${s.syncError}</div>`;
+
+                const serialNumber = filteredStudents.length - index;
+
+                div.innerHTML = `
+                    <div class="p-3 flex items-center gap-2">
+                        <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0">#${serialNumber}</div>
+                        <div class="flex-shrink-0">
+                            ${photoHtml}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <div class="font-bold text-gray-900 text-sm truncate pr-2">${escapeHtml(s.name)}</div>
+                            </div>
+                            <div class="text-xs text-gray-600 font-medium mt-1">Class: <span class="text-gray-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-gray-300">|</span> Roll: <span class="text-gray-800">${escapeHtml(s.roll)}</span></div>
+                            <div class="mt-1">${statusHtml}</div>
+                        </div>
+                        <div class="flex-shrink-0 pl-1 flex items-center gap-3 border-l border-gray-100 ml-1 pl-3">
+                            <button onclick="editStudent('${s.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Edit Student"><i class="fas fa-pen"></i></button>
+                            <button onclick="deleteStudent('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Move to Recycle Bin"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            if (filteredStudents.length > visibleCount) {
+                const btnWrapper = document.createElement('div');
+                btnWrapper.className = "text-center mt-2 pb-4";
+                btnWrapper.innerHTML = `<button onclick="window.loadMore()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2.5 px-6 rounded-full text-sm shadow-sm transition flex items-center mx-auto">Load More <i class="fas fa-chevron-down ml-2"></i></button>`;
+                list.appendChild(btnWrapper);
+            }
+        }
+        
+        window.loadMore = function() {
+            visibleCount += 50;
+            renderList();
+        }
+
+        // --- SAVE / EDIT ---
+        document.getElementById('saveBtn').onclick = async () => {
+            const idStr = document.getElementById('editId').value;
+            const name = document.getElementById('sName').value.trim();
+            const cls = document.getElementById('sClass').value;
+            const roll = document.getElementById('sRoll').value.trim();
+            const phone = document.getElementById('sPhone').value.trim();
+            const dob = document.getElementById('sDob').value;
+            const blood = document.getElementById('sBlood').value;
+
+            if(!name || !cls || !roll) return alert('Name, Class, and Roll are required.');
+            
+            const btn = document.getElementById('saveBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin mr-2'></i> Saving...";
+            btn.disabled = true;
+            
+            const id = idStr ? Number(idStr) : Date.now();
+
+            let existingData = {};
+            if(idStr) {
+                existingData = students.find(x => x.id === id) || {};
+            }
+
+            let base64 = null;
+            if(currentPhotoBlob) {
+                base64 = await blobToBase64(currentPhotoBlob);
+            } else if(idStr) {
+                base64 = existingData.photoBase64 || null;
+            }
+
+            const student = {
+                ...existingData,
+                id: id,
+                schoolName: currentSchoolData.realSchoolName || currentSchoolData.name,
+                hmSignature: currentSchoolData.hmSignature || '',
+                block: currentSchoolData.block || '',
+                district: currentSchoolData.district || '',
+                pin: currentSchoolData.pin || '',
+                udise: currentSchoolData.udise || '',
+                hmPhone: currentSchoolData.phone || '',
+                name, class: cls, roll, dob, bloodGroup: blood,
+                mobile: phone,
+                photoBase64: base64,
+                photoName: existingData.photoName || `${Date.now()}.jpg`,
+                finalised: true, 
+                synced: false,   
+                lastModified: Date.now(),
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                source: currentSchoolData.source || 'manual' 
+            };
+
+            const tx = db.transaction(['students'], 'readwrite');
+            tx.objectStore('students').put(student);
+            tx.oncomplete = () => {
+                showToast(idStr ? "Student Updated!" : "Student Saved!");
+                resetForm(); 
+                
+                if (!idStr) {
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('filterClass').value = 'ALL';
+                }
+                
+                loadStudents();
+                
+                if (navigator.onLine) {
+                    syncToFirebase(student).then(() => loadStudents()).catch(console.error);
+                }
+                
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            };
+            tx.onerror = () => {
+                btn.innerHTML = origText;
+                btn.disabled = false;
+                showToast("Failed to save locally", "error");
+            }
+        };
+
+        window.editStudent = function(idStr) {
+            const id = Number(idStr);
+            const s = students.find(x => x.id === id);
+            if(!s) return;
+            document.getElementById('editId').value = s.id;
+            document.getElementById('sName').value = s.name;
+            
+            const mappedClass = normalizeClass(s.class);
+            const classSelect = document.getElementById('sClass');
+            let optionFound = false;
+            for (let opt of classSelect.options) {
+                if (opt.value === mappedClass) {
+                    optionFound = true; break;
+                }
+            }
+            classSelect.value = optionFound ? mappedClass : "";
+            
+            document.getElementById('sRoll').value = s.roll;
+            document.getElementById('sPhone').value = s.mobile || s.phone || '';
+            
+            const dobInput = document.getElementById('sDob');
+            const parsedDob = formatDateForInput(s.dob);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(parsedDob)) {
+                dobInput.type = 'date';
+                dobInput.value = parsedDob;
+            } else {
+                dobInput.type = 'text';
+                dobInput.value = s.dob || ''; 
+            }
+            
+            document.getElementById('sBlood').value = s.bloodGroup || '';
+            
+            if (s.photoBase64) {
+                setPreviewImage(s.photoBase64);
+            } else {
+                window.removePhoto();
+            }
+            
+            document.getElementById('formTitle').innerHTML = 'Edit Student <i class="fas fa-pen text-sm text-gray-400 ml-1"></i>';
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> Update Student';
+            saveBtn.classList.replace('bg-green-600', 'bg-blue-600');
+            saveBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+            
+            document.getElementById('addStudentModal').classList.remove('hidden');
+        }
+
+        window.resetForm = function(hideForm = true) {
+            document.getElementById('editId').value = '';
+            document.getElementById('sName').value = '';
+            document.getElementById('sClass').value = '';
+            document.getElementById('sRoll').value = '';
+            document.getElementById('sPhone').value = '';
+            document.getElementById('sDob').value = '';
+            document.getElementById('sDob').type = 'text'; 
+            document.getElementById('sBlood').value = '';
+            window.removePhoto();
+            
+            document.getElementById('formTitle').innerHTML = 'Add Student';
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.innerHTML = 'Save Student';
+            saveBtn.classList.replace('bg-blue-600', 'bg-green-600');
+            saveBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+            
+            if (hideForm) {
+                document.getElementById('addStudentModal').classList.add('hidden');
+            }
+        }
+
+        // ==========================================
+        // RECYCLE BIN LOGIC (Soft Delete & Hard Delete)
+        // ==========================================
+        window.deleteStudent = async function(idStr) {
+            const id = Number(idStr);
+            const confirmed = await showConfirm("Move this student to the Recycle Bin? You can restore them within 30 days.", "Delete Student?", "Yes, Move to Bin");
+            if(!confirmed) return;
+            
+            const student = students.find(s => s.id === id);
+            if(!student) return;
+
+            student.deleted = true;
+            student.deletedAt = Date.now();
+            student.synced = false; 
+
+            const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
+            tx.objectStore('students').delete(id);
+            tx.objectStore('deleted_students').put(student);
+
+            tx.oncomplete = () => {
+                showToast("Moved to Recycle Bin", "info");
+                resetForm(); 
+
+                loadStudents();
+                loadRecycleBin();
+                if(navigator.onLine) {
+                    syncToFirebase(student, 'deleted_students').then(() => loadStudents()).catch(console.error);
+                }
+            };
+        }
+
+        window.openRecycleBin = function() {
+            document.getElementById('recycleBinModal').classList.remove('hidden');
+            loadRecycleBin();
+        }
+        
+        window.closeRecycleBin = function() {
+            document.getElementById('recycleBinModal').classList.add('hidden');
+        }
+
+        function loadRecycleBin() {
+            if(!db || !currentSchoolData) return;
+            const tx = db.transaction(['deleted_students'], 'readonly');
+            tx.objectStore('deleted_students').getAll().onsuccess = e => {
+                const targetUdise = currentSchoolData.udise;
+                const targetSource = currentSchoolData.source || 'manual';
+                
+                let all = e.target.result;
+                
+                deletedStudents = all.filter(s => {
+                    if (!targetUdise || !s.udise) return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
+                    return s.udise === targetUdise && getStudentSource(s) === targetSource;
+                });
+
+                deletedStudents.sort((a,b) => b.deletedAt - a.deletedAt);
+                renderRecycleBin();
+            };
+        }
+
+        function renderRecycleBin() {
+            const list = document.getElementById('recycleBinList');
+            list.innerHTML = '';
+
+            if (deletedStudents.length === 0) {
+                list.innerHTML = `<div class="text-center py-8 text-gray-400"><i class="fas fa-trash mb-2 text-2xl"></i><p>Recycle Bin is empty.</p></div>`;
+                return;
+            }
+
+            deletedStudents.forEach(s => {
+                const daysPassed = Math.floor((Date.now() - s.deletedAt) / (1000 * 60 * 60 * 24));
+                const daysLeft = Math.max(0, 30 - daysPassed);
+
+                const div = document.createElement('div');
+                div.className = 'bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-2 flex items-center justify-between gap-2';
+                
+                div.innerHTML = `
+                    <div class="flex-1 min-w-0 pr-1">
+                        <div class="font-bold text-gray-800 text-sm truncate line-through opacity-70">${escapeHtml(s.name)}</div>
+                        <div class="text-xs text-red-500 font-medium"><i class="fas fa-history"></i> ${daysLeft} days left</div>
+                    </div>
+                    <button onclick="restoreStudent(${s.id})" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex-shrink-0 shadow-sm">
+                        Restore
+                    </button>
+                    <button onclick="hardDeleteStudent(${s.id})" class="bg-red-50 hover:bg-red-100 text-red-500 px-2 py-1.5 rounded-lg text-sm transition flex-shrink-0 shadow-sm" title="Delete Permanently">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        window.restoreStudent = function(id) {
+            const student = deletedStudents.find(s => s.id === id);
+            if(!student) return;
+
+            delete student.deleted;
+            delete student.deletedAt;
+            student.synced = false; 
+            student.lastModified = Date.now();
+
+            const tx = db.transaction(['students', 'deleted_students'], 'readwrite');
+            tx.objectStore('students').put(student);
+            tx.objectStore('deleted_students').delete(id);
+
+            tx.oncomplete = () => {
+                showToast("Student Restored!", "success");
+                loadStudents();
+                loadRecycleBin();
+                if(navigator.onLine) {
+                    syncToFirebase(student, 'students').then(() => loadStudents()).catch(console.error);
+                }
+            };
+        }
+
+        window.hardDeleteStudent = async function(id) {
+            const confirmed = await showConfirm("Are you sure you want to permanently delete this student? This action CANNOT be undone.", "Permanent Delete", "Delete Forever");
+            if(!confirmed) return;
+
+            const tx = db.transaction(['deleted_students'], 'readwrite');
+            tx.objectStore('deleted_students').delete(id);
+            tx.oncomplete = () => {
+                showToast("Student deleted permanently", "info");
+                loadRecycleBin();
+                if(navigator.onLine) {
+                    firestore.collection('students').doc(String(id)).delete().catch(console.error);
+                }
+            };
+        }
+
+        window.emptyRecycleBin = async function() {
+            if(deletedStudents.length === 0) return;
+            const confirmed = await showConfirm(`Are you sure you want to permanently delete ALL ${deletedStudents.length} students in the Recycle Bin?`, "Empty Bin", "Empty Bin");
+            if(!confirmed) return;
+
+            const tx = db.transaction(['deleted_students'], 'readwrite');
+            const store = tx.objectStore('deleted_students');
+            
+            deletedStudents.forEach(s => {
+                store.delete(s.id);
+                if(navigator.onLine) {
+                    firestore.collection('students').doc(String(s.id)).delete().catch(console.error);
+                }
+            });
+
+            tx.oncomplete = () => {
+                showToast("Recycle bin emptied", "success");
+                loadRecycleBin();
+            }
+        }
+
+        function cleanupRecycleBin() {
+            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            
+            const tx = db.transaction(['deleted_students'], 'readwrite');
+            const store = tx.objectStore('deleted_students');
+            
+            store.openCursor().onsuccess = e => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    const student = cursor.value;
+                    if (student.deletedAt && (now - student.deletedAt > THIRTY_DAYS_MS)) {
+                        cursor.delete();
+                        if(navigator.onLine) {
+                             firestore.collection('students').doc(String(student.id)).delete().catch(console.error);
+                        }
+                    }
+                    cursor.continue();
+                }
+            };
+        }
+
+    </script>
+</body>
+</html>
