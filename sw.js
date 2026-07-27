@@ -1,4 +1,4 @@
-const CACHE_NAME = 'student-data-v21-source-separation'; // Bumped to v21 to force update on all devices
+const CACHE_NAME = 'student-data-v22-auto-load'; // Bumped to v22 to force update on all devices
 
 const urlsToCache = [
   './',
@@ -33,7 +33,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v21');
+        console.log('Opened cache v22');
         return cache.addAll(urlsToCache);
       })
   );
@@ -88,12 +88,3 @@ self.addEventListener('activate', event => {
     })
   );
 });
-```eof
-
-### How this forces the update:
-By changing `CACHE_NAME` to `v21`, the browser detects a change in the Service Worker file. When that happens:
-1. It downloads the new `v21` Service Worker.
-2. `self.skipWaiting()` forces the new Service Worker to activate immediately.
-3. `clients.claim()` forces the new Service Worker to take control of the currently open app on the user's phone.
-4. The `activate` event deletes the old `v20` cache completely.
-5. The field user will see the "A new version is available!" blue banner drop down from the top of their screen, prompting them to hit "Refresh Now", which will pull the perfectly fixed `index.html` file!
