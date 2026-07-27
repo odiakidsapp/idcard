@@ -783,6 +783,7 @@
                     const tx = db.transaction(['students'], 'readwrite');
                     const studentStore = tx.objectStore('students');
                     let hasUpdates = false;
+                    let receivedExcelData = false;
 
                     snapshot.docChanges().forEach(change => {
                         const data = change.doc.data();
@@ -796,6 +797,11 @@
                         if (change.type === 'added' || change.type === 'modified') {
                             studentStore.put(student);
                             hasUpdates = true;
+                            
+                            // Check if this new data is the Excel import arriving
+                            if (actualSource === 'excel' && currentSchoolData.importStatus === 'pending') {
+                                receivedExcelData = true;
+                            }
                         }
                         if (change.type === 'removed') {
                             studentStore.delete(student.id);
@@ -804,7 +810,26 @@
                     });
 
                     tx.oncomplete = () => {
-                        if (hasUpdates) loadStudents();
+                        // SMART INTERCEPTION: If we were waiting for data, and Excel data arrived, clear the waiting screen!
+                        if (receivedExcelData && currentSchoolData.importStatus === 'pending') {
+                            currentSchoolData.importStatus = 'completed';
+                            currentSchoolData.source = 'excel'; // Switch view to the new data
+                            
+                            // Update local school record
+                            const stx = db.transaction(['schools'], 'readwrite');
+                            stx.objectStore('schools').put(currentSchoolData);
+                            
+                            // Update Firebase school record
+                            firestore.collection('schools').doc(currentSchoolData.udise).set({
+                                importStatus: 'completed',
+                                lastModified: Date.now()
+                            }, {merge: true}).catch(e => console.error(e));
+                            
+                            showToast("Auto-Load complete! Students imported.", "success");
+                            enterSchool(currentSchoolData); // Re-render the UI
+                        } else if (hasUpdates) {
+                            loadStudents();
+                        }
                     };
                 }, error => {
                     console.error("Live sync error:", error);
