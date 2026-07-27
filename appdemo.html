@@ -34,6 +34,14 @@
         
         #sidebarOverlay { background-color: rgba(0, 0, 0, 0.5); transition: opacity 0.3s ease; }
         #sidebar { transition: transform 0.3s ease; }
+        
+        /* Floating WhatsApp Button Animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+        .fab-hover { animation: float 3s ease-in-out infinite; }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
@@ -41,6 +49,15 @@
     <!-- Offline Banner -->
     <div id="offlineBanner" class="hidden fixed top-0 inset-x-0 z-[70] bg-red-500 text-white px-4 py-2 shadow-md flex justify-center items-center text-sm font-bold transition-transform duration-300 transform -translate-y-full">
         <i class="fas fa-wifi-slash mr-2"></i> You are offline. Data will be saved locally.
+    </div>
+
+    <!-- Update Banner -->
+    <div id="updateBanner" class="hidden fixed top-0 inset-x-0 z-[60] bg-blue-600 text-white px-4 py-3 shadow-lg flex justify-between items-center transform transition-transform duration-300">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-cloud-arrow-down text-xl"></i>
+            <span class="text-sm font-medium">A new version is available!</span>
+        </div>
+        <button onclick="window.location.reload()" class="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow hover:bg-gray-100 transition">Refresh Now</button>
     </div>
 
     <!-- App Navigation Header -->
@@ -91,7 +108,6 @@
             </div>
         </div>
     </div>
-
 
     <!-- Main Container -->
     <div class="max-w-lg mx-auto p-4 pt-4">
@@ -156,10 +172,7 @@
                 <h3 class="text-xl font-bold text-gray-900 mb-2">Data Extraction in Progress</h3>
                 <p class="text-sm text-gray-600 mb-6">Your students will be automatically loaded here within 24 hours. You can view, edit, or add photos then.</p>
                 
-                <div class="flex flex-col gap-4">
-                    <a href="https://wa.me/917855800205" target="_blank" class="w-full bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 border border-[#25D366]/30">
-                        <i class="fab fa-whatsapp text-xl"></i> Having trouble? Connect to my whatsapp number
-                    </a>
+                <div class="flex justify-center mt-2">
                     <button onclick="cancelPendingImport()" class="text-xs text-gray-500 hover:text-gray-800 underline font-medium">
                         Cancel auto enter
                     </button>
@@ -237,6 +250,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Floating WhatsApp Support Button (Only shown on waiting screen) -->
+    <a href="https://wa.me/917855800205" target="_blank" id="floatingWhatsappBtn" class="hidden fixed bottom-6 right-6 z-[90] w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center text-3xl shadow-[0_4px_12px_rgba(37,211,102,0.4)] hover:bg-[#1ebd5a] hover:scale-105 transition-all duration-300 fab-hover" title="WhatsApp Support">
+        <i class="fab fa-whatsapp"></i>
+    </a>
 
     <!-- ================= MODALS ================= -->
 
@@ -466,14 +484,18 @@
             btn.disabled = true;
 
             try {
-                // 1. SMART CHECK: Does an Excel batch already exist for this UDISE?
+                // SMART CHECK: Does an Excel batch already exist for this UDISE?
                 const snap = await firestore.collection('students')
                     .where('udise', '==', currentSchoolData.udise)
-                    .where('source', '==', 'excel')
-                    .limit(1)
+                    .limit(100)
                     .get();
 
-                if (!snap.empty) {
+                let hasExcel = false;
+                snap.forEach(doc => {
+                    if (getStudentSource(doc.data()) === 'excel') hasExcel = true;
+                });
+
+                if (hasExcel) {
                     // Instantly switch to Excel mode without any prompts!
                     currentSchoolData.source = 'excel';
                     currentSchoolData.importStatus = 'manual';
@@ -486,7 +508,7 @@
                     return;
                 }
 
-                // 2. NO EXCEL BATCH YET: Start the request flow
+                // NO EXCEL BATCH YET: Start the request flow
                 if (currentSchoolData.udisePass) {
                     // Password already known from registration
                     await startAutoLoadProcess(currentSchoolData.udisePass);
@@ -750,11 +772,6 @@
             updateOnlineStatus();
             if (navigator.onLine) {
                 syncAllPending();
-                const pending = localStorage.getItem('pendingSchoolRename');
-                if (pending) {
-                    const { oldName, updates } = JSON.parse(pending);
-                    pushSchoolRenameToFirestore(oldName, updates);
-                }
             }
         };
 
@@ -770,52 +787,20 @@
             const liveIndicator = document.getElementById('liveIndicator');
             if(liveIndicator) liveIndicator.classList.remove('hidden');
 
-            // 1. School Data Listener (Catches Admin Master Profile edits instantly)
-            unsubscribeSchool = firestore.collection('schools').doc(currentSchoolData.udise)
-                .onSnapshot(doc => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        let updated = false;
-                        
-                        if (data.name && data.name !== currentSchoolData.realSchoolName) {
-                            currentSchoolData.realSchoolName = data.name;
-                            updated = true;
-                        }
-                        if (data.phone && data.phone !== currentSchoolData.phone) {
-                            currentSchoolData.phone = data.phone;
-                            updated = true;
-                        }
-                        
-                        if (currentSchoolData.importStatus === 'pending' && data.importStatus === 'manual') {
-                            currentSchoolData.importStatus = 'manual';
-                            updated = true;
-                        }
-
-                        if (updated) {
-                            const tx = db.transaction(['schools'], 'readwrite');
-                            tx.objectStore('schools').put(currentSchoolData);
-                            
-                            updateSchoolHeader();
-                            
-                            if (currentSchoolData.importStatus === 'manual' && document.getElementById('pendingImportCard').classList.contains('hidden') === false) {
-                                enterSchool(currentSchoolData);
-                            }
-                        }
-                    }
-                });
-
-            // 2. Student Data Listener (Catches new Excel data instantly)
+            // 1. Listen to Students (Also unlocks 24-hour waiting state)
             unsubscribeRealtime = firestore.collection('students')
                 .where('udise', '==', currentSchoolData.udise)
                 .onSnapshot(snapshot => {
                     const tx = db.transaction(['students'], 'readwrite');
                     const studentStore = tx.objectStore('students');
                     let hasUpdates = false;
-                    let receivedExcelData = false;
+                    let foundExcel = false; 
 
                     snapshot.docChanges().forEach(change => {
                         const data = change.doc.data();
                         const actualSource = getStudentSource(data);
+                        
+                        if (actualSource === 'excel') foundExcel = true;
                         
                         const student = { ...data, id: Number(change.doc.id), synced: true, source: actualSource };
                         delete student.submittedAt;
@@ -825,10 +810,6 @@
                         if (change.type === 'added' || change.type === 'modified') {
                             studentStore.put(student);
                             hasUpdates = true;
-                            
-                            if (actualSource === 'excel') {
-                                receivedExcelData = true;
-                            }
                         }
                         if (change.type === 'removed') {
                             studentStore.delete(student.id);
@@ -837,22 +818,17 @@
                     });
 
                     tx.oncomplete = () => {
-                        // SMART INTERCEPT: If we are stuck on pending but just received Excel data!
-                        if (receivedExcelData && currentSchoolData.importStatus === 'pending') {
+                        // SMART INTERCEPTION: If waiting for data and excel data arrives, break out of waiting state!
+                        if (currentSchoolData.importStatus === 'pending' && foundExcel) {
+                            currentSchoolData.source = 'excel';
                             currentSchoolData.importStatus = 'manual';
-                            currentSchoolData.source = 'excel'; 
                             
-                            const stx = db.transaction(['schools'], 'readwrite');
-                            stx.objectStore('schools').put(currentSchoolData);
+                            const sTx = db.transaction(['schools'], 'readwrite');
+                            sTx.objectStore('schools').put(currentSchoolData);
                             
-                            firestore.collection('schools').doc(currentSchoolData.udise).set({
-                                importStatus: 'manual',
-                                lastModified: Date.now()
-                            }, {merge: true}).catch(e => {});
-                            
-                            showToast("Auto-Load complete! Students imported.", "success");
+                            showToast("Excel data automatically loaded!", "success");
                             enterSchool(currentSchoolData); 
-                        } else if (hasUpdates) {
+                        } else if (hasUpdates && currentSchoolData.importStatus !== 'pending') {
                             loadStudents();
                         }
                     };
@@ -860,6 +836,30 @@
                     console.error("Live sync error:", error);
                     if(liveIndicator) liveIndicator.classList.add('hidden');
                 });
+                
+            // 2. Listen to Master School Profile for updates
+            unsubscribeSchool = firestore.collection('schools').doc(currentSchoolData.udise)
+                .onSnapshot(doc => {
+                    if (doc.exists) {
+                        const adminData = doc.data();
+                        let needsUpdate = false;
+                        
+                        if (adminData.name && adminData.name !== currentSchoolData.realSchoolName) {
+                            currentSchoolData.realSchoolName = adminData.name;
+                            needsUpdate = true;
+                        }
+                        if (adminData.district !== undefined && adminData.district !== currentSchoolData.district) {
+                            currentSchoolData.district = adminData.district;
+                            needsUpdate = true;
+                        }
+
+                        if (needsUpdate) {
+                            const tx = db.transaction(['schools'], 'readwrite');
+                            tx.objectStore('schools').put(currentSchoolData);
+                            updateSchoolHeader();
+                        }
+                    }
+                }, err => console.log("School sync error:", err));
         }
 
 
@@ -1195,7 +1195,7 @@
                 showToast(`Restored ${restoreCount} students successfully!`);
                 document.getElementById('restoreUdiseInput').value = '';
                 
-                // Fetch the password from Firebase to keep it synced locally, but don't overwrite if it doesn't exist online
+                // Fetch the password from Firebase to keep it synced locally
                 if(navigator.onLine) {
                     firestore.collection('schools').doc(udise).get().then(doc => {
                         if(doc.exists) {
@@ -1473,12 +1473,16 @@
 
             updateSchoolHeader();
             
+            const fab = document.getElementById('floatingWhatsappBtn');
+
             if (currentSchoolData.importStatus === 'pending') {
                 document.getElementById('standardDashboardControls').classList.add('hidden');
                 document.getElementById('pendingImportCard').classList.remove('hidden');
+                if(fab) fab.classList.remove('hidden');
             } else {
                 document.getElementById('standardDashboardControls').classList.remove('hidden');
                 document.getElementById('pendingImportCard').classList.add('hidden');
+                if(fab) fab.classList.add('hidden');
                 
                 // Toggle Banner
                 const upgradeBanner = document.getElementById('upgradeToAutoBanner');
@@ -1491,9 +1495,11 @@
                 }
                 
                 visibleCount = 50; 
-                setupRealtimeListener();
                 loadStudents();
             }
+            
+            // ALWAYS setup the listener so we can catch background updates from the admin while waiting!
+            setupRealtimeListener();
         }
 
         function updateSchoolHeader() {
@@ -1593,9 +1599,6 @@
             };
         };
 
-        // ==========================================
-        // STUDENT LOGIC, STATS, & FILTERS
-        // ==========================================
         function loadStudents() {
             const tx = db.transaction(['students'], 'readonly');
             tx.objectStore('students').getAll().onsuccess = e => {
