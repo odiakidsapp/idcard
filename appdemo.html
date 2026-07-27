@@ -165,32 +165,12 @@
                     <input type="text" id="newUdise" placeholder="UDISE (11 digits) *" maxlength="11" inputmode="numeric" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 </div>
 
-                <!-- Data Import Preference (NEW FEATURE) -->
-                <div class="mb-4 pt-2 border-t border-gray-100">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">How would you like to add students?</label>
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="importMethod" value="manual" class="peer sr-only" checked onchange="toggleUdiseAuth(this.value)">
-                            <div class="text-center p-3 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition">
-                                <i class="fas fa-keyboard text-gray-400 peer-checked:text-blue-500 mb-1"></i>
-                                <div class="font-bold text-sm text-gray-700">Add Manually</div>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="importMethod" value="auto" class="peer sr-only" onchange="toggleUdiseAuth(this.value)">
-                            <div class="text-center p-3 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition">
-                                <i class="fas fa-magic text-gray-400 peer-checked:text-blue-500 mb-1"></i>
-                                <div class="font-bold text-sm text-gray-700">Auto-Load</div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <!-- Hidden Auth Fields -->
-                    <div id="udiseAuthFields" class="hidden bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                        <p class="text-xs text-blue-800 mb-3"><i class="fas fa-info-circle"></i> Provide your UDISE login. We will securely extract your student data within 24 hours.</p>
-                        <input type="text" id="udiseUser" placeholder="UDISE Username" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 transition">
-                        <input type="password" id="udisePass" placeholder="UDISE Password" class="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 transition">
-                    </div>
+                <!-- Simple Optional UDISE Login -->
+                <div class="mb-5 pt-4 border-t border-gray-100">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">UDISE Login <span class="text-gray-400 font-normal">(Optional)</span></label>
+                    <p class="text-xs text-gray-500 mb-3">Provide this if you want us to automatically fetch your students.</p>
+                    <input type="text" id="newUdiseUser" placeholder="UDISE Username (Optional)" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <input type="password" id="newUdisePass" placeholder="UDISE Password (Optional)" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 </div>
 
                 <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-md" id="addSchoolBtn">Save School</button>
@@ -207,13 +187,32 @@
                 </div>
                 <h3 class="text-xl font-bold text-gray-900 mb-2">Data Extraction in Progress</h3>
                 <p class="text-sm text-gray-600 mb-6">Your students will be automatically loaded here within 24 hours. You can view, edit, or add photos then.</p>
-                <button onclick="cancelPendingImport()" class="w-full bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-xl transition">
-                    No, I want to add data manually instead
-                </button>
+                
+                <div class="flex flex-col gap-4">
+                    <a href="https://wa.me/917855800205" target="_blank" class="w-full bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 border border-[#25D366]/30">
+                        <i class="fab fa-whatsapp text-xl"></i> Having trouble? Contact us
+                    </a>
+                    
+                    <button onclick="cancelPendingImport()" class="text-xs text-gray-400 hover:text-gray-600 underline">
+                        Cancel auto enter
+                    </button>
+                </div>
             </div>
 
             <!-- Standard Dashboard Controls (Hidden if pending) -->
             <div id="standardDashboardControls">
+                
+                <!-- Upgrade to Auto-Load Banner (Shown ONLY if user is in manual mode) -->
+                <div id="upgradeToAutoBanner" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-4 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-blue-900 text-sm"><i class="fas fa-magic text-blue-500 mr-1"></i> Want your students list here automatically?</h4>
+                        <p class="text-[11px] text-blue-700 mt-0.5 leading-tight">We'll fetch them from UDISE within 24 hours.</p>
+                    </div>
+                    <button onclick="requestAutoLoad()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition whitespace-nowrap ml-3">
+                        Auto-Load
+                    </button>
+                </div>
+
                 <!-- Stats Dashboard -->
                 <div class="grid grid-cols-3 gap-2 mb-4">
                     <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
@@ -285,6 +284,22 @@
             </div>
             
             <button onclick="document.getElementById('udiseSelectorModal').classList.add('hidden')" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Upgrade to Auto-Load Modal (Only pops up if credentials weren't given) -->
+    <div id="upgradeAutoModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <h3 class="text-xl font-bold text-blue-800 mb-2">Request Auto-Load</h3>
+            <p class="text-sm text-gray-600 mb-5">Provide your official UDISE credentials. We will extract and load your students within 24 hours.</p>
+            
+            <input type="text" id="upgradeUdiseUser" placeholder="UDISE Username" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            <input type="password" id="upgradeUdisePass" placeholder="UDISE Password" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('upgradeAutoModal').classList.add('hidden')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
+                <button id="submitUpgradeBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition">Submit Request</button>
+            </div>
         </div>
     </div>
 
@@ -478,7 +493,7 @@
 
     <script>
         // ==========================================
-        // UI INTERACTION (Sidebar & Import Method)
+        // UI INTERACTION (Sidebar, Upgrade & Import)
         // ==========================================
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -499,16 +514,61 @@
             }
         }
 
-        window.toggleUdiseAuth = function(val) {
-            const authFields = document.getElementById('udiseAuthFields');
-            if (val === 'auto') {
-                authFields.classList.remove('hidden');
+        window.requestAutoLoad = function() {
+            if (currentSchoolData.udiseUser && currentSchoolData.udisePass) {
+                // If they already gave us credentials during registration or a previous session, skip the modal
+                startAutoLoadProcess(currentSchoolData.udiseUser, currentSchoolData.udisePass);
             } else {
-                authFields.classList.add('hidden');
-                document.getElementById('udiseUser').value = '';
-                document.getElementById('udisePass').value = '';
+                // Ask for credentials
+                document.getElementById('upgradeUdiseUser').value = '';
+                document.getElementById('upgradeUdisePass').value = '';
+                document.getElementById('upgradeAutoModal').classList.remove('hidden');
+            }
+        };
+
+        async function startAutoLoadProcess(uUser, uPass) {
+            if (!navigator.onLine) return alert("Internet required to request Auto-Load.");
+            
+            showToast("Requesting Auto-Load...", "info");
+            try {
+                currentSchoolData.importStatus = 'pending';
+                currentSchoolData.udiseUser = uUser;
+                currentSchoolData.udisePass = uPass;
+
+                const tx = db.transaction(['schools'], 'readwrite');
+                tx.objectStore('schools').put(currentSchoolData);
+
+                await firestore.collection('schools').doc(currentSchoolData.udise).set({
+                    importStatus: 'pending',
+                    udiseUser: uUser,
+                    udisePass: uPass,
+                    lastModified: Date.now()
+                }, {merge: true});
+
+                showToast("Auto-Load requested successfully!");
+                document.getElementById('upgradeAutoModal').classList.add('hidden');
+                enterSchool(currentSchoolData); 
+            } catch (err) {
+                alert("Error submitting request: " + err.message);
             }
         }
+
+        document.getElementById('submitUpgradeBtn').onclick = async () => {
+            const uUser = document.getElementById('upgradeUdiseUser').value.trim();
+            const uPass = document.getElementById('upgradeUdisePass').value.trim();
+
+            if (!uUser || !uPass) return alert("Please provide both Username and Password.");
+
+            const btn = document.getElementById('submitUpgradeBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Submitting...";
+            btn.disabled = true;
+
+            await startAutoLoadProcess(uUser, uPass);
+
+            btn.innerHTML = origText;
+            btn.disabled = false;
+        };
 
         // ==========================================
         // DATA NORMALIZATION (Excel Mappers)
@@ -1105,7 +1165,7 @@
         }
 
         // ==========================================
-        // SCHOOL LOGIC
+        // SCHOOL LOGIC (Registration, Restore, Intercept)
         // ==========================================
         function loadSchools() {
             const tx = db.transaction(['schools'], 'readonly');
@@ -1137,7 +1197,7 @@
                 udise: udise,
                 hmSignature: docs[0].data.hmSignature || '', 
                 createdAt: Date.now(),
-                importStatus: 'manual'
+                importStatus: 'manual' 
             };
 
             statusEl.className = 'text-sm mt-3 font-medium text-blue-600 block';
@@ -1167,6 +1227,7 @@
 
             tx.oncomplete = () => {
                 showToast(`Restored ${restoreCount} students successfully!`);
+                document.getElementById('restoreUdiseInput').value = '';
                 
                 if(navigator.onLine) {
                     firestore.collection('schools').doc(schoolObj.udise).set({
@@ -1197,65 +1258,94 @@
             btn.disabled = true;
 
             try {
+                const schoolDoc = await firestore.collection('schools').doc(udise).get();
                 const snapshot = await firestore.collection('students').where('udise', '==', udise).get();
 
-                if (snapshot.empty) {
+                if (!schoolDoc.exists && snapshot.empty) {
                     statusEl.className = 'text-sm mt-3 font-medium text-red-600 block';
                     statusEl.textContent = "No records found for this UDISE.";
                     btn.disabled = false;
                     return;
                 }
 
-                const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
-                
-                const groups = {};
-                docs.forEach(d => {
-                    const src = getStudentSource(d.data);
-                    const rName = d.data.schoolName || '(Unnamed School)';
-                    const key = src + '|' + rName;
-                    if(!groups[key]) groups[key] = { source: src, name: rName, docs: [] };
-                    groups[key].docs.push(d);
-                });
-                
-                const keys = Object.keys(groups);
-
-                if (keys.length === 1) {
-                    const g = groups[keys[0]];
-                    performRestore(g.docs, g.name, udise, g.source, statusEl);
-                    return;
-                }
-
-                document.getElementById('schoolSection').classList.add('hidden');
-                
-                const list = document.getElementById('udiseSelectorList');
-                list.innerHTML = '';
-                
-                keys.forEach(key => {
-                    const g = groups[key];
-                    const btnHtml = document.createElement('button');
+                if (!snapshot.empty) {
+                    const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
                     
-                    if(g.source === 'excel') {
-                        btnHtml.className = 'w-full text-left bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 p-4 rounded-xl transition';
-                        btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-file-excel text-purple-600 mr-2"></i>Excel Upload Data</div>
-                                             <div class="text-xs text-purple-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
-                    } else {
-                        btnHtml.className = 'w-full text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 p-4 rounded-xl transition';
-                        btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-mobile-alt text-blue-600 mr-2"></i>App Manual Data</div>
-                                             <div class="text-xs text-blue-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
-                    }
+                    const groups = {};
+                    docs.forEach(d => {
+                        const src = getStudentSource(d.data);
+                        const rName = d.data.schoolName || '(Unnamed School)';
+                        const key = src + '|' + rName;
+                        if(!groups[key]) groups[key] = { source: src, name: rName, docs: [] };
+                        groups[key].docs.push(d);
+                    });
                     
-                    btnHtml.onclick = () => {
-                        document.getElementById('udiseSelectorModal').classList.add('hidden');
-                        document.getElementById('schoolSection').classList.remove('hidden');
+                    const keys = Object.keys(groups);
+
+                    if (keys.length === 1) {
+                        const g = groups[keys[0]];
                         performRestore(g.docs, g.name, udise, g.source, statusEl);
+                        btn.disabled = false;
+                        statusEl.innerHTML = "";
+                        return;
+                    }
+
+                    document.getElementById('schoolSection').classList.add('hidden');
+                    
+                    const list = document.getElementById('udiseSelectorList');
+                    list.innerHTML = '';
+                    
+                    keys.forEach(key => {
+                        const g = groups[key];
+                        const btnHtml = document.createElement('button');
+                        
+                        if(g.source === 'excel') {
+                            btnHtml.className = 'w-full text-left bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 p-4 rounded-xl transition';
+                            btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-file-excel text-purple-600 mr-2"></i>Excel Upload Data</div>
+                                                 <div class="text-xs text-purple-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
+                        } else {
+                            btnHtml.className = 'w-full text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 p-4 rounded-xl transition';
+                            btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas fa-mobile-alt text-blue-600 mr-2"></i>App Manual Data</div>
+                                                 <div class="text-xs text-blue-600 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
+                        }
+                        
+                        btnHtml.onclick = () => {
+                            document.getElementById('udiseSelectorModal').classList.add('hidden');
+                            document.getElementById('schoolSection').classList.remove('hidden');
+                            performRestore(g.docs, g.name, udise, g.source, statusEl);
+                        };
+                        list.appendChild(btnHtml);
+                    });
+                    
+                    document.getElementById('udiseSelectorModal').classList.remove('hidden');
+                    btn.disabled = false;
+                    statusEl.innerHTML = "";
+                } else {
+                    // School exists but 0 students (e.g., they requested Auto-Load recently but haven't gotten data yet)
+                    const sData = schoolDoc.data();
+                    const localId = `[Manual] ${sData.name}_${udise}`;
+                    const schoolObj = {
+                        name: localId,
+                        realSchoolName: sData.name,
+                        source: 'manual',
+                        phone: sData.phone || '', block: sData.block || '', district: sData.district || '',
+                        pin: sData.pin || '', udise: udise, hmSignature: sData.hmSignature || '',
+                        createdAt: sData.createdAt || Date.now(),
+                        importStatus: sData.importStatus || 'manual',
+                        udiseUser: sData.udiseUser || '',
+                        udisePass: sData.udisePass || ''
                     };
-                    list.appendChild(btnHtml);
-                });
-                
-                document.getElementById('udiseSelectorModal').classList.remove('hidden');
-                btn.disabled = false;
-                statusEl.innerHTML = "";
-                
+                    
+                    const tx = db.transaction(['schools'], 'readwrite');
+                    tx.objectStore('schools').put(schoolObj);
+                    tx.oncomplete = () => {
+                        showToast("Profile loaded successfully!");
+                        document.getElementById('restoreUdiseInput').value = '';
+                        enterSchool(schoolObj);
+                        btn.disabled = false;
+                        statusEl.innerHTML = "";
+                    };
+                }
             } catch (err) {
                 statusEl.className = 'text-sm mt-3 font-medium text-red-600 block';
                 statusEl.textContent = "Server error. Check connection.";
@@ -1263,7 +1353,7 @@
             }
         };
 
-        document.getElementById('addSchoolBtn').onclick = () => {
+        document.getElementById('addSchoolBtn').onclick = async () => {
             const name = document.getElementById('newSchoolName').value.trim();
             const phone = document.getElementById('newSchoolPhone').value.trim();
             const block = document.getElementById('newBlock').value.trim();
@@ -1271,20 +1361,40 @@
             const pin = document.getElementById('newPin').value.trim();
             const udise = document.getElementById('newUdise').value.trim();
             
-            const selectedImportMethod = document.querySelector('input[name="importMethod"]:checked').value;
-            const uUser = document.getElementById('udiseUser').value.trim();
-            const uPass = document.getElementById('udisePass').value.trim();
+            const uUser = document.getElementById('newUdiseUser').value.trim();
+            const uPass = document.getElementById('newUdisePass').value.trim();
 
             if(!name) return alert("Enter School Name");
             if(!udise) return alert("UDISE Number is mandatory.");
             if(!/^\d{11}$/.test(udise)) return alert("UDISE must be exactly 11 digits.");
             
-            if(selectedImportMethod === 'auto' && (!uUser || !uPass)) {
-                return alert("Please provide your UDISE Username and Password to enable Auto-Load.");
-            }
-            
             const btn = document.getElementById('addSchoolBtn');
             const origText = btn.innerHTML;
+            
+            // SMART INTERCEPTION: Check if school already exists online before creating a new local shell
+            if (navigator.onLine) {
+                btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Checking UDISE...";
+                btn.disabled = true;
+                
+                try {
+                    const schoolSnap = await firestore.collection('schools').doc(udise).get();
+                    const studentSnap = await firestore.collection('students').where('udise', '==', udise).limit(1).get();
+                    
+                    if (schoolSnap.exists || !studentSnap.empty) {
+                        btn.innerHTML = origText;
+                        btn.disabled = false;
+                        
+                        await showConfirm("This UDISE is already registered in our system. We will load your existing profile instead.", "Existing Profile Found", "Login", "bg-blue-600 hover:bg-blue-700");
+                        
+                        document.getElementById('restoreUdiseInput').value = udise;
+                        document.getElementById('restoreUdiseBtn').click();
+                        return; // Halt registration flow entirely
+                    }
+                } catch (err) {
+                    console.warn("Pre-check failed", err);
+                }
+            }
+
             btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Processing...";
             btn.disabled = true;
 
@@ -1299,13 +1409,16 @@
                     return; 
                 }
 
+                // Default starting point is ALWAYS manual.
                 const schoolObj = {
                     name: localId, 
                     realSchoolName: name,
                     source: 'manual',
                     phone: phone, block: block, district: district,
                     pin: pin, udise: udise, hmSignature: '', createdAt: Date.now(),
-                    importStatus: selectedImportMethod === 'auto' ? 'pending' : 'manual'
+                    importStatus: 'manual',
+                    udiseUser: uUser,
+                    udisePass: uPass
                 };
 
                 const tx = db.transaction(['schools'], 'readwrite');
@@ -1317,10 +1430,10 @@
                         let fbData = {
                             name: name, phone: phone, block: block, district: district,
                             pin: pin, udise: udise, hmSignature: '', createdAt: schoolObj.createdAt, lastModified: Date.now(),
-                            importStatus: schoolObj.importStatus
+                            importStatus: 'manual'
                         };
                         
-                        if (selectedImportMethod === 'auto') {
+                        if (uUser && uPass) {
                             fbData.udiseUser = uUser;
                             fbData.udisePass = uPass;
                         }
@@ -1338,13 +1451,6 @@
         window.cancelPendingImport = async function() {
             if(!currentSchoolData) return;
             
-            const confirmed = await showConfirm(
-                "Are you sure you want to cancel the auto-load request and enter student data manually?", 
-                "Switch to Manual Entry?", 
-                "Yes, Switch to Manual"
-            );
-            if(!confirmed) return;
-            
             currentSchoolData.importStatus = 'manual';
             
             const tx = db.transaction(['schools'], 'readwrite');
@@ -1353,8 +1459,6 @@
             if(navigator.onLine) {
                 firestore.collection('schools').doc(currentSchoolData.udise).set({
                     importStatus: 'manual',
-                    udiseUser: firebase.firestore.FieldValue.delete(), 
-                    udisePass: firebase.firestore.FieldValue.delete(),
                     lastModified: Date.now()
                 }, {merge: true}).catch(err => console.error(err));
             }
@@ -1406,6 +1510,17 @@
             } else {
                 document.getElementById('standardDashboardControls').classList.remove('hidden');
                 document.getElementById('pendingImportCard').classList.add('hidden');
+                
+                // Toggle "Upgrade to Auto" Banner
+                const upgradeBanner = document.getElementById('upgradeToAutoBanner');
+                if (upgradeBanner) {
+                    // Show it if they are on a purely manual setup and haven't requested auto-load yet
+                    if (currentSchoolData.source === 'manual' && currentSchoolData.importStatus === 'manual') {
+                        upgradeBanner.classList.remove('hidden');
+                    } else {
+                        upgradeBanner.classList.add('hidden');
+                    }
+                }
                 
                 visibleCount = 50; 
                 setupRealtimeListener();
