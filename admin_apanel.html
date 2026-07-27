@@ -259,6 +259,13 @@
             </div>
         </div>
         <div class="form-group"><label>Mobile Number</label><input type="text" id="editPhone"></div>
+
+        <div id="undoReviewBox" class="hidden" style="background:#fff3cd; border:1px solid #ffe69c; padding:12px 14px; border-radius:10px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div style="font-size:12.5px; color:#7a5b00; line-height:1.4;">
+                <b>Reviewed / Ready to Print.</b><br>Send this student back to Pending Review if something needs fixing.
+            </div>
+            <button type="button" class="btn btn-warning" id="undoReviewBtn" style="font-size:12.5px; padding:8px 12px; white-space:nowrap;">↩ Undo Review</button>
+        </div>
         
         <div class="modal-btns" style="justify-content: space-between; align-items: center; margin-top: 30px;">
             <button class="btn btn-warning" id="previewEditBtn" style="font-size: 13px; padding: 8px 12px;">👁 Preview Card</button>
@@ -1635,8 +1642,39 @@ function openEditModal(id){
     document.getElementById('editDob').value = s.dob;
     document.getElementById('editBlood').value = s.bloodGroup;
     document.getElementById('editPhone').value = s.mobile || s.phone || '';
+
+    // Undo Review is only relevant for Excel-sourced students that are currently reviewed/finalised.
+    // Manual entries have no review step, so the option never appears for them.
+    const showUndo = s._source === 'excel' && s.finalised !== false;
+    document.getElementById('undoReviewBox').classList.toggle('hidden', !showUndo);
+
     document.getElementById('editModal').style.display = 'flex';
 }
+
+document.getElementById('undoReviewBtn').onclick = async () => {
+    const id = document.getElementById('editId').value;
+    const s = currentSchoolStudents.find(x => x.id == id);
+    if(!s) return;
+
+    if(!(await showMsg("Send this student back to <b>Pending Review</b>? It will disappear from Ready-to-Print/Printed lists and show as pending in the user's app until re-reviewed.", true))) return;
+
+    const btn = document.getElementById('undoReviewBtn');
+    const oldText = btn.textContent;
+    btn.innerHTML = "Undoing...";
+    btn.disabled = true;
+
+    try {
+        await db.collection('students').doc(id.toString()).update({ finalised: false, lastModified: Date.now() });
+        s.finalised = false;
+        document.getElementById('editModal').style.display = 'none';
+        renderTable();
+    } catch(e) {
+        showMsg("Error: " + e.message);
+    } finally {
+        btn.innerHTML = oldText;
+        btn.disabled = false;
+    }
+};
 
 document.getElementById('saveEditBtn').onclick = async () => {
     const btn = document.getElementById('saveEditBtn');
