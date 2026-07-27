@@ -1,10 +1,10 @@
-const CACHE_NAME = 'student-data-v22-auto-load'; // Bumped to v22 to force update on all devices
+const CACHE_NAME = 'student-data-v23-auto-load-update'; // Bumped to v23 to force update on all devices
 
 const urlsToCache = [
   './',
   './index.html',
-  './admin_apanel.html',
-  './portal.html',
+  './app.html', // Your main Data Entry App
+  './admin_apanel.html', // Admin Panel
   './manifest.json',
 
   // Fonts and Backgrounds cached for completely offline preview generation
@@ -33,7 +33,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v22');
+        console.log('Opened cache v23');
         return cache.addAll(urlsToCache);
       })
   );
@@ -43,7 +43,7 @@ self.addEventListener('install', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  // Use Network-First for HTML files (gets bug fixes instantly)
+  // Use Network-First for HTML files (gets bug fixes instantly, falls back to cache if offline)
   if (req.headers.get('accept') && req.headers.get('accept').includes('text/html')) {
     event.respondWith(
       fetch(req)
