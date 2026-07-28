@@ -2,41 +2,73 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Teacher ID Card Data Entry</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Cropper.js CSS for Custom Crop System -->
+    <!-- Cropper.js CSS for Gallery Uploads -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
 
     <style>
         body { font-family: 'Inter', sans-serif; }
         
-        /* Custom Styling for the Cropper to show Head & Shoulders Guide */
+        /* --- Gallery Cropper Custom Styles --- */
+        .cropper-container {
+            width: 100% !important;
+            height: 100% !important;
+        }
         .cropper-view-box {
             border-radius: 4px;
-            outline: 2px solid #3b82f6; /* Blue border */
+            outline: 2px solid #3b82f6; 
         }
-        
-        /* This injects the Head and Shoulders outline into the crop box */
         .cropper-face::after {
             content: '';
             position: absolute;
             top: 5%; left: 10%; right: 10%; bottom: 5%;
-            /* SVG Data URI for Head and Shoulders Outline */
             background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 133'%3E%3Cellipse cx='50' cy='45' rx='20' ry='25' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3Cpath d='M 15 133 C 15 100 25 90 35 85 C 40 90 60 90 65 85 C 75 90 85 100 85 133' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3C/svg%3E");
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center bottom;
-            pointer-events: none; /* Essential so dragging works through the outline */
+            pointer-events: none; 
         }
-        
-        /* Darken the area outside the crop box */
-        .cropper-modal {
-            background-color: rgba(0, 0, 0, 0.85);
+
+        /* --- Live Camera Custom Styles --- */
+        #liveVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Fill the screen */
+        }
+        .camera-overlay-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 10;
+        }
+        .camera-guide-box {
+            width: 70vw; /* 70% of screen width */
+            max-width: 320px;
+            aspect-ratio: 3 / 4;
+            border: 2px solid #3b82f6;
+            border-radius: 4px;
+            /* This massive outline darkens everything OUTSIDE the box */
+            outline: 4000px solid rgba(0, 0, 0, 0.75); 
+            position: relative;
+        }
+        .camera-guide-box::after {
+            content: '';
+            position: absolute;
+            top: 5%; left: 10%; right: 10%; bottom: 5%;
+            background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 133'%3E%3Cellipse cx='50' cy='45' rx='20' ry='25' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3Cpath d='M 15 133 C 15 100 25 90 35 85 C 40 90 60 90 65 85 C 75 90 85 100 85 133' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
         }
     </style>
 </head>
@@ -50,7 +82,7 @@
                     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                     </svg>
-                    <span class="font-bold text-xl tracking-wider">Teacher ID Data Portal</span>
+                    <span class="font-bold text-xl tracking-wider">Teacher ID Portal</span>
                 </div>
             </div>
         </div>
@@ -137,11 +169,11 @@
                     
                     <!-- Upload Buttons UI -->
                     <div id="photoUploadUI" class="mt-1 flex flex-col items-center justify-center px-6 pt-6 pb-6 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-all hover:bg-gray-100">
-                        <p class="text-sm text-gray-600 mb-4 font-medium">Capture or select a photo to frame perfectly</p>
+                        <p class="text-sm text-gray-600 mb-4 font-medium">Capture live photo or select from gallery</p>
                         
                         <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mb-3 w-full sm:w-auto">
-                            <!-- Camera Button -->
-                            <button type="button" onclick="document.getElementById('photoCamera').click()" class="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-sm w-full sm:w-auto">
+                            <!-- Custom Live Camera Button -->
+                            <button type="button" onclick="startLiveCamera()" class="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-sm w-full sm:w-auto">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                 Open Camera
                             </button>
@@ -152,18 +184,15 @@
                                 Choose Gallery
                             </button>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2">A 3:4 crop tool will open automatically</p>
+                        <p class="text-xs text-gray-500 mt-2">Automatically formatted for 3:4 ID Card</p>
                         
-                        <!-- Hidden Inputs -->
-                        <!-- trigger openFileUI on change instead of direct preview -->
-                        <input id="photoCamera" type="file" class="hidden" accept="image/*" capture="environment" onchange="openCropperUI(event)">
-                        <input id="photoGallery" type="file" class="hidden" accept="image/*" onchange="openCropperUI(event)">
+                        <!-- Hidden File Input for Gallery Only -->
+                        <input id="photoGallery" type="file" class="hidden" accept="image/*" onchange="openGalleryCropper(event)">
                     </div>
 
-                    <!-- Final Preview Container (Post-Crop) -->
+                    <!-- Final Preview Container -->
                     <div id="imagePreviewContainer" class="mt-4 hidden relative flex-col items-center">
                         <div class="relative">
-                            <!-- Adjusted to aspect-ratio 3:4 dimensions roughly -->
                             <img id="imagePreview" src="#" alt="Preview" class="h-48 w-36 object-cover rounded-lg shadow-md border-4 border-white">
                             <button type="button" onclick="removeImage()" class="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg border-2 border-white transition-transform hover:scale-110" title="Remove Photo">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
@@ -183,12 +212,10 @@
                 </div>
             </form>
             
-            <!-- Success Message overlay -->
+            <!-- Success Message -->
             <div id="successMessage" class="hidden p-8 text-center bg-green-50">
                 <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                    <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
+                    <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
                 </div>
                 <h3 class="text-2xl font-bold text-green-800 mb-2">Success!</h3>
                 <p class="text-green-600 mb-6">Your data has been submitted successfully.</p>
@@ -199,35 +226,54 @@
         </div>
     </main>
 
-    <!-- FULL SCREEN CROPPER MODAL -->
+
+    <!-- 1. LIVE CAMERA MODAL -->
+    <div id="cameraModal" class="hidden fixed inset-0 z-50 bg-black flex-col">
+        <!-- Live Video Feed -->
+        <video id="liveVideo" autoplay playsinline muted></video>
+        
+        <!-- The Guide Overlay (3:4 Box + Head outline) -->
+        <div class="camera-overlay-container">
+            <div id="cameraGuideBox" class="camera-guide-box"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="absolute bottom-0 left-0 right-0 p-6 pb-10 bg-gradient-to-t from-black to-transparent flex justify-between items-center z-20">
+            <button type="button" onclick="stopLiveCamera()" class="text-white bg-gray-800/80 hover:bg-gray-700 px-6 py-2 rounded-full font-medium backdrop-blur-sm">
+                Cancel
+            </button>
+            
+            <!-- Capture Shutter Button -->
+            <button type="button" onclick="captureLivePhoto()" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 flex items-center justify-center hover:scale-105 transition-transform">
+                <div class="w-12 h-12 bg-white rounded-full shadow-inner"></div>
+            </button>
+            
+            <div class="w-20"></div> <!-- Spacer for centering -->
+        </div>
+    </div>
+
+
+    <!-- 2. GALLERY CROPPER MODAL (Fixed layout) -->
     <div id="cropperModal" class="hidden fixed inset-0 z-50 bg-black/95 flex-col backdrop-blur-sm">
-        <!-- Modal Header -->
         <div class="p-4 flex justify-between items-center text-white border-b border-gray-800 bg-black">
             <h3 class="font-semibold text-lg flex items-center">
                 <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-                Align Photo within Guide
+                Align Gallery Photo
             </h3>
-            <button type="button" onclick="closeCropper()" class="text-gray-400 hover:text-white p-1 rounded-full bg-gray-800 hover:bg-gray-700 transition">
+            <button type="button" onclick="closeGalleryCropper()" class="text-gray-400 hover:text-white p-1 rounded-full bg-gray-800 hover:bg-gray-700">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
         
-        <!-- Cropper Work Area -->
-        <div class="flex-1 relative w-full h-full p-2 sm:p-6 flex items-center justify-center overflow-hidden">
-            <div class="w-full max-h-full">
-                <!-- Image gets injected here -->
-                <img id="imageToCrop" src="" class="max-w-full hidden">
-            </div>
+        <!-- Fixed height container so image is never tiny -->
+        <div style="height: calc(100vh - 140px); width: 100%;" class="relative bg-black">
+            <img id="imageToCrop" src="" style="display: block; max-width: 100%;">
         </div>
         
-        <!-- Modal Footer Controls -->
         <div class="p-4 pb-8 sm:pb-4 bg-gray-900 border-t border-gray-800 flex justify-center space-x-4">
-            <button type="button" onclick="closeCropper()" class="px-6 py-3 rounded-md border border-gray-600 text-white hover:bg-gray-800 transition font-medium w-full sm:w-auto">
-                Cancel
-            </button>
-            <button type="button" onclick="applyCropAndSave()" id="btnApplyCrop" class="px-6 py-3 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition shadow-lg font-medium flex items-center justify-center w-full sm:w-auto">
+            <button type="button" onclick="applyCropAndSave()" id="btnApplyCrop" class="px-6 py-3 rounded-md bg-blue-600 text-white hover:bg-blue-700 shadow-lg font-medium flex items-center justify-center w-full">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                Confirm & Compress
+                Confirm Crop
             </button>
         </div>
     </div>
@@ -257,9 +303,98 @@
         // Globals
         window.selectedFile = null;
         let cropperInstance = null;
+        let cameraStream = null;
 
-        // 1. Triggered when photo is selected/taken
-        window.openCropperUI = function(event) {
+        /* =========================================
+           1. LIVE CAMERA SYSTEM (New & Improved)
+        ========================================= */
+        window.startLiveCamera = async function() {
+            try {
+                // Request back camera
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } 
+                });
+                const video = document.getElementById('liveVideo');
+                video.srcObject = cameraStream;
+                
+                // Show camera modal
+                document.getElementById('cameraModal').classList.remove('hidden');
+                document.getElementById('cameraModal').classList.add('flex');
+            } catch (err) {
+                console.error("Camera error:", err);
+                alert("Could not access camera. Please check permissions or use the Gallery option.");
+            }
+        };
+
+        window.stopLiveCamera = function() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            document.getElementById('cameraModal').classList.add('hidden');
+            document.getElementById('cameraModal').classList.remove('flex');
+        };
+
+        window.captureLivePhoto = function() {
+            const video = document.getElementById('liveVideo');
+            const guideBox = document.getElementById('cameraGuideBox');
+            
+            // 1. Setup a hidden canvas to capture the raw video frame
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // 2. Math to perfectly extract the area inside the Guide Box!
+            // Calculate how the video is scaled on the screen (object-fit: cover)
+            const scale = Math.max(video.clientWidth / video.videoWidth, video.clientHeight / video.videoHeight);
+            
+            // Calculate offsets caused by object-fit: cover centering
+            const offsetX = (video.clientWidth - video.videoWidth * scale) / 2;
+            const offsetY = (video.clientHeight - video.videoHeight * scale) / 2;
+            
+            // Calculate guide box position relative to the screen
+            const guideRect = guideBox.getBoundingClientRect();
+            
+            // Map the screen pixels of the guide box back to the raw video coordinates
+            const sourceX = (guideRect.left - offsetX) / scale;
+            const sourceY = (guideRect.top - offsetY) / scale;
+            const sourceW = guideRect.width / scale;
+            const sourceH = guideRect.height / scale;
+
+            // 3. Setup final 600x800 Passport Canvas
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = 600;
+            finalCanvas.height = 800;
+            const finalCtx = finalCanvas.getContext('2d');
+
+            // Draw just that specific cropped area into the final canvas
+            finalCtx.drawImage(canvas, sourceX, sourceY, sourceW, sourceH, 0, 0, 600, 800);
+
+            // 4. Save and Update UI
+            finalCanvas.toBlob(function(blob) {
+                window.selectedFile = new File([blob], `camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                const sizeKB = (blob.size / 1024).toFixed(1);
+                
+                document.getElementById('imagePreview').src = URL.createObjectURL(blob);
+                document.getElementById('photoUploadUI').style.display = 'none';
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                document.getElementById('imagePreviewContainer').classList.add('flex');
+                document.getElementById('compressionStats').innerHTML = `
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Live Photo Captured (${sizeKB}KB)
+                `;
+                
+                stopLiveCamera(); // Close camera
+            }, 'image/jpeg', 0.85);
+        };
+
+
+        /* =========================================
+           2. GALLERY CROPPER SYSTEM (Fixed Layout)
+        ========================================= */
+        window.openGalleryCropper = function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
@@ -268,45 +403,35 @@
                 const imgElement = document.getElementById('imageToCrop');
                 imgElement.src = e.target.result;
 
-                // Show Modal
                 document.getElementById('cropperModal').classList.remove('hidden');
                 document.getElementById('cropperModal').classList.add('flex');
 
-                // Destroy old instance if exists
-                if (cropperInstance) {
-                    cropperInstance.destroy();
-                }
+                if (cropperInstance) cropperInstance.destroy();
 
-                // Initialize Cropper.js locked to 3:4 aspect ratio
+                // Fixed Cropper options
                 cropperInstance = new Cropper(imgElement, {
-                    aspectRatio: 3 / 4,     // Strict Passport Ratio
-                    viewMode: 1,            // Restrict crop box to not exceed canvas
-                    dragMode: 'move',       // Allow dragging the image around
-                    autoCropArea: 0.8,      // Initial size of crop box
-                    guides: false,          // Hide standard grid
-                    center: false,          // Hide center indicator
+                    aspectRatio: 3 / 4,
+                    viewMode: 1, // Restrict crop box to canvas
+                    dragMode: 'move',
+                    autoCropArea: 0.9, // Make box fill 90% of screen initially
+                    guides: false,
+                    center: false,
                     highlight: false,
-                    background: false,
-                    cropBoxMovable: false,  // Lock the box position (user moves image instead)
-                    cropBoxResizable: false,// Lock the box size (user zooms image instead)
-                    toggleDragModeOnDblclick: false,
+                    background: true,
+                    cropBoxMovable: false,
+                    cropBoxResizable: false,
                 });
             }
             reader.readAsDataURL(file);
         };
 
-        // 2. User cancels crop
-        window.closeCropper = function() {
+        window.closeGalleryCropper = function() {
             document.getElementById('cropperModal').classList.add('hidden');
             document.getElementById('cropperModal').classList.remove('flex');
             if (cropperInstance) cropperInstance.destroy();
-            
-            // Clear inputs so they can select the same file again if needed
-            document.getElementById('photoCamera').value = '';
             document.getElementById('photoGallery').value = '';
         };
 
-        // 3. User confirms crop -> Generate strictly 600x800 image
         window.applyCropAndSave = function() {
             if (!cropperInstance) return;
 
@@ -314,30 +439,18 @@
             btn.innerHTML = 'Processing...';
             btn.disabled = true;
 
-            // Extract the canvas matching exactly 600x800 pixels (Passport Standard)
             const croppedCanvas = cropperInstance.getCroppedCanvas({
-                width: 600,
-                height: 800,
-                imageSmoothingEnabled: true,
-                imageSmoothingQuality: 'high',
+                width: 600, height: 800,
+                imageSmoothingEnabled: true, imageSmoothingQuality: 'high',
             });
 
-            // Convert to JPEG format with 85% quality (excellent balance of clarity and size)
             croppedCanvas.toBlob(function(blob) {
-                
-                // Set to global variable for the Form Submit function
-                const fileInput = document.getElementById('photoCamera').files[0] || document.getElementById('photoGallery').files[0];
+                const fileInput = document.getElementById('photoGallery').files[0];
                 const originalName = fileInput ? (fileInput.name.split('.')[0] || 'photo') : 'photo';
                 
-                window.selectedFile = new File([blob], `${originalName}_passport.jpg`, {
-                    type: 'image/jpeg',
-                    lastModified: Date.now()
-                });
-
-                // Calculate file size in KB
+                window.selectedFile = new File([blob], `${originalName}_passport.jpg`, { type: 'image/jpeg' });
                 const sizeKB = (blob.size / 1024).toFixed(1);
 
-                // Update Form UI
                 document.getElementById('imagePreview').src = URL.createObjectURL(blob);
                 document.getElementById('photoUploadUI').style.display = 'none';
                 document.getElementById('imagePreviewContainer').classList.remove('hidden');
@@ -348,24 +461,21 @@
                     Passport Ready (${sizeKB}KB)
                 `;
 
-                // Reset and close
-                btn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Confirm & Compress';
+                btn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Confirm Crop';
                 btn.disabled = false;
-                closeCropper();
-
+                closeGalleryCropper();
             }, 'image/jpeg', 0.85);
         };
 
-        // Standard Form Logic below
+        /* =========================================
+           3. STANDARD FORM LOGIC 
+        ========================================= */
         window.removeImage = function() {
-            document.getElementById('photoCamera').value = '';
             document.getElementById('photoGallery').value = '';
             window.selectedFile = null;
-            
             document.getElementById('imagePreviewContainer').classList.add('hidden');
             document.getElementById('imagePreviewContainer').classList.remove('flex');
             document.getElementById('imagePreview').src = '#';
-            
             document.getElementById('photoUploadUI').style.display = 'flex';
         };
 
@@ -376,12 +486,11 @@
             document.getElementById('successMessage').classList.add('hidden');
         }
 
-        // Form Submission logic
         document.getElementById('teacherForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             if (!window.selectedFile) {
-                alert("Please provide a Teacher Photo by choosing Camera or Gallery.");
+                alert("Please provide a Teacher Photo by capturing or uploading one.");
                 return;
             }
 
@@ -391,21 +500,16 @@
             try {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = `
-                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Uploading...
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Uploading Data...
                 `;
 
-                // Upload to Firebase Storage!
                 const fileName = `student_photos/teachers/${Date.now()}_${window.selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '')}`;
                 const storageRef = ref(storage, fileName);
                 
                 const uploadTask = await uploadBytesResumable(storageRef, window.selectedFile);
                 const downloadURL = await getDownloadURL(uploadTask.ref);
 
-                // Save Data to Firestore
                 const teacherData = {
                     schoolName: document.getElementById('schoolName').value,
                     udiseCode: document.getElementById('udiseCode').value,
@@ -424,7 +528,6 @@
 
                 await addDoc(collection(db, "teachers"), teacherData);
 
-                // Show Success
                 document.getElementById('teacherForm').style.display = 'none';
                 document.getElementById('successMessage').classList.remove('hidden');
                 
