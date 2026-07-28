@@ -4,15 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher ID Card Data Entry</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Cropper.js CSS for Custom Crop System -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+
     <style>
         body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom Styling for the Cropper to show Head & Shoulders Guide */
+        .cropper-view-box {
+            border-radius: 4px;
+            outline: 2px solid #3b82f6; /* Blue border */
+        }
+        
+        /* This injects the Head and Shoulders outline into the crop box */
+        .cropper-face::after {
+            content: '';
+            position: absolute;
+            top: 5%; left: 10%; right: 10%; bottom: 5%;
+            /* SVG Data URI for Head and Shoulders Outline */
+            background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 133'%3E%3Cellipse cx='50' cy='45' rx='20' ry='25' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3Cpath d='M 15 133 C 15 100 25 90 35 85 C 40 90 60 90 65 85 C 75 90 85 100 85 133' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            pointer-events: none; /* Essential so dragging works through the outline */
+        }
+        
+        /* Darken the area outside the crop box */
+        .cropper-modal {
+            background-color: rgba(0, 0, 0, 0.85);
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-    <!-- Header (No navigation links) -->
+    <!-- Header -->
     <nav class="bg-blue-600 shadow-lg text-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
@@ -107,7 +137,7 @@
                     
                     <!-- Upload Buttons UI -->
                     <div id="photoUploadUI" class="mt-1 flex flex-col items-center justify-center px-6 pt-6 pb-6 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-all hover:bg-gray-100">
-                        <p class="text-sm text-gray-600 mb-4 font-medium">Select an option to upload your photo</p>
+                        <p class="text-sm text-gray-600 mb-4 font-medium">Capture or select a photo to frame perfectly</p>
                         
                         <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mb-3 w-full sm:w-auto">
                             <!-- Camera Button -->
@@ -122,26 +152,26 @@
                                 Choose Gallery
                             </button>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2">Format: PNG, JPG (Up to 1MB)</p>
+                        <p class="text-xs text-gray-500 mt-2">A 3:4 crop tool will open automatically</p>
                         
                         <!-- Hidden Inputs -->
-                        <!-- capture="environment" forces the camera open on mobile -->
-                        <input id="photoCamera" type="file" class="hidden" accept="image/*" capture="environment" onchange="previewImage(event)">
-                        <!-- standard input prompts file manager/gallery on mobile -->
-                        <input id="photoGallery" type="file" class="hidden" accept="image/*" onchange="previewImage(event)">
+                        <!-- trigger openFileUI on change instead of direct preview -->
+                        <input id="photoCamera" type="file" class="hidden" accept="image/*" capture="environment" onchange="openCropperUI(event)">
+                        <input id="photoGallery" type="file" class="hidden" accept="image/*" onchange="openCropperUI(event)">
                     </div>
 
-                    <!-- Preview Container -->
+                    <!-- Final Preview Container (Post-Crop) -->
                     <div id="imagePreviewContainer" class="mt-4 hidden relative flex-col items-center">
                         <div class="relative">
-                            <img id="imagePreview" src="#" alt="Preview" class="h-48 w-48 object-cover rounded-lg shadow-md border-4 border-white">
+                            <!-- Adjusted to aspect-ratio 3:4 dimensions roughly -->
+                            <img id="imagePreview" src="#" alt="Preview" class="h-48 w-36 object-cover rounded-lg shadow-md border-4 border-white">
                             <button type="button" onclick="removeImage()" class="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg border-2 border-white transition-transform hover:scale-110" title="Remove Photo">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
                             </button>
                         </div>
-                        <p class="text-sm text-green-600 font-medium mt-3 flex items-center">
+                        <p id="compressionStats" class="text-sm text-green-600 font-medium mt-3 flex items-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            Photo attached successfully
+                            Passport Photo Ready
                         </p>
                     </div>
                 </div>
@@ -169,7 +199,42 @@
         </div>
     </main>
 
-    <!-- Firebase SDK Setup -->
+    <!-- FULL SCREEN CROPPER MODAL -->
+    <div id="cropperModal" class="hidden fixed inset-0 z-50 bg-black/95 flex-col backdrop-blur-sm">
+        <!-- Modal Header -->
+        <div class="p-4 flex justify-between items-center text-white border-b border-gray-800 bg-black">
+            <h3 class="font-semibold text-lg flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                Align Photo within Guide
+            </h3>
+            <button type="button" onclick="closeCropper()" class="text-gray-400 hover:text-white p-1 rounded-full bg-gray-800 hover:bg-gray-700 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <!-- Cropper Work Area -->
+        <div class="flex-1 relative w-full h-full p-2 sm:p-6 flex items-center justify-center overflow-hidden">
+            <div class="w-full max-h-full">
+                <!-- Image gets injected here -->
+                <img id="imageToCrop" src="" class="max-w-full hidden">
+            </div>
+        </div>
+        
+        <!-- Modal Footer Controls -->
+        <div class="p-4 pb-8 sm:pb-4 bg-gray-900 border-t border-gray-800 flex justify-center space-x-4">
+            <button type="button" onclick="closeCropper()" class="px-6 py-3 rounded-md border border-gray-600 text-white hover:bg-gray-800 transition font-medium w-full sm:w-auto">
+                Cancel
+            </button>
+            <button type="button" onclick="applyCropAndSave()" id="btnApplyCrop" class="px-6 py-3 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition shadow-lg font-medium flex items-center justify-center w-full sm:w-auto">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                Confirm & Compress
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Firebase & Cropper SDK Setup -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -189,46 +254,118 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
 
-        // Make functions globally available
+        // Globals
         window.selectedFile = null;
+        let cropperInstance = null;
 
-        // Image Preview & Validation handling
-        window.previewImage = function(event) {
+        // 1. Triggered when photo is selected/taken
+        window.openCropperUI = function(event) {
             const file = event.target.files[0];
-            if (file) {
-                if (file.size > 1024 * 1024) { // 1MB Limit
-                    alert("File is too large. Please select an image under 1MB.");
-                    event.target.value = ''; 
-                    return;
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imgElement = document.getElementById('imageToCrop');
+                imgElement.src = e.target.result;
+
+                // Show Modal
+                document.getElementById('cropperModal').classList.remove('hidden');
+                document.getElementById('cropperModal').classList.add('flex');
+
+                // Destroy old instance if exists
+                if (cropperInstance) {
+                    cropperInstance.destroy();
                 }
 
-                window.selectedFile = file;
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    document.getElementById('imagePreview').src = e.target.result;
-                    // Hide the upload UI buttons
-                    document.getElementById('photoUploadUI').style.display = 'none';
-                    // Show the preview
-                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
-                    document.getElementById('imagePreviewContainer').classList.add('flex');
-                }
-                reader.readAsDataURL(file);
+                // Initialize Cropper.js locked to 3:4 aspect ratio
+                cropperInstance = new Cropper(imgElement, {
+                    aspectRatio: 3 / 4,     // Strict Passport Ratio
+                    viewMode: 1,            // Restrict crop box to not exceed canvas
+                    dragMode: 'move',       // Allow dragging the image around
+                    autoCropArea: 0.8,      // Initial size of crop box
+                    guides: false,          // Hide standard grid
+                    center: false,          // Hide center indicator
+                    highlight: false,
+                    background: false,
+                    cropBoxMovable: false,  // Lock the box position (user moves image instead)
+                    cropBoxResizable: false,// Lock the box size (user zooms image instead)
+                    toggleDragModeOnDblclick: false,
+                });
             }
+            reader.readAsDataURL(file);
         };
 
+        // 2. User cancels crop
+        window.closeCropper = function() {
+            document.getElementById('cropperModal').classList.add('hidden');
+            document.getElementById('cropperModal').classList.remove('flex');
+            if (cropperInstance) cropperInstance.destroy();
+            
+            // Clear inputs so they can select the same file again if needed
+            document.getElementById('photoCamera').value = '';
+            document.getElementById('photoGallery').value = '';
+        };
+
+        // 3. User confirms crop -> Generate strictly 600x800 image
+        window.applyCropAndSave = function() {
+            if (!cropperInstance) return;
+
+            const btn = document.getElementById('btnApplyCrop');
+            btn.innerHTML = 'Processing...';
+            btn.disabled = true;
+
+            // Extract the canvas matching exactly 600x800 pixels (Passport Standard)
+            const croppedCanvas = cropperInstance.getCroppedCanvas({
+                width: 600,
+                height: 800,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high',
+            });
+
+            // Convert to JPEG format with 85% quality (excellent balance of clarity and size)
+            croppedCanvas.toBlob(function(blob) {
+                
+                // Set to global variable for the Form Submit function
+                const fileInput = document.getElementById('photoCamera').files[0] || document.getElementById('photoGallery').files[0];
+                const originalName = fileInput ? (fileInput.name.split('.')[0] || 'photo') : 'photo';
+                
+                window.selectedFile = new File([blob], `${originalName}_passport.jpg`, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+
+                // Calculate file size in KB
+                const sizeKB = (blob.size / 1024).toFixed(1);
+
+                // Update Form UI
+                document.getElementById('imagePreview').src = URL.createObjectURL(blob);
+                document.getElementById('photoUploadUI').style.display = 'none';
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                document.getElementById('imagePreviewContainer').classList.add('flex');
+                
+                document.getElementById('compressionStats').innerHTML = `
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Passport Ready (${sizeKB}KB)
+                `;
+
+                // Reset and close
+                btn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Confirm & Compress';
+                btn.disabled = false;
+                closeCropper();
+
+            }, 'image/jpeg', 0.85);
+        };
+
+        // Standard Form Logic below
         window.removeImage = function() {
-            // Clear both inputs
             document.getElementById('photoCamera').value = '';
             document.getElementById('photoGallery').value = '';
             window.selectedFile = null;
             
-            // Hide preview
             document.getElementById('imagePreviewContainer').classList.add('hidden');
             document.getElementById('imagePreviewContainer').classList.remove('flex');
             document.getElementById('imagePreview').src = '#';
             
-            // Show upload UI buttons again
             document.getElementById('photoUploadUI').style.display = 'flex';
         };
 
@@ -243,7 +380,6 @@
         document.getElementById('teacherForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Verify photo is selected (since we removed 'required' from HTML to handle 2 buttons)
             if (!window.selectedFile) {
                 alert("Please provide a Teacher Photo by choosing Camera or Gallery.");
                 return;
@@ -253,7 +389,6 @@
             const originalText = submitBtn.innerHTML;
             
             try {
-                // 1. Show loading state
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = `
                     <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -263,14 +398,14 @@
                     Uploading...
                 `;
 
-                // 2. Upload Image to Storage (using the student_photos path allowed by your rules)
-                const fileName = `student_photos/teachers/${Date.now()}_${window.selectedFile.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+                // Upload to Firebase Storage!
+                const fileName = `student_photos/teachers/${Date.now()}_${window.selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '')}`;
                 const storageRef = ref(storage, fileName);
                 
                 const uploadTask = await uploadBytesResumable(storageRef, window.selectedFile);
                 const downloadURL = await getDownloadURL(uploadTask.ref);
 
-                // 3. Save Data to Firestore
+                // Save Data to Firestore
                 const teacherData = {
                     schoolName: document.getElementById('schoolName').value,
                     udiseCode: document.getElementById('udiseCode').value,
@@ -282,14 +417,14 @@
                     qualification: document.getElementById('qualification').value,
                     mobileNo: document.getElementById('mobileNo').value,
                     bloodGroup: document.getElementById('bloodGroup').value,
-                    teacherCode: document.getElementById('teacherCode').value || 'N/A', // Handle optional field
+                    teacherCode: document.getElementById('teacherCode').value || 'N/A', 
                     photoUrl: downloadURL,
                     timestamp: serverTimestamp()
                 };
 
                 await addDoc(collection(db, "teachers"), teacherData);
 
-                // 4. Show Success
+                // Show Success
                 document.getElementById('teacherForm').style.display = 'none';
                 document.getElementById('successMessage').classList.remove('hidden');
                 
@@ -297,7 +432,6 @@
                 console.error("Error adding document: ", error);
                 alert("An error occurred: " + error.message);
             } finally {
-                // Reset button state
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
