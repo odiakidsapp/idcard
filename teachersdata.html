@@ -27,11 +27,11 @@
         .cropper-face::after {
             content: '';
             position: absolute;
-            top: 5%; left: 10%; right: 10%; bottom: 5%;
-            background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 133'%3E%3Cellipse cx='50' cy='45' rx='20' ry='25' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3Cpath d='M 15 133 C 15 100 25 90 35 85 C 40 90 60 90 65 85 C 75 90 85 100 85 133' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3C/svg%3E");
-            background-size: contain;
+            top: 0; left: 0; right: 0; bottom: 0; /* Touches edges */
+            /* Enriched SVG: Head is larger, Shoulders stretch to X=0 and X=100 edges */
+            background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 133'%3E%3Cellipse cx='50' cy='45' rx='26' ry='34' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3Cpath d='M 0 133 C 0 100 10 90 28 83 C 35 91 65 91 72 83 C 90 90 100 100 100 133' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3C/svg%3E");
+            background-size: 100% 100%;
             background-repeat: no-repeat;
-            background-position: center bottom;
             pointer-events: none; 
         }
 
@@ -57,18 +57,18 @@
             aspect-ratio: 3 / 4;
             border: 2px solid #3b82f6;
             border-radius: 4px;
-            /* This massive outline darkens everything OUTSIDE the box */
+            /* Darken outside area */
             outline: 4000px solid rgba(0, 0, 0, 0.75); 
             position: relative;
         }
         .camera-guide-box::after {
             content: '';
             position: absolute;
-            top: 5%; left: 10%; right: 10%; bottom: 5%;
-            background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 133'%3E%3Cellipse cx='50' cy='45' rx='20' ry='25' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3Cpath d='M 15 133 C 15 100 25 90 35 85 C 40 90 60 90 65 85 C 75 90 85 100 85 133' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3C/svg%3E");
-            background-size: contain;
+            top: 0; left: 0; right: 0; bottom: 0;
+            /* Same larger SVG for live camera */
+            background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 133'%3E%3Cellipse cx='50' cy='45' rx='26' ry='34' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3Cpath d='M 0 133 C 0 100 10 90 28 83 C 35 91 65 91 72 83 C 90 90 100 100 100 133' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3C/svg%3E");
+            background-size: 100% 100%;
             background-repeat: no-repeat;
-            background-position: center bottom;
         }
     </style>
 </head>
@@ -306,7 +306,7 @@
         let cameraStream = null;
 
         /* =========================================
-           1. LIVE CAMERA SYSTEM (New & Improved)
+           1. LIVE CAMERA SYSTEM
         ========================================= */
         window.startLiveCamera = async function() {
             try {
@@ -347,17 +347,11 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             // 2. Math to perfectly extract the area inside the Guide Box!
-            // Calculate how the video is scaled on the screen (object-fit: cover)
             const scale = Math.max(video.clientWidth / video.videoWidth, video.clientHeight / video.videoHeight);
-            
-            // Calculate offsets caused by object-fit: cover centering
             const offsetX = (video.clientWidth - video.videoWidth * scale) / 2;
             const offsetY = (video.clientHeight - video.videoHeight * scale) / 2;
-            
-            // Calculate guide box position relative to the screen
             const guideRect = guideBox.getBoundingClientRect();
             
-            // Map the screen pixels of the guide box back to the raw video coordinates
             const sourceX = (guideRect.left - offsetX) / scale;
             const sourceY = (guideRect.top - offsetY) / scale;
             const sourceW = guideRect.width / scale;
@@ -373,26 +367,27 @@
             finalCtx.drawImage(canvas, sourceX, sourceY, sourceW, sourceH, 0, 0, 600, 800);
 
             // 4. Save and Update UI
+            // Changed quality to 0.95 (95%) for maximum clarity while remaining a standard JPEG
             finalCanvas.toBlob(function(blob) {
                 window.selectedFile = new File([blob], `camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
-                const sizeKB = (blob.size / 1024).toFixed(1);
                 
                 document.getElementById('imagePreview').src = URL.createObjectURL(blob);
                 document.getElementById('photoUploadUI').style.display = 'none';
                 document.getElementById('imagePreviewContainer').classList.remove('hidden');
                 document.getElementById('imagePreviewContainer').classList.add('flex');
+                
                 document.getElementById('compressionStats').innerHTML = `
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    Live Photo Captured (${sizeKB}KB)
+                    Live Photo Captured
                 `;
                 
                 stopLiveCamera(); // Close camera
-            }, 'image/jpeg', 0.85);
+            }, 'image/jpeg', 0.95);
         };
 
 
         /* =========================================
-           2. GALLERY CROPPER SYSTEM (Fixed Layout)
+           2. GALLERY CROPPER SYSTEM
         ========================================= */
         window.openGalleryCropper = function(event) {
             const file = event.target.files[0];
@@ -408,12 +403,11 @@
 
                 if (cropperInstance) cropperInstance.destroy();
 
-                // Fixed Cropper options
                 cropperInstance = new Cropper(imgElement, {
                     aspectRatio: 3 / 4,
-                    viewMode: 1, // Restrict crop box to canvas
+                    viewMode: 1, 
                     dragMode: 'move',
-                    autoCropArea: 0.9, // Make box fill 90% of screen initially
+                    autoCropArea: 0.9, 
                     guides: false,
                     center: false,
                     highlight: false,
@@ -444,12 +438,12 @@
                 imageSmoothingEnabled: true, imageSmoothingQuality: 'high',
             });
 
+            // Changed quality to 0.95 (95%) for maximum clarity
             croppedCanvas.toBlob(function(blob) {
                 const fileInput = document.getElementById('photoGallery').files[0];
                 const originalName = fileInput ? (fileInput.name.split('.')[0] || 'photo') : 'photo';
                 
                 window.selectedFile = new File([blob], `${originalName}_passport.jpg`, { type: 'image/jpeg' });
-                const sizeKB = (blob.size / 1024).toFixed(1);
 
                 document.getElementById('imagePreview').src = URL.createObjectURL(blob);
                 document.getElementById('photoUploadUI').style.display = 'none';
@@ -458,13 +452,13 @@
                 
                 document.getElementById('compressionStats').innerHTML = `
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    Passport Ready (${sizeKB}KB)
+                    Passport Photo Ready
                 `;
 
                 btn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Confirm Crop';
                 btn.disabled = false;
                 closeGalleryCropper();
-            }, 'image/jpeg', 0.85);
+            }, 'image/jpeg', 0.95);
         };
 
         /* =========================================
