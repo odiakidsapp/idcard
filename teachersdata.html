@@ -16,66 +16,43 @@
         body { font-family: 'Inter', sans-serif; }
         
         /* --- Gallery Cropper Custom Styles --- */
-        .cropper-container {
-            width: 100% !important;
-            height: 100% !important;
-        }
-        .cropper-view-box {
-            border-radius: 4px;
-            outline: 2px solid #3b82f6; 
-        }
+        .cropper-container { width: 100% !important; height: 100% !important; }
+        .cropper-view-box { border-radius: 4px; outline: 2px solid #3b82f6; }
         .cropper-face::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0; /* Touches edges */
-            /* Enriched SVG: Head is larger, Shoulders stretch to X=0 and X=100 edges */
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
             background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 133'%3E%3Cellipse cx='50' cy='45' rx='26' ry='34' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3Cpath d='M 0 133 C 0 100 10 90 28 83 C 35 91 65 91 72 83 C 90 90 100 100 100 133' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3C/svg%3E");
-            background-size: 100% 100%;
-            background-repeat: no-repeat;
-            pointer-events: none; 
+            background-size: 100% 100%; background-repeat: no-repeat; pointer-events: none; 
         }
 
         /* --- Live Camera Custom Styles --- */
-        #liveVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* Fill the screen */
-        }
+        #liveVideo { width: 100%; height: 100%; object-fit: cover; }
         .camera-overlay-container {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 10;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none; overflow: hidden; z-index: 10;
         }
         .camera-guide-box {
-            width: 70vw; /* 70% of screen width */
-            max-width: 320px;
-            aspect-ratio: 1 / 1; /* SQUARE RATIO */
-            border: 2px solid #3b82f6;
-            border-radius: 4px;
-            /* Darken outside area */
-            outline: 4000px solid rgba(0, 0, 0, 0.75); 
-            position: relative;
+            width: 70vw; max-width: 320px; aspect-ratio: 1 / 1; 
+            border: 2px solid #3b82f6; border-radius: 4px;
+            outline: 4000px solid rgba(0, 0, 0, 0.75); position: relative;
         }
         .camera-guide-box::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            /* Same larger SVG for live camera */
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 133'%3E%3Cellipse cx='50' cy='45' rx='26' ry='34' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3Cpath d='M 0 133 C 0 100 10 90 28 83 C 35 91 65 91 72 83 C 90 90 100 100 100 133' fill='none' stroke='rgba(255,255,255,0.8)' stroke-width='1.5' stroke-dasharray='4,4' /%3E%3C/svg%3E");
-            background-size: 100% 100%;
-            background-repeat: no-repeat;
+            background-size: 100% 100%; background-repeat: no-repeat;
         }
+        
+        /* Hide scrollbar for cleaner look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
     <!-- Header -->
-    <nav class="bg-blue-600 shadow-lg text-white">
+    <nav class="bg-blue-600 shadow-lg text-white shrink-0">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center space-x-3">
@@ -84,45 +61,128 @@
                     </svg>
                     <span class="font-bold text-xl tracking-wider">Teacher ID Portal</span>
                 </div>
+                <!-- Logout Button (Hidden initially) -->
+                <button id="btnLogout" onclick="logout()" class="hidden items-center text-sm font-medium hover:text-blue-200 transition">
+                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    Sign Out
+                </button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Container -->
-    <main class="max-w-3xl mx-auto py-8 px-4 sm:px-6">
-        <div class="bg-white rounded-xl shadow-md overflow-hidden">
-            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                <h2 class="text-xl font-semibold text-gray-800">Teacher Information Form</h2>
-                <p class="text-sm text-gray-500 mt-1">Please fill out all the required details to generate your ID card.</p>
+    <!-- App Container -->
+    <main class="flex-1 w-full max-w-4xl mx-auto py-8 px-4 sm:px-6 relative">
+
+        <!-- ==========================================
+             VIEW 1: LOGIN (Enter UDISE)
+        =========================================== -->
+        <div id="viewLogin" class="block max-w-md mx-auto">
+            <div class="bg-white rounded-xl shadow-md p-8 text-center">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">School Sign In</h2>
+                <p class="text-gray-500 mb-6">Enter your school's 11-digit UDISE Code to manage your teacher ID cards.</p>
+                
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <input type="text" id="loginUdise" required pattern="[0-9]{11}" placeholder="Enter 11-digit UDISE Code" class="w-full text-center text-xl tracking-widest px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 mb-4 transition-colors">
+                    <button type="submit" id="btnLogin" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition flex justify-center items-center">
+                        Continue to Portal
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             VIEW 2: NEW SCHOOL SETUP
+        =========================================== -->
+        <div id="viewSchoolSetup" class="hidden max-w-2xl mx-auto">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="px-6 py-4 bg-yellow-50 border-b border-yellow-200">
+                    <h2 class="text-xl font-semibold text-yellow-800 flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        New School Detected
+                    </h2>
+                    <p class="text-sm text-yellow-700 mt-1">We couldn't find this UDISE. Please set up your school profile first.</p>
+                </div>
+                
+                <form id="schoolSetupForm" onsubmit="saveSchoolProfile(event)" class="p-6 space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">UDISE Code</label>
+                        <input type="text" id="setupUdise" readonly class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-500 cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">School Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="setupSchoolName" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Block <span class="text-red-500">*</span></label>
+                            <input type="text" id="setupBlock" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">District <span class="text-red-500">*</span></label>
+                            <input type="text" id="setupDistrict" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">PIN Code <span class="text-red-500">*</span></label>
+                            <input type="text" id="setupPin" required pattern="[0-9]{6}" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    <button type="submit" id="btnSaveSchool" class="w-full bg-green-600 text-white font-medium py-3 rounded-lg hover:bg-green-700 transition">
+                        Save Profile & Continue
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             VIEW 3: SCHOOL DASHBOARD
+        =========================================== -->
+        <div id="viewDashboard" class="hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h2 id="dashSchoolName" class="text-2xl font-bold text-gray-900">School Name</h2>
+                    <p class="text-gray-500 font-medium">UDISE: <span id="dashUdise"></span> | Block: <span id="dashBlock"></span></p>
+                </div>
+                <button onclick="openTeacherForm()" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition shadow-sm flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Add New Teacher
+                </button>
+            </div>
+
+            <!-- Loader -->
+            <div id="dashboardLoader" class="flex justify-center py-12">
+                <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </div>
+
+            <!-- Teachers Grid -->
+            <div id="teachersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+                <!-- Cards injected here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">No teachers added yet</h3>
+                <p class="text-gray-500 mb-4">Get started by adding your first teacher ID entry.</p>
+                <button onclick="openTeacherForm()" class="text-blue-600 font-medium hover:text-blue-800">Add Teacher +</button>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             VIEW 4: TEACHER DATA ENTRY FORM
+        =========================================== -->
+        <div id="viewForm" class="hidden bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                <div>
+                    <h2 id="formTitle" class="text-xl font-semibold text-gray-800">Add Teacher Details</h2>
+                    <p class="text-sm text-gray-500 mt-1">For <span id="formSchoolNameDisplay" class="font-medium text-gray-700"></span></p>
+                </div>
+                <button type="button" onclick="showView('viewDashboard')" class="text-gray-500 hover:text-gray-800 bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded transition">Back</button>
             </div>
             
             <form id="teacherForm" class="p-6 space-y-6">
-                <!-- Location Details -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">School Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="schoolName" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">UDISE Code <span class="text-red-500">*</span></label>
-                        <input type="text" id="udiseCode" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Block <span class="text-red-500">*</span></label>
-                        <input type="text" id="block" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">District <span class="text-red-500">*</span></label>
-                        <input type="text" id="district" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">PIN Code <span class="text-red-500">*</span></label>
-                        <input type="text" id="pin" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                </div>
-
-                <hr class="border-gray-200">
-
                 <!-- Personal Details -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -131,7 +191,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Designation <span class="text-red-500">*</span></label>
-                        <input type="text" id="designation" required placeholder="e.g., Assistant Teacher, Headmaster" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" id="designation" required placeholder="e.g., Assistant Teacher" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Qualification <span class="text-red-500">*</span></label>
@@ -170,120 +230,111 @@
                     <!-- Upload Buttons UI -->
                     <div id="photoUploadUI" class="mt-1 flex flex-col items-center justify-center px-6 pt-6 pb-6 border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 transition-all hover:bg-gray-100">
                         <p class="text-sm text-gray-600 mb-4 font-medium">Capture live photo or select from gallery</p>
-                        
                         <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mb-3 w-full sm:w-auto">
-                            <!-- Custom Live Camera Button -->
-                            <button type="button" onclick="startLiveCamera()" class="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-sm w-full sm:w-auto">
+                            <button type="button" onclick="startLiveCamera()" class="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-sm w-full sm:w-auto">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                 Open Camera
                             </button>
-                            
-                            <!-- Gallery Button -->
-                            <button type="button" onclick="document.getElementById('photoGallery').click()" class="flex items-center justify-center px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition shadow-sm w-full sm:w-auto">
+                            <button type="button" onclick="document.getElementById('photoGallery').click()" class="flex items-center justify-center px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 shadow-sm w-full sm:w-auto">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                 Choose Gallery
                             </button>
                         </div>
                         <p class="text-xs text-gray-500 mt-2">Automatically formatted as a Square (1:1)</p>
-                        
-                        <!-- Hidden File Input for Gallery Only -->
                         <input id="photoGallery" type="file" class="hidden" accept="image/*" onchange="openGalleryCropper(event)">
                     </div>
 
-                    <!-- Final Preview Container (Now Square) -->
+                    <!-- Final Preview Container -->
                     <div id="imagePreviewContainer" class="mt-4 hidden relative flex-col items-center">
                         <div class="relative">
-                            <img id="imagePreview" src="#" alt="Preview" class="h-40 w-40 object-cover rounded-lg shadow-md border-4 border-white">
+                            <img id="imagePreview" src="#" alt="Preview" class="h-40 w-40 object-cover rounded-lg shadow-md border-4 border-white bg-gray-100">
                             <button type="button" onclick="removeImage()" class="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg border-2 border-white transition-transform hover:scale-110" title="Remove Photo">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
                             </button>
                         </div>
                         <p id="compressionStats" class="text-sm text-green-600 font-medium mt-3 flex items-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            Photo Ready
+                            Photo Attached
                         </p>
                     </div>
                 </div>
 
                 <div class="pt-4">
-                    <button type="submit" id="submitBtn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
-                        Submit Data
+                    <button type="submit" id="submitBtn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none transition-colors">
+                        Save Teacher Details
                     </button>
                 </div>
             </form>
-            
-            <!-- Success Message -->
-            <div id="successMessage" class="hidden p-8 text-center bg-green-50">
-                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                    <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <h3 class="text-2xl font-bold text-green-800 mb-2">Success!</h3>
-                <p class="text-green-600 mb-6">Your data has been submitted successfully.</p>
-                <button type="button" onclick="resetForm()" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium transition-colors">
-                    Submit Another Entry
-                </button>
-            </div>
         </div>
+
     </main>
 
 
-    <!-- 1. LIVE CAMERA MODAL -->
-    <div id="cameraModal" class="hidden fixed inset-0 z-50 bg-black flex-col">
-        <!-- Live Video Feed -->
-        <video id="liveVideo" autoplay playsinline muted></video>
-        
-        <!-- The Guide Overlay (SQUARE Box + Head outline) -->
-        <div class="camera-overlay-container">
-            <div id="cameraGuideBox" class="camera-guide-box"></div>
-        </div>
+    <!-- ==========================================
+         MODALS & OVERLAYS
+    =========================================== -->
 
-        <!-- Controls -->
-        <div class="absolute bottom-0 left-0 right-0 p-6 pb-10 bg-gradient-to-t from-black to-transparent flex justify-between items-center z-20">
-            <button type="button" onclick="stopLiveCamera()" class="text-white bg-gray-800/80 hover:bg-gray-700 px-6 py-2 rounded-full font-medium backdrop-blur-sm">
-                Cancel
-            </button>
-            
-            <!-- Capture Shutter Button -->
-            <button type="button" onclick="captureLivePhoto()" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 flex items-center justify-center hover:scale-105 transition-transform">
-                <div class="w-12 h-12 bg-white rounded-full shadow-inner"></div>
-            </button>
-            
-            <div class="w-20"></div> <!-- Spacer for centering -->
+    <!-- Custom Alert Modal (Replaces browser alert) -->
+    <div id="customAlert" class="hidden fixed inset-0 z-[100] bg-black/60 flex items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-white p-6 rounded-xl max-w-sm w-full shadow-2xl text-center transform transition-all">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
+                <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h3 id="alertTitle" class="text-lg font-bold text-gray-900 mb-2">Notice</h3>
+            <p id="alertMessage" class="text-gray-600 mb-6">Message goes here</p>
+            <button onclick="closeCustomAlert()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition">OK, got it</button>
         </div>
     </div>
 
+    <!-- Custom Confirm Modal (For deletions) -->
+    <div id="customConfirm" class="hidden fixed inset-0 z-[100] bg-black/60 flex items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-white p-6 rounded-xl max-w-sm w-full shadow-2xl text-center transform transition-all">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Delete Teacher?</h3>
+            <p class="text-gray-600 mb-6">Are you sure you want to delete this entry? This cannot be undone.</p>
+            <div class="flex space-x-3">
+                <button onclick="closeCustomConfirm()" class="flex-1 bg-gray-200 text-gray-800 py-2.5 rounded-lg font-medium hover:bg-gray-300 transition">Cancel</button>
+                <button id="btnConfirmDelete" class="flex-1 bg-red-600 text-white py-2.5 rounded-lg font-medium hover:bg-red-700 transition">Delete</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- 2. GALLERY CROPPER MODAL (Fixed layout) -->
+    <!-- Live Camera Modal -->
+    <div id="cameraModal" class="hidden fixed inset-0 z-50 bg-black flex-col">
+        <video id="liveVideo" autoplay playsinline muted></video>
+        <div class="camera-overlay-container"><div id="cameraGuideBox" class="camera-guide-box"></div></div>
+        <div class="absolute bottom-0 left-0 right-0 p-6 pb-10 bg-gradient-to-t from-black to-transparent flex justify-between items-center z-20">
+            <button type="button" onclick="stopLiveCamera()" class="text-white bg-gray-800/80 hover:bg-gray-700 px-6 py-2 rounded-full font-medium backdrop-blur-sm">Cancel</button>
+            <button type="button" onclick="captureLivePhoto()" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 flex items-center justify-center hover:scale-105 transition-transform"><div class="w-12 h-12 bg-white rounded-full shadow-inner"></div></button>
+            <div class="w-20"></div>
+        </div>
+    </div>
+
+    <!-- Gallery Cropper Modal -->
     <div id="cropperModal" class="hidden fixed inset-0 z-50 bg-black/95 flex-col backdrop-blur-sm">
         <div class="p-4 flex justify-between items-center text-white border-b border-gray-800 bg-black">
             <h3 class="font-semibold text-lg flex items-center">
-                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-                Align Gallery Photo
+                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg> Align Gallery Photo
             </h3>
-            <button type="button" onclick="closeGalleryCropper()" class="text-gray-400 hover:text-white p-1 rounded-full bg-gray-800 hover:bg-gray-700">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+            <button type="button" onclick="closeGalleryCropper()" class="text-gray-400 hover:text-white p-1 rounded-full bg-gray-800 hover:bg-gray-700"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         </div>
-        
-        <!-- Fixed height container so image is never tiny -->
         <div style="height: calc(100vh - 140px); width: 100%;" class="relative bg-black">
             <img id="imageToCrop" src="" style="display: block; max-width: 100%;">
         </div>
-        
         <div class="p-4 pb-8 sm:pb-4 bg-gray-900 border-t border-gray-800 flex justify-center space-x-4">
             <button type="button" onclick="applyCropAndSave()" id="btnApplyCrop" class="px-6 py-3 rounded-md bg-blue-600 text-white hover:bg-blue-700 shadow-lg font-medium flex items-center justify-center w-full">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                Confirm Crop
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Confirm Crop
             </button>
         </div>
     </div>
 
-
-    <!-- Firebase & Cropper SDK Setup -->
+    <!-- Firebase & Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -300,53 +351,359 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
 
-        // Globals
+        // App State
+        window.currentSchool = null; // Holds School Profile data
+        window.editingTeacherId = null; // Null if adding new, string ID if editing
+        window.existingPhotoUrl = null; // Used to retain old photo during edits
+        
+        // Photo State
         window.selectedFile = null;
         let cropperInstance = null;
         let cameraStream = null;
 
         /* =========================================
-           1. LIVE CAMERA SYSTEM (SQUARE)
+           UI HELPERS (Custom Modals)
         ========================================= */
+        window.showCustomAlert = function(title, message) {
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+            document.getElementById('customAlert').classList.remove('hidden');
+        };
+        window.closeCustomAlert = function() {
+            document.getElementById('customAlert').classList.add('hidden');
+        };
+
+        let confirmCallback = null;
+        window.showCustomConfirm = function(callback) {
+            confirmCallback = callback;
+            document.getElementById('customConfirm').classList.remove('hidden');
+        };
+        window.closeCustomConfirm = function() {
+            document.getElementById('customConfirm').classList.add('hidden');
+            confirmCallback = null;
+        };
+        document.getElementById('btnConfirmDelete').addEventListener('click', () => {
+            if(confirmCallback) confirmCallback();
+            closeCustomConfirm();
+        });
+
+        // View Router
+        window.showView = function(viewId) {
+            const views = ['viewLogin', 'viewSchoolSetup', 'viewDashboard', 'viewForm'];
+            views.forEach(v => {
+                document.getElementById(v).classList.add('hidden');
+                document.getElementById(v).classList.remove('block');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+            
+            // Toggle Logout button
+            if(viewId === 'viewLogin') {
+                document.getElementById('btnLogout').classList.add('hidden');
+                document.getElementById('btnLogout').classList.remove('flex');
+            } else {
+                document.getElementById('btnLogout').classList.remove('hidden');
+                document.getElementById('btnLogout').classList.add('flex');
+            }
+        };
+
+        window.logout = function() {
+            window.currentSchool = null;
+            document.getElementById('loginForm').reset();
+            showView('viewLogin');
+        };
+
+        /* =========================================
+           CORE LOGIC: LOGIN & SETUP
+        ========================================= */
+        window.handleLogin = async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnLogin');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Checking...'; btn.disabled = true;
+
+            const udiseCode = document.getElementById('loginUdise').value.trim();
+
+            try {
+                // Check if school exists in 'schools' collection
+                const schoolRef = doc(db, "schools", udiseCode);
+                const schoolSnap = await getDoc(schoolRef);
+
+                if (schoolSnap.exists()) {
+                    // Existing School -> Go to Dashboard
+                    window.currentSchool = schoolSnap.data();
+                    window.currentSchool.udiseCode = udiseCode; // ensure attached
+                    loadDashboard();
+                } else {
+                    // New School -> Ask for Profile Setup
+                    document.getElementById('setupUdise').value = udiseCode;
+                    showView('viewSchoolSetup');
+                }
+            } catch (error) {
+                console.error("Login error:", error);
+                showCustomAlert("Connection Error", "Could not connect to database. Please check connection.");
+            } finally {
+                btn.innerHTML = originalText; btn.disabled = false;
+            }
+        };
+
+        window.saveSchoolProfile = async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSaveSchool');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Saving...'; btn.disabled = true;
+
+            const udiseCode = document.getElementById('setupUdise').value;
+            
+            window.currentSchool = {
+                udiseCode: udiseCode,
+                schoolName: document.getElementById('setupSchoolName').value,
+                block: document.getElementById('setupBlock').value,
+                district: document.getElementById('setupDistrict').value,
+                pin: document.getElementById('setupPin').value,
+            };
+
+            try {
+                // Save to 'schools' collection
+                await setDoc(doc(db, "schools", udiseCode), window.currentSchool);
+                loadDashboard();
+            } catch (error) {
+                console.error("Setup error:", error);
+                showCustomAlert("Save Error", "Failed to save school profile.");
+                window.currentSchool = null;
+            } finally {
+                btn.innerHTML = originalText; btn.disabled = false;
+            }
+        };
+
+
+        /* =========================================
+           DASHBOARD & DATA MANAGEMENT
+        ========================================= */
+        window.localTeachersList = []; // Cache to avoid re-fetching on edit
+
+        window.loadDashboard = async function() {
+            showView('viewDashboard');
+            
+            // Set Header details
+            document.getElementById('dashSchoolName').innerText = window.currentSchool.schoolName;
+            document.getElementById('dashUdise').innerText = window.currentSchool.udiseCode;
+            document.getElementById('dashBlock').innerText = window.currentSchool.block;
+
+            // UI states
+            document.getElementById('dashboardLoader').classList.remove('hidden');
+            document.getElementById('teachersGrid').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            
+            const grid = document.getElementById('teachersGrid');
+            grid.innerHTML = ''; 
+
+            try {
+                // Fetch all teachers for this UDISE
+                const q = query(collection(db, "teachers"), where("udiseCode", "==", window.currentSchool.udiseCode));
+                const querySnapshot = await getDocs(q);
+                
+                window.localTeachersList = [];
+
+                if (querySnapshot.empty) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                } else {
+                    querySnapshot.forEach((docSnap) => {
+                        const data = docSnap.data();
+                        data.id = docSnap.id;
+                        window.localTeachersList.push(data);
+                        
+                        // Create Teacher Card
+                        const card = document.createElement('div');
+                        card.className = "bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col";
+                        card.innerHTML = `
+                            <div class="p-5 flex items-start space-x-4 flex-1">
+                                <img src="${data.photoUrl || '#'}" class="w-20 h-20 rounded-lg object-cover shadow-sm bg-gray-100 border border-gray-200">
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="text-lg font-bold text-gray-900 truncate">${data.teacherName}</h3>
+                                    <p class="text-sm text-blue-600 font-medium truncate">${data.designation}</p>
+                                    <p class="text-xs text-gray-500 mt-1 truncate">Mob: ${data.mobileNo}</p>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-end space-x-3">
+                                <button onclick="editTeacher('${data.id}')" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition px-2">Edit</button>
+                                <button onclick="triggerDelete('${data.id}')" class="text-sm font-medium text-red-600 hover:text-red-800 transition px-2">Delete</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                    grid.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Dashboard fetch error:", error);
+                showCustomAlert("Load Error", "Failed to load teachers.");
+            } finally {
+                document.getElementById('dashboardLoader').classList.add('hidden');
+            }
+        };
+
+        window.openTeacherForm = function() {
+            // Reset for Add New
+            window.editingTeacherId = null;
+            document.getElementById('teacherForm').reset();
+            window.removeImage(); // resets photo UI
+            
+            document.getElementById('formTitle').innerText = "Add New Teacher";
+            document.getElementById('formSchoolNameDisplay').innerText = window.currentSchool.schoolName;
+            document.getElementById('submitBtn').innerText = "Save Teacher Details";
+            
+            showView('viewForm');
+        };
+
+        window.editTeacher = function(id) {
+            const teacher = window.localTeachersList.find(t => t.id === id);
+            if(!teacher) return;
+
+            window.editingTeacherId = id;
+            
+            // Populate Fields
+            document.getElementById('teacherName').value = teacher.teacherName;
+            document.getElementById('designation').value = teacher.designation;
+            document.getElementById('qualification').value = teacher.qualification;
+            document.getElementById('mobileNo').value = teacher.mobileNo;
+            document.getElementById('bloodGroup').value = teacher.bloodGroup;
+            document.getElementById('teacherCode').value = teacher.teacherCode === 'N/A' ? '' : teacher.teacherCode;
+
+            // Handle Existing Photo
+            window.selectedFile = null; 
+            window.existingPhotoUrl = teacher.photoUrl;
+            document.getElementById('imagePreview').src = teacher.photoUrl;
+            document.getElementById('photoUploadUI').style.display = 'none';
+            document.getElementById('imagePreviewContainer').classList.remove('hidden');
+            document.getElementById('imagePreviewContainer').classList.add('flex');
+            document.getElementById('compressionStats').innerHTML = `
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                Current Photo Retained
+            `;
+
+            document.getElementById('formTitle').innerText = "Edit Teacher Details";
+            document.getElementById('formSchoolNameDisplay').innerText = window.currentSchool.schoolName;
+            document.getElementById('submitBtn').innerText = "Update Details";
+            
+            showView('viewForm');
+        };
+
+        window.triggerDelete = function(id) {
+            showCustomConfirm(async () => {
+                try {
+                    await deleteDoc(doc(db, "teachers", id));
+                    loadDashboard(); // Refresh
+                } catch (error) {
+                    showCustomAlert("Delete Error", "Could not delete entry.");
+                }
+            });
+        };
+
+        /* =========================================
+           FORM SUBMISSION
+        ========================================= */
+        document.getElementById('teacherForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Validate Photo
+            if (!window.selectedFile && !window.existingPhotoUrl) {
+                showCustomAlert("Photo Required", "Please provide a Teacher Photo by capturing or uploading one.");
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Saving...`;
+
+                let finalPhotoUrl = window.existingPhotoUrl;
+
+                // Upload NEW image if they selected one
+                if (window.selectedFile) {
+                    const fileName = `student_photos/teachers/${Date.now()}_${window.selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '')}`;
+                    const storageRef = ref(storage, fileName);
+                    const uploadTask = await uploadBytesResumable(storageRef, window.selectedFile);
+                    finalPhotoUrl = await getDownloadURL(uploadTask.ref);
+                }
+
+                // Compile data (combining current School info with Form info)
+                const teacherData = {
+                    // Hidden School Data (keeps backward compatibility with admin panel)
+                    schoolName: window.currentSchool.schoolName,
+                    udiseCode: window.currentSchool.udiseCode,
+                    block: window.currentSchool.block,
+                    district: window.currentSchool.district,
+                    pin: window.currentSchool.pin,
+                    
+                    // Form Data
+                    teacherName: document.getElementById('teacherName').value,
+                    designation: document.getElementById('designation').value,
+                    qualification: document.getElementById('qualification').value,
+                    mobileNo: document.getElementById('mobileNo').value,
+                    bloodGroup: document.getElementById('bloodGroup').value,
+                    teacherCode: document.getElementById('teacherCode').value || 'N/A', 
+                    photoUrl: finalPhotoUrl,
+                    timestamp: serverTimestamp()
+                };
+
+                if (window.editingTeacherId) {
+                    // UPDATE
+                    await updateDoc(doc(db, "teachers", window.editingTeacherId), teacherData);
+                } else {
+                    // ADD NEW
+                    await addDoc(collection(db, "teachers"), teacherData);
+                }
+
+                loadDashboard(); // Returns to dashboard and refreshes
+                
+            } catch (error) {
+                console.error("Save error: ", error);
+                showCustomAlert("Error", "An error occurred saving the data. Check connection.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+
+
+        /* =========================================
+           CAMERA & CROPPER SYSTEMS (Preserved perfectly)
+        ========================================= */
+        window.removeImage = function() {
+            document.getElementById('photoGallery').value = '';
+            window.selectedFile = null;
+            window.existingPhotoUrl = null;
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            document.getElementById('imagePreviewContainer').classList.remove('flex');
+            document.getElementById('imagePreview').src = '#';
+            document.getElementById('photoUploadUI').style.display = 'flex';
+        };
+
+        // Live Camera
         window.startLiveCamera = async function() {
             try {
-                // Request back camera
-                cameraStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } 
-                });
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
                 const video = document.getElementById('liveVideo');
                 video.srcObject = cameraStream;
-                
-                // Show camera modal
-                document.getElementById('cameraModal').classList.remove('hidden');
-                document.getElementById('cameraModal').classList.add('flex');
+                document.getElementById('cameraModal').classList.remove('hidden'); document.getElementById('cameraModal').classList.add('flex');
             } catch (err) {
-                console.error("Camera error:", err);
-                alert("Could not access camera. Please check permissions or use the Gallery option.");
+                showCustomAlert("Camera Error", "Could not access camera. Please use the Gallery option.");
             }
         };
 
         window.stopLiveCamera = function() {
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-                cameraStream = null;
-            }
-            document.getElementById('cameraModal').classList.add('hidden');
-            document.getElementById('cameraModal').classList.remove('flex');
+            if (cameraStream) { cameraStream.getTracks().forEach(track => track.stop()); cameraStream = null; }
+            document.getElementById('cameraModal').classList.add('hidden'); document.getElementById('cameraModal').classList.remove('flex');
         };
 
         window.captureLivePhoto = function() {
             const video = document.getElementById('liveVideo');
             const guideBox = document.getElementById('cameraGuideBox');
-            
-            // 1. Setup a hidden canvas to capture the raw video frame
             const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d'); ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // 2. Math to perfectly extract the area inside the Guide Box!
             const scale = Math.max(video.clientWidth / video.videoWidth, video.clientHeight / video.videoHeight);
             const offsetX = (video.clientWidth - video.videoWidth * scale) / 2;
             const offsetY = (video.clientHeight - video.videoHeight * scale) / 2;
@@ -357,182 +714,65 @@
             const sourceW = guideRect.width / scale;
             const sourceH = guideRect.height / scale;
 
-            // 3. Setup final 800x800 Square Canvas
             const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = 800; // Square width
-            finalCanvas.height = 800; // Square height
+            finalCanvas.width = 800; finalCanvas.height = 800; // Square
             const finalCtx = finalCanvas.getContext('2d');
-
-            // Draw just that specific cropped area into the final canvas
             finalCtx.drawImage(canvas, sourceX, sourceY, sourceW, sourceH, 0, 0, 800, 800);
 
-            // 4. Save and Update UI
-            // Quality 0.95 (95%) for maximum clarity
             finalCanvas.toBlob(function(blob) {
                 window.selectedFile = new File([blob], `camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
-                
+                window.existingPhotoUrl = null; // Clear old photo if replacing
                 document.getElementById('imagePreview').src = URL.createObjectURL(blob);
                 document.getElementById('photoUploadUI').style.display = 'none';
-                document.getElementById('imagePreviewContainer').classList.remove('hidden');
-                document.getElementById('imagePreviewContainer').classList.add('flex');
-                
-                document.getElementById('compressionStats').innerHTML = `
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    Live Photo Captured
-                `;
-                
-                stopLiveCamera(); // Close camera
+                document.getElementById('imagePreviewContainer').classList.remove('hidden'); document.getElementById('imagePreviewContainer').classList.add('flex');
+                document.getElementById('compressionStats').innerHTML = `<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Live Photo Captured`;
+                stopLiveCamera();
             }, 'image/jpeg', 0.95);
         };
 
-
-        /* =========================================
-           2. GALLERY CROPPER SYSTEM (SQUARE)
-        ========================================= */
+        // Gallery Cropper
         window.openGalleryCropper = function(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 const imgElement = document.getElementById('imageToCrop');
                 imgElement.src = e.target.result;
-
-                document.getElementById('cropperModal').classList.remove('hidden');
-                document.getElementById('cropperModal').classList.add('flex');
-
+                document.getElementById('cropperModal').classList.remove('hidden'); document.getElementById('cropperModal').classList.add('flex');
                 if (cropperInstance) cropperInstance.destroy();
-
                 cropperInstance = new Cropper(imgElement, {
-                    aspectRatio: 1 / 1, // SQUARE RATIO
-                    viewMode: 1, 
-                    dragMode: 'move',
-                    autoCropArea: 0.9, 
-                    guides: false,
-                    center: false,
-                    highlight: false,
-                    background: true,
-                    cropBoxMovable: false,
-                    cropBoxResizable: false,
+                    aspectRatio: 1 / 1, viewMode: 1, dragMode: 'move', autoCropArea: 0.9, guides: false, center: false, highlight: false, background: true, cropBoxMovable: false, cropBoxResizable: false,
                 });
             }
             reader.readAsDataURL(file);
         };
 
         window.closeGalleryCropper = function() {
-            document.getElementById('cropperModal').classList.add('hidden');
-            document.getElementById('cropperModal').classList.remove('flex');
+            document.getElementById('cropperModal').classList.add('hidden'); document.getElementById('cropperModal').classList.remove('flex');
             if (cropperInstance) cropperInstance.destroy();
             document.getElementById('photoGallery').value = '';
         };
 
         window.applyCropAndSave = function() {
             if (!cropperInstance) return;
-
             const btn = document.getElementById('btnApplyCrop');
-            btn.innerHTML = 'Processing...';
-            btn.disabled = true;
+            btn.innerHTML = 'Processing...'; btn.disabled = true;
 
-            const croppedCanvas = cropperInstance.getCroppedCanvas({
-                width: 800, height: 800, // Square output dimensions
-                imageSmoothingEnabled: true, imageSmoothingQuality: 'high',
-            });
-
-            // Quality 0.95 (95%) for maximum clarity
+            const croppedCanvas = cropperInstance.getCroppedCanvas({ width: 800, height: 800, imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
             croppedCanvas.toBlob(function(blob) {
                 const fileInput = document.getElementById('photoGallery').files[0];
                 const originalName = fileInput ? (fileInput.name.split('.')[0] || 'photo') : 'photo';
-                
                 window.selectedFile = new File([blob], `${originalName}_passport.jpg`, { type: 'image/jpeg' });
+                window.existingPhotoUrl = null; // Clear old photo if replacing
 
                 document.getElementById('imagePreview').src = URL.createObjectURL(blob);
                 document.getElementById('photoUploadUI').style.display = 'none';
-                document.getElementById('imagePreviewContainer').classList.remove('hidden');
-                document.getElementById('imagePreviewContainer').classList.add('flex');
-                
-                document.getElementById('compressionStats').innerHTML = `
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    Photo Ready
-                `;
-
-                btn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Confirm Crop';
-                btn.disabled = false;
-                closeGalleryCropper();
+                document.getElementById('imagePreviewContainer').classList.remove('hidden'); document.getElementById('imagePreviewContainer').classList.add('flex');
+                document.getElementById('compressionStats').innerHTML = `<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Photo Ready`;
+                btn.innerHTML = `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Confirm Crop`;
+                btn.disabled = false; closeGalleryCropper();
             }, 'image/jpeg', 0.95);
         };
-
-        /* =========================================
-           3. STANDARD FORM LOGIC 
-        ========================================= */
-        window.removeImage = function() {
-            document.getElementById('photoGallery').value = '';
-            window.selectedFile = null;
-            document.getElementById('imagePreviewContainer').classList.add('hidden');
-            document.getElementById('imagePreviewContainer').classList.remove('flex');
-            document.getElementById('imagePreview').src = '#';
-            document.getElementById('photoUploadUI').style.display = 'flex';
-        };
-
-        window.resetForm = function() {
-            document.getElementById('teacherForm').reset();
-            window.removeImage();
-            document.getElementById('teacherForm').style.display = 'block';
-            document.getElementById('successMessage').classList.add('hidden');
-        }
-
-        document.getElementById('teacherForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!window.selectedFile) {
-                alert("Please provide a Teacher Photo by capturing or uploading one.");
-                return;
-            }
-
-            const submitBtn = document.getElementById('submitBtn');
-            const originalText = submitBtn.innerHTML;
-            
-            try {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = `
-                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    Uploading Data...
-                `;
-
-                const fileName = `student_photos/teachers/${Date.now()}_${window.selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '')}`;
-                const storageRef = ref(storage, fileName);
-                
-                const uploadTask = await uploadBytesResumable(storageRef, window.selectedFile);
-                const downloadURL = await getDownloadURL(uploadTask.ref);
-
-                const teacherData = {
-                    schoolName: document.getElementById('schoolName').value,
-                    udiseCode: document.getElementById('udiseCode').value,
-                    block: document.getElementById('block').value,
-                    district: document.getElementById('district').value,
-                    pin: document.getElementById('pin').value,
-                    teacherName: document.getElementById('teacherName').value,
-                    designation: document.getElementById('designation').value,
-                    qualification: document.getElementById('qualification').value,
-                    mobileNo: document.getElementById('mobileNo').value,
-                    bloodGroup: document.getElementById('bloodGroup').value,
-                    teacherCode: document.getElementById('teacherCode').value || 'N/A', 
-                    photoUrl: downloadURL,
-                    timestamp: serverTimestamp()
-                };
-
-                await addDoc(collection(db, "teachers"), teacherData);
-
-                document.getElementById('teacherForm').style.display = 'none';
-                document.getElementById('successMessage').classList.remove('hidden');
-                
-            } catch (error) {
-                console.error("Error adding document: ", error);
-                alert("An error occurred: " + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        });
     </script>
 </body>
 </html>
