@@ -177,12 +177,31 @@
             <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                 <div>
                     <h2 id="formTitle" class="text-xl font-semibold text-gray-800">Add Teacher Details</h2>
-                    <p class="text-sm text-gray-500 mt-1">For <span id="formSchoolNameDisplay" class="font-medium text-gray-700"></span></p>
+                    <p class="text-sm text-gray-500 mt-1">Please fill in the information below.</p>
                 </div>
                 <button type="button" onclick="showView('viewDashboard')" class="text-gray-500 hover:text-gray-800 bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded transition">Back</button>
             </div>
             
             <form id="teacherForm" class="p-6 space-y-6">
+                
+                <!-- Visible School Information -->
+                <div class="bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                    <h3 class="text-sm font-semibold text-blue-800 mb-3 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                        School Details (Auto-filled)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">School Name</label>
+                            <input type="text" id="formSchoolName" readonly class="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-md text-gray-700 font-semibold cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">UDISE Code</label>
+                            <input type="text" id="formUdiseCode" readonly class="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-md text-gray-700 font-semibold cursor-not-allowed">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Personal Details -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -333,8 +352,9 @@
     <!-- Firebase & Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script type="module">
+        // Added setDoc to imports to fix the save error
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, setDoc, updateDoc, deleteDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -424,17 +444,14 @@
             const udiseCode = document.getElementById('loginUdise').value.trim();
 
             try {
-                // Check if school exists in 'schools' collection
                 const schoolRef = doc(db, "schools", udiseCode);
                 const schoolSnap = await getDoc(schoolRef);
 
                 if (schoolSnap.exists()) {
-                    // Existing School -> Go to Dashboard
                     window.currentSchool = schoolSnap.data();
-                    window.currentSchool.udiseCode = udiseCode; // ensure attached
+                    window.currentSchool.udiseCode = udiseCode; 
                     loadDashboard();
                 } else {
-                    // New School -> Ask for Profile Setup
                     document.getElementById('setupUdise').value = udiseCode;
                     showView('viewSchoolSetup');
                 }
@@ -463,7 +480,7 @@
             };
 
             try {
-                // Save to 'schools' collection
+                // Now using setDoc properly!
                 await setDoc(doc(db, "schools", udiseCode), window.currentSchool);
                 loadDashboard();
             } catch (error) {
@@ -479,17 +496,15 @@
         /* =========================================
            DASHBOARD & DATA MANAGEMENT
         ========================================= */
-        window.localTeachersList = []; // Cache to avoid re-fetching on edit
+        window.localTeachersList = []; 
 
         window.loadDashboard = async function() {
             showView('viewDashboard');
             
-            // Set Header details
             document.getElementById('dashSchoolName').innerText = window.currentSchool.schoolName;
             document.getElementById('dashUdise').innerText = window.currentSchool.udiseCode;
             document.getElementById('dashBlock').innerText = window.currentSchool.block;
 
-            // UI states
             document.getElementById('dashboardLoader').classList.remove('hidden');
             document.getElementById('teachersGrid').classList.add('hidden');
             document.getElementById('emptyState').classList.add('hidden');
@@ -498,7 +513,6 @@
             grid.innerHTML = ''; 
 
             try {
-                // Fetch all teachers for this UDISE
                 const q = query(collection(db, "teachers"), where("udiseCode", "==", window.currentSchool.udiseCode));
                 const querySnapshot = await getDocs(q);
                 
@@ -512,7 +526,6 @@
                         data.id = docSnap.id;
                         window.localTeachersList.push(data);
                         
-                        // Create Teacher Card
                         const card = document.createElement('div');
                         card.className = "bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col";
                         card.innerHTML = `
@@ -542,13 +555,15 @@
         };
 
         window.openTeacherForm = function() {
-            // Reset for Add New
             window.editingTeacherId = null;
             document.getElementById('teacherForm').reset();
-            window.removeImage(); // resets photo UI
+            window.removeImage();
+            
+            // Populating visible school fields in the form!
+            document.getElementById('formSchoolName').value = window.currentSchool.schoolName;
+            document.getElementById('formUdiseCode').value = window.currentSchool.udiseCode;
             
             document.getElementById('formTitle').innerText = "Add New Teacher";
-            document.getElementById('formSchoolNameDisplay').innerText = window.currentSchool.schoolName;
             document.getElementById('submitBtn').innerText = "Save Teacher Details";
             
             showView('viewForm');
@@ -560,7 +575,10 @@
 
             window.editingTeacherId = id;
             
-            // Populate Fields
+            // Populating visible school fields in the form!
+            document.getElementById('formSchoolName').value = window.currentSchool.schoolName;
+            document.getElementById('formUdiseCode').value = window.currentSchool.udiseCode;
+            
             document.getElementById('teacherName').value = teacher.teacherName;
             document.getElementById('designation').value = teacher.designation;
             document.getElementById('qualification').value = teacher.qualification;
@@ -568,7 +586,6 @@
             document.getElementById('bloodGroup').value = teacher.bloodGroup;
             document.getElementById('teacherCode').value = teacher.teacherCode === 'N/A' ? '' : teacher.teacherCode;
 
-            // Handle Existing Photo
             window.selectedFile = null; 
             window.existingPhotoUrl = teacher.photoUrl;
             document.getElementById('imagePreview').src = teacher.photoUrl;
@@ -581,7 +598,6 @@
             `;
 
             document.getElementById('formTitle').innerText = "Edit Teacher Details";
-            document.getElementById('formSchoolNameDisplay').innerText = window.currentSchool.schoolName;
             document.getElementById('submitBtn').innerText = "Update Details";
             
             showView('viewForm');
@@ -591,7 +607,7 @@
             showCustomConfirm(async () => {
                 try {
                     await deleteDoc(doc(db, "teachers", id));
-                    loadDashboard(); // Refresh
+                    loadDashboard(); 
                 } catch (error) {
                     showCustomAlert("Delete Error", "Could not delete entry.");
                 }
@@ -604,7 +620,6 @@
         document.getElementById('teacherForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Validate Photo
             if (!window.selectedFile && !window.existingPhotoUrl) {
                 showCustomAlert("Photo Required", "Please provide a Teacher Photo by capturing or uploading one.");
                 return;
@@ -619,7 +634,6 @@
 
                 let finalPhotoUrl = window.existingPhotoUrl;
 
-                // Upload NEW image if they selected one
                 if (window.selectedFile) {
                     const fileName = `student_photos/teachers/${Date.now()}_${window.selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '')}`;
                     const storageRef = ref(storage, fileName);
@@ -629,14 +643,12 @@
 
                 // Compile data (combining current School info with Form info)
                 const teacherData = {
-                    // Hidden School Data (keeps backward compatibility with admin panel)
                     schoolName: window.currentSchool.schoolName,
                     udiseCode: window.currentSchool.udiseCode,
                     block: window.currentSchool.block,
                     district: window.currentSchool.district,
                     pin: window.currentSchool.pin,
                     
-                    // Form Data
                     teacherName: document.getElementById('teacherName').value,
                     designation: document.getElementById('designation').value,
                     qualification: document.getElementById('qualification').value,
@@ -648,14 +660,12 @@
                 };
 
                 if (window.editingTeacherId) {
-                    // UPDATE
                     await updateDoc(doc(db, "teachers", window.editingTeacherId), teacherData);
                 } else {
-                    // ADD NEW
                     await addDoc(collection(db, "teachers"), teacherData);
                 }
 
-                loadDashboard(); // Returns to dashboard and refreshes
+                loadDashboard(); 
                 
             } catch (error) {
                 console.error("Save error: ", error);
@@ -668,7 +678,7 @@
 
 
         /* =========================================
-           CAMERA & CROPPER SYSTEMS (Preserved perfectly)
+           CAMERA & CROPPER SYSTEMS
         ========================================= */
         window.removeImage = function() {
             document.getElementById('photoGallery').value = '';
@@ -680,7 +690,6 @@
             document.getElementById('photoUploadUI').style.display = 'flex';
         };
 
-        // Live Camera
         window.startLiveCamera = async function() {
             try {
                 cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
@@ -721,7 +730,7 @@
 
             finalCanvas.toBlob(function(blob) {
                 window.selectedFile = new File([blob], `camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
-                window.existingPhotoUrl = null; // Clear old photo if replacing
+                window.existingPhotoUrl = null; 
                 document.getElementById('imagePreview').src = URL.createObjectURL(blob);
                 document.getElementById('photoUploadUI').style.display = 'none';
                 document.getElementById('imagePreviewContainer').classList.remove('hidden'); document.getElementById('imagePreviewContainer').classList.add('flex');
@@ -730,7 +739,6 @@
             }, 'image/jpeg', 0.95);
         };
 
-        // Gallery Cropper
         window.openGalleryCropper = function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -763,7 +771,7 @@
                 const fileInput = document.getElementById('photoGallery').files[0];
                 const originalName = fileInput ? (fileInput.name.split('.')[0] || 'photo') : 'photo';
                 window.selectedFile = new File([blob], `${originalName}_passport.jpg`, { type: 'image/jpeg' });
-                window.existingPhotoUrl = null; // Clear old photo if replacing
+                window.existingPhotoUrl = null;
 
                 document.getElementById('imagePreview').src = URL.createObjectURL(blob);
                 document.getElementById('photoUploadUI').style.display = 'none';
