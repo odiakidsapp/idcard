@@ -101,6 +101,7 @@
                                     <th class="pb-3 font-medium">Blood Grp</th>
                                     <th class="pb-3 font-medium">Contact</th>
                                     <th class="pb-3 font-medium">Qualification</th>
+                                    <th class="pb-3 font-medium text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="teacherTableBody" class="text-sm">
@@ -152,6 +153,41 @@
                 toast.classList.add('translate-x-full', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+        }
+
+        // Helper function to force download an image file
+        async function downloadTeacherPhoto(url, teacherName, teacherCode) {
+            if (!url) {
+                showToast("No photo available to download.", "error");
+                return;
+            }
+
+            const fileName = `${teacherName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${teacherCode || 'photo'}.jpg`;
+
+            try {
+                showToast("Downloading photo...", "success");
+                const response = await fetch(url, { mode: 'cors' });
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                console.warn("CORS fetch failed, falling back to direct tab download:", error);
+                // Fallback for strict CORS settings: Open in new window/trigger default download
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         }
 
         async function loadDashboardData() {
@@ -244,7 +280,7 @@
             tbody.innerHTML = '';
 
             if (school.teachers.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">No teachers found for this school.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-gray-500">No teachers found for this school.</td></tr>`;
                 return;
             }
 
@@ -253,6 +289,7 @@
                 tr.className = "border-b border-gray-100 hover:bg-gray-50 transition-colors";
                 
                 const photoSrc = teacher.photoUrl ? teacher.photoUrl : 'https://placehold.co/40x40/e2e8f0/94a3b8?text=N/A';
+                const hasValidPhoto = Boolean(teacher.photoUrl);
 
                 tr.innerHTML = `
                     <td class="py-3 px-2">
@@ -266,6 +303,16 @@
                     <td class="py-3 px-2 font-medium ${teacher.bloodGroup ? 'text-red-500' : 'text-gray-600'}">${teacher.bloodGroup || 'N/A'}</td>
                     <td class="py-3 px-2 text-gray-600">${teacher.mobileNo}</td>
                     <td class="py-3 px-2 text-gray-600 truncate max-w-[150px]" title="${teacher.qualification}">${teacher.qualification}</td>
+                    <td class="py-3 px-2 text-center">
+                        <button 
+                            onclick="downloadTeacherPhoto('${teacher.photoUrl || ''}', '${teacher.teacherName || 'Teacher'}', '${teacher.teacherCode || ''}')"
+                            class="inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all ${!hasValidPhoto ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''}"
+                            title="${hasValidPhoto ? 'Download Photo' : 'No Photo Available'}"
+                            ${!hasValidPhoto ? 'disabled' : ''}
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -280,6 +327,7 @@
         window.loadDashboardData = loadDashboardData;
         window.openSchoolDetails = openSchoolDetails;
         window.closeSchoolDetails = closeSchoolDetails;
+        window.downloadTeacherPhoto = downloadTeacherPhoto;
 
         // Load data automatically when admin page loads
         document.addEventListener('DOMContentLoaded', loadDashboardData);
