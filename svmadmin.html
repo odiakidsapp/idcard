@@ -204,6 +204,17 @@
     </div>
   </div></div>
 
+  <!-- Delete ALL Students Confirmation Modal -->
+  <div id="deleteAllModal" class="modal"><div class="modal-content" style="max-width: 400px; text-align: center;">
+    <div style="font-size: 3rem; margin-bottom: 10px;">🚨</div>
+    <h3 style="margin-top: 0;">Wipe Complete Database?</h3>
+    <p id="deleteAllText" style="color: var(--text-muted); margin-bottom: 25px;">Delete ALL student records in the entire database? This cannot be undone.</p>
+    <div style="display: flex; gap: 10px; justify-content: center;">
+      <button id="deleteAllNoBtn" class="btn-outline" style="flex: 1;">Cancel</button>
+      <button id="deleteAllYesBtn" class="btn-danger" style="flex: 1;">Yes, Wipe All</button>
+    </div>
+  </div></div>
+
   <!-- Duplicate Finder Modal -->
   <div id="duplicateModal" class="modal"><div class="modal-content">
     <div class="modal-header">
@@ -351,9 +362,8 @@ function loadData(){
 
     renderClassGrids();
     updateGlobalDeleteButton();
-    updateStats(); // Update dashboard calculation
+    updateStats();
     
-    // Re-trigger search if there's an active query during reload
     if(searchInput.value) { searchInput.dispatchEvent(new Event('input')); }
   }).catch(err=>{ console.error(err); classesContainer.innerHTML = `<div style="padding: 20px; color: red;">Error: ${escapeHtml(err.message||err)}</div>`; updateGlobalDeleteButton(); });
 }
@@ -371,7 +381,6 @@ function updateStats() {
 function renderClassGrids() {
   classesContainer.innerHTML = '';
   
-  // Natural sort for classes (e.g. Class 1, Class 2, Class 10)
   const classNames = Object.keys(groupedByClass).sort(new Intl.Collator('en', {numeric: true, sensitivity: 'base'}).compare);
   
   if(classNames.length === 0) {
@@ -448,7 +457,6 @@ searchInput.addEventListener('input', (e) => {
             }
         });
         
-        // Hide the entire class section if no matches found inside it
         if (visibleCount === 0) {
             section.style.display = 'none';
         } else {
@@ -469,7 +477,6 @@ function findDuplicates() {
     let dupMap = {};
     let potentialDuplicates = [];
 
-    // Group logic: Match exact (lowercase, trimmed) Name + Father Name, OR Phone number (if exists)
     allStudents.forEach(s => {
         let nameKey = `${(s.name||'').trim().toLowerCase()}|${(s.fatherName||'').trim().toLowerCase()}`;
         let phoneKey = (s.phone||'').trim();
@@ -479,11 +486,10 @@ function findDuplicates() {
             dupMap[nameKey].push(s);
         }
         
-        // Also check by phone if it's substantial enough to be a real number
         if(phoneKey.length > 5) {
             let pKey = `phone:${phoneKey}`;
             if(!dupMap[pKey]) dupMap[pKey] = [];
-            if(!dupMap[pKey].find(existing => existing.id === s.id)) { // Avoid double-adding if name already matched
+            if(!dupMap[pKey].find(existing => existing.id === s.id)) {
                 dupMap[pKey].push(s);
             }
         }
@@ -522,21 +528,19 @@ function findDuplicates() {
     duplicateModal.style.display = 'flex';
 }
 
-// Quick delete directly from duplicate modal without extra confirmation
 function quickDelete(id) {
     if(!db) return;
     const btn = event.target;
     btn.textContent = '...'; btn.disabled = true;
     db.collection('students').doc(id.toString()).delete().then(() => {
-        btn.parentElement.remove(); // Remove item from modal visually
+        btn.parentElement.remove();
         allStudents = allStudents.filter(s => s.id.toString() !== id.toString());
-        loadData(); // Re-render main view behind the modal
+        loadData();
     }).catch(err => { alert('Failed to delete: ' + err.message); btn.textContent = 'Delete'; btn.disabled = false; });
 }
 
 /* ---------- Delegated Event Listeners ---------- */
 
-// Listen for checkbox changes to update selected student counter
 classesContainer.addEventListener('change', e => {
     if (e.target.classList.contains('student-cb') || e.target.classList.contains('select-all-cb')) {
         updateStats();
@@ -550,7 +554,6 @@ classesContainer.addEventListener('click', e => {
     const className = target.dataset.class;
     const isChecked = target.checked;
     
-    // Only select currently visible checkboxes based on search filter
     const section = target.closest('.class-section');
     if (section) {
         const checkboxes = section.querySelectorAll('.student-card[style*="display: flex"] .student-cb, .student-card:not([style*="display: none"]) .student-cb');
@@ -593,7 +596,7 @@ function deleteStudent(id){
 }
 
 deleteAllBtn.addEventListener('click', ()=>{ 
-    document.getElementById('deleteAllText').textContent = 'Delete ALL student records in the entire database?'; 
+    document.getElementById('deleteAllText').textContent = 'Delete ALL student records in the entire database? This cannot be undone.'; 
     document.getElementById('deleteAllModal').style.display='flex'; 
 });
 document.getElementById('deleteAllNoBtn').addEventListener('click', ()=>{ document.getElementById('deleteAllModal').style.display='none'; });
@@ -650,19 +653,22 @@ fontInput.addEventListener('change', async e=>{ const f = e.target.files[0]; if(
 
 /* ---------- Status UI ---------- */
 function updateStatus(){ 
-    const t = window.assets.template ? '✅ Template Loaded' : '❌ Missing Template'; 
-    const fo = window.assets.font ? '✅ Font Loaded' : '❌ Missing Font'; 
+    const t = window.assets.template ? '✅ Template' : '❌ Missing Template'; 
+    const fo = window.assets.font ? '✅ Font' : '❌ Missing Font'; 
     let ai='⏳ Loading AI...'; 
-    if(window.assets.aiModel==='loaded') ai='✅ AI Cropper Ready'; 
+    if(window.assets.aiModel==='loaded') ai='✅ AI Ready'; 
     if(window.assets.aiModel==='failed') ai='⚠️ Basic Crop Mode'; 
     
-    let bg = (window.assets.template && window.assets.font) ? '#dcfce7' : '#fee2e2';
-    let col = (window.assets.template && window.assets.font) ? 'var(--success)' : 'var(--danger)';
+    // Decoupled: You only need Template + Font to be ready to generate!
+    const isReady = !!(window.assets.template && window.assets.font);
+    
+    let bg = isReady ? '#dcfce7' : '#fee2e2';
+    let col = isReady ? 'var(--success)' : 'var(--danger)';
     
     generatorStatus.style.background = bg;
     generatorStatus.style.color = col;
-    generatorStatus.innerHTML = `<strong>System Status:</strong> ${t} | ${fo} | ${ai}`; 
-    window.assets.isReady = (window.assets.template && window.assets.font && (window.assets.aiModel==='loaded' || window.assets.aiModel==='failed')); 
+    generatorStatus.innerHTML = isReady ? `✅ System Ready (${ai})` : `<strong>Status:</strong> ${t} | ${fo}`; 
+    window.assets.isReady = isReady;
 }
 setInterval(updateStatus, 1000);
 
