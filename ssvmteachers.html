@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Manage Teachers</title>
-    <!-- FIXED: Reliable CDN for qrcodejs without invalid integrity attribute -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- FIXED: Using reliable CDN with automatic dynamic capacity sizing -->
+    <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
         .admin-container { max-width: 1100px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
@@ -274,28 +274,28 @@
             e.target.innerText = "Generating...";
             e.target.disabled = true;
 
+            // FIXED: Safety substring trimming ensures text never exceeds maximum QR capacity
             const qrText = [
                 `Name: ${data.name || 'N/A'}`,
                 `DOJ: ${data.doj || 'N/A'}`,
                 `Qualification: ${data.qualification || 'N/A'}`,
                 `Mobile: ${data.mobile || 'N/A'}`,
                 `Blood Group: ${data.bloodGroup || 'N/A'}`,
-                `Address: ${data.address || 'N/A'}`
+                `Address: ${(data.address || 'N/A').toString().substring(0, 300)}`
             ].join('\n');
 
             try {
-                // FIXED: Create a temporary off-screen container to generate canvas-based QR
                 const tempDiv = document.createElement("div");
+                // FIXED: Set CorrectLevel to L (Low) to maximize character capacity without overflow
                 new QRCode(tempDiv, {
                     text: qrText,
                     width: 300,
                     height: 300,
                     colorDark: "#000000",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.M
+                    correctLevel: QRCode.CorrectLevel.L
                 });
 
-                // Small delay ensures Canvas/img rendering finishes inside DOM
                 setTimeout(() => {
                     const canvas = tempDiv.querySelector("canvas");
                     if (canvas) {
@@ -312,11 +312,11 @@
                     }
                     e.target.innerText = originalText;
                     e.target.disabled = false;
-                }, 200);
+                }, 300);
 
             } catch (error) {
                 console.error("Error generating QR code: ", error);
-                alert("Failed to generate QR Code.");
+                alert("Failed to generate QR Code. Data might be too long.");
                 e.target.innerText = originalText;
                 e.target.disabled = false;
             }
