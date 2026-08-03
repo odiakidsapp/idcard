@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Manage Teachers</title>
-    <!-- FIXED: Switched to qrcode-generator (Kazuhiko Arase) which handles large text blocks without overflow -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
@@ -130,7 +129,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Object to store temporary teacher data for the edit modal
     let teachersDataMap = {};
 
     async function loadData() {
@@ -190,7 +188,6 @@
         }
     }
 
-    // Handle clicks inside the table (Edit, Delete, Download Photo, and Download QR buttons)
     document.getElementById('tableBody').addEventListener('click', async (e) => {
         // DELETE BUTTON
         if (e.target.classList.contains('delete-btn')) {
@@ -260,10 +257,10 @@
             }
         }
 
-        // DOWNLOAD QR CODE BUTTON
+        // DOWNLOAD QR CODE BUTTON (Now encodes a URL pointing to teacher-profile.html)
         if (e.target.classList.contains('qr-btn')) {
             if (typeof qrcode === 'undefined') {
-                alert("QR Code library failed to load. Please check your internet connection and refresh the page.");
+                alert("QR Code library failed to load. Please check your internet connection.");
                 return;
             }
 
@@ -274,27 +271,19 @@
             e.target.innerText = "Generating...";
             e.target.disabled = true;
 
-            const qrText = [
-                `Name: ${data.name || 'N/A'}`,
-                `DOJ: ${data.doj || 'N/A'}`,
-                `Qualification: ${data.qualification || 'N/A'}`,
-                `Mobile: ${data.mobile || 'N/A'}`,
-                `Blood Group: ${data.bloodGroup || 'N/A'}`,
-                `Address: ${data.address || 'N/A'}`
-            ].join('\n');
+            // Generate full URL pointing to teacher-profile.html?id=DOCUMENT_ID
+            const profileUrl = new URL(`teacher-profile.html?id=${encodeURIComponent(id)}`, window.location.href).href;
 
             try {
-                // FIXED: Using version 0 tells qrcode-generator to automatically calculate the exact size needed up to version 40
-                const qr = qrcode(0, 'L');
-                qr.addData(qrText);
+                const qr = qrcode(0, 'M');
+                qr.addData(profileUrl);
                 qr.make();
 
-                // Create Data URL with cell size 6 (approx 300x300px depending on text length) and margin 4
                 const qrDataUrl = qr.createDataURL(6, 4);
 
                 const a = document.createElement("a");
                 a.href = qrDataUrl;
-                const fileName = (data.name ? data.name.replace(/\s+/g, '_') : 'Teacher') + '_QRCode.png';
+                const fileName = (data.name ? data.name.replace(/\s+/g, '_') : 'Teacher') + '_Profile_QR.png';
                 a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
