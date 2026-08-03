@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Manage Teachers</title>
-    <!-- FIXED: Using reliable CDN with automatic dynamic capacity sizing -->
-    <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
+    <!-- FIXED: Switched to qrcode-generator (Kazuhiko Arase) which handles large text blocks without overflow -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
         .admin-container { max-width: 1100px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
@@ -262,7 +262,7 @@
 
         // DOWNLOAD QR CODE BUTTON
         if (e.target.classList.contains('qr-btn')) {
-            if (typeof QRCode === 'undefined') {
+            if (typeof qrcode === 'undefined') {
                 alert("QR Code library failed to load. Please check your internet connection and refresh the page.");
                 return;
             }
@@ -274,49 +274,35 @@
             e.target.innerText = "Generating...";
             e.target.disabled = true;
 
-            // FIXED: Safety substring trimming ensures text never exceeds maximum QR capacity
             const qrText = [
                 `Name: ${data.name || 'N/A'}`,
                 `DOJ: ${data.doj || 'N/A'}`,
                 `Qualification: ${data.qualification || 'N/A'}`,
                 `Mobile: ${data.mobile || 'N/A'}`,
                 `Blood Group: ${data.bloodGroup || 'N/A'}`,
-                `Address: ${(data.address || 'N/A').toString().substring(0, 300)}`
+                `Address: ${data.address || 'N/A'}`
             ].join('\n');
 
             try {
-                const tempDiv = document.createElement("div");
-                // FIXED: Set CorrectLevel to L (Low) to maximize character capacity without overflow
-                new QRCode(tempDiv, {
-                    text: qrText,
-                    width: 300,
-                    height: 300,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.L
-                });
+                // FIXED: Using version 0 tells qrcode-generator to automatically calculate the exact size needed up to version 40
+                const qr = qrcode(0, 'L');
+                qr.addData(qrText);
+                qr.make();
 
-                setTimeout(() => {
-                    const canvas = tempDiv.querySelector("canvas");
-                    if (canvas) {
-                        const qrDataUrl = canvas.toDataURL("image/png");
-                        const a = document.createElement("a");
-                        a.href = qrDataUrl;
-                        const fileName = (data.name ? data.name.replace(/\s+/g, '_') : 'Teacher') + '_QRCode.png';
-                        a.download = fileName;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    } else {
-                        alert("Failed to render QR Code canvas.");
-                    }
-                    e.target.innerText = originalText;
-                    e.target.disabled = false;
-                }, 300);
+                // Create Data URL with cell size 6 (approx 300x300px depending on text length) and margin 4
+                const qrDataUrl = qr.createDataURL(6, 4);
 
+                const a = document.createElement("a");
+                a.href = qrDataUrl;
+                const fileName = (data.name ? data.name.replace(/\s+/g, '_') : 'Teacher') + '_QRCode.png';
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             } catch (error) {
                 console.error("Error generating QR code: ", error);
-                alert("Failed to generate QR Code. Data might be too long.");
+                alert("Failed to generate QR Code: " + error.message);
+            } finally {
                 e.target.innerText = originalText;
                 e.target.disabled = false;
             }
