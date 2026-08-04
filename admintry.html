@@ -545,6 +545,27 @@ function unlockAdmin() {
     startApp();
 }
 
+if (sessionStorage.getItem('adminAuthed') === 'true') {
+    unlockAdmin();
+} else {
+    document.getElementById('adminPasswordBtn').onclick = () => {
+        const entered = document.getElementById('adminPasswordInput').value;
+        if (entered === ADMIN_PASSWORD) {
+            sessionStorage.setItem('adminAuthed', 'true');
+            unlockAdmin();
+        } else {
+            document.getElementById('adminPasswordError').style.display = 'block';
+            document.getElementById('adminPasswordInput').value = '';
+        }
+    };
+    document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('adminPasswordBtn').click();
+    });
+    document.getElementById('adminPasswordInput').addEventListener('input', () => {
+        document.getElementById('adminPasswordError').style.display = 'none';
+    });
+}
+
 function exportBackup() {
     const data = JSON.stringify(schoolsMap, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
