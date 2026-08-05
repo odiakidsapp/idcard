@@ -180,7 +180,7 @@
                 <label>Update Photo (Crop to Square)</label>
                 <input type="file" id="edit-photo-input" accept="image/*">
                 <div id="cropper-container">
-                    <img id="cropper-image" src="">
+                    <img id="cropper-image" src="" crossorigin="anonymous">
                 </div>
             </div>
             <div class="modal-actions">
@@ -308,12 +308,33 @@
             document.getElementById('edit-bloodGroup').value = data.bloodGroup || 'A+';
             document.getElementById('edit-address').value = data.address || '';
 
-            // Reset cropper & file input
+            // Reset file input
             document.getElementById('edit-photo-input').value = '';
-            document.getElementById('cropper-container').style.display = 'none';
+            
+            // Handle existing photo for cropping
+            const img = document.getElementById('cropper-image');
             if (cropper) {
                 cropper.destroy();
                 cropper = null;
+            }
+
+            if (data.photo) {
+                img.src = data.photo;
+                document.getElementById('cropper-container').style.display = 'block';
+                
+                // Initialize cropper once the existing image loads
+                img.onload = function() {
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(img, {
+                        aspectRatio: 1, // Enforce a 1:1 Square Crop
+                        viewMode: 1,
+                        background: false
+                    });
+                    img.onload = null; // Clear onload to prevent double firing
+                };
+            } else {
+                document.getElementById('cropper-container').style.display = 'none';
+                img.src = '';
             }
 
             document.getElementById('editModal').style.display = 'flex';
@@ -583,7 +604,9 @@
             for (let i = 0; i < totalCards; i++) {
                 const id = teacherIds[i];
                 const teacherData = teachersDataMap[id];
-                const safeName = (teacherData.name || `Teacher_${i}`).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                
+                // Add index (i + 1) to guarantee unique filenames, preventing ZIP overwrites for duplicate names
+                const safeName = `${(teacherData.name || 'Teacher').replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${i + 1}`;
 
                 // Generate Front
                 const frontBase64 = await createFrontCard(teacherData, id, frontBg);
