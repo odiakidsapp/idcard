@@ -509,8 +509,8 @@
             if (parts.length === 3) dojFormatted = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
 
-        // 3. Draw Data Fields (Left Aligned starting at X: 299) with Odia Digits
-        const dataStartX = 299;
+        // 3. Draw Data Fields (Left Aligned starting at X: 304) with Odia Digits
+        const dataStartX = 304;
         const translatedQual = translateQualification(teacherData.qualification || '');
         
         ctx.fillText(toOdiaDigits(translatedQual), dataStartX, 675);
