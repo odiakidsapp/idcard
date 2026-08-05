@@ -223,14 +223,14 @@
         let translated = qual;
         // Dictionary for common abbreviations (handles case insensitivity and optional dots)
         const replaceMap = [
-            { regex: /\bB\.?A\.?\b/gi, odia: 'ବି ଏ' },
+            { regex: /\bB\.?A\.?\b/gi, odia: 'ବି.ଏ' },
             { regex: /\bB\.?Ed\.?\b/gi, odia: 'ବି.ଏଡ' },
-            { regex: /\bM\.?A\.?\b/gi, odia: 'ଏମ ଏ' },
+            { regex: /\bM\.?A\.?\b/gi, odia: 'ଏମ.ଏ' },
             { regex: /\bM\.?Ed\.?\b/gi, odia: 'ଏମ.ଏଡ' },
-            { regex: /\bB\.?Sc\.?\b/gi, odia: 'ବି ଏସସି' },
-            { regex: /\bM\.?Sc\.?\b/gi, odia: 'ଏମ ଏସସି' },
-            { regex: /\bB\.?Com\.?\b/gi, odia: 'ବି କମ' },
-            { regex: /\bM\.?Com\.?\b/gi, odia: 'ଏମ କମ' },
+            { regex: /\bB\.?Sc\.?\b/gi, odia: 'ବି.ଏସସି' },
+            { regex: /\bM\.?Sc\.?\b/gi, odia: 'ଏମ.ଏସସି' },
+            { regex: /\bB\.?Com\.?\b/gi, odia: 'ବି.କମ' },
+            { regex: /\bM\.?Com\.?\b/gi, odia: 'ଏମ.କମ' },
             { regex: /\bC\.?T\.?\b/gi, odia: 'ସି.ଟି' }
         ];
         
@@ -480,7 +480,7 @@
 
         // Define Fonts (Reduced size for data fields)
         const nameFont = 'bold 36px "Noto Sans Oriya", Arial, sans-serif';
-        const dataFont = '32px "Noto Sans Oriya", Arial, sans-serif';
+        const dataFont = '30px "Noto Sans Oriya", Arial, sans-serif';
         const textColor = '#000000';
 
         ctx.fillStyle = textColor;
