@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Manage Teachers & Generate IDs</title>
+    <!-- JSZip for zipping files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- FileSaver for triggering the download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- QRCode generator -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    
+    <style>
+        @font-face {
+            font-family: 'Noto Sans Oriya';
+            src: url('NotoSansOriya-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
+        .admin-container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        /* Table Styles */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .photo-cell img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+        #loading { text-align: center; font-size: 18px; color: #666; margin-top: 20px; }
+
+        /* Button Styles */
+        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 5px; margin-bottom: 3px; font-weight: bold;}
+        .edit-btn { background-color: #ffc107; color: #000; }
+        .edit-btn:hover { background-color: #e0a800; }
+        .delete-btn { background-color: #dc3545; color: white; }
+        .delete-btn:hover { background-color: #c82333; }
+        .generate-btn { background-color: #28a745; color: white; font-size: 16px; padding: 10px 20px;}
+        .generate-btn:hover { background-color: #218838; }
+        .generate-btn:disabled { background-color: #6c757d; cursor: not-allowed; }
+
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-content h3 { margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .save-btn { background-color: #007bff; color: white; padding: 8px 15px; }
+        .cancel-btn { background-color: #6c757d; color: white; padding: 8px 15px; }
+        
+        #progress-container {
+            display: none;
+            margin-top: 10px;
+            text-align: center;
+        }
+        #progress-bar {
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #progress-fill {
+            height: 20px;
+            width: 0%;
+            background-color: #28a745;
+            transition: width 0.3s;
+        }
+        #progress-text {
+            margin-top: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="admin-container">
+    <div class="header-actions">
+        <h2>Manage Registered Teachers</h2>
+        <button id="generateIdsBtn" class="generate-btn">Generate All ID Cards (ZIP)</button>
+    </div>
+    
+    <div id="progress-container">
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+        <div id="progress-text">Generating... 0%</div>
+    </div>
+
+    <div id="loading">Loading data from Firestore...</div>
+    <table id="teachersTable" style="display:none;">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Photo</th>
+                <th>Name</th>
+                <th>Designation</th>
+                <th>Date of Joining</th>
+                <th>Qualification</th>
+                <th>Mobile</th>
+                <th>Blood Group</th>
+                <th>Address</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Data will be injected here -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Edit Teacher Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-content">
+        <h3>Edit Teacher Details</h3>
+        <form id="editForm">
+            <input type="hidden" id="edit-id">
+            <div class="form-group">
+                <label>Title / Prefix</label>
+                <select id="edit-salutation" required>
+                    <option value="ଶ୍ରୀଯୁକ୍ତ">ଶ୍ରୀଯୁକ୍ତ</option>
+                    <option value="ଶ୍ରୀମାନ">ଶ୍ରୀମାନ</option>
+                    <option value="ସୁଶ୍ରୀ">ସୁଶ୍ରୀ</option>
+                    <option value="ଶ୍ରୀମତୀ">ଶ୍ରୀମତୀ</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="edit-name" required>
+            </div>
+            <div class="form-group">
+                <label>Designation</label>
+                <input type="text" id="edit-designation" required>
+            </div>
+            <div class="form-group">
+                <label>Date of Joining</label>
+                <input type="date" id="edit-doj" required>
+            </div>
+            <div class="form-group">
+                <label>Qualification</label>
+                <input type="text" id="edit-qualification" required>
+            </div>
+            <div class="form-group">
+                <label>Mobile Number</label>
+                <input type="tel" id="edit-mobile" required>
+            </div>
+            <div class="form-group">
+                <label>Blood Group</label>
+                <select id="edit-bloodGroup" required>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Address</label>
+                <textarea id="edit-address" rows="3" required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn" id="closeModalBtn">Cancel</button>
+                <button type="submit" class="save-btn" id="saveChangesBtn">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAOlazCzBurIelrL2wyIo_cOeC9jJeRp8I",
+      authDomain: "privateid-aa396.firebaseapp.com",
+      projectId: "privateid-aa396",
+      storageBucket: "privateid-aa396.firebasestorage.app",
+      messagingSenderId: "543202127090",
+      appId: "1:543202127090:web:a9f2dd69c1c216a769746b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let teachersDataMap = {};
+
+    async function loadData() {
+        const tableBody = document.getElementById('tableBody');
+        const loading = document.getElementById('loading');
+        const table = document.getElementById('teachersTable');
+
+        loading.style.display = 'block';
+        table.style.display = 'none';
+        
+        try {
+            const q = query(collection(db, "teachers"), orderBy("timestamp", "desc"));
+            const querySnapshot = await getDocs(q);
+            
+            tableBody.innerHTML = ''; 
+            teachersDataMap = {}; 
+            
+            let serialNumber = 1;
+
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const id = doc.id;
+                
+                teachersDataMap[id] = data;
+
+                const tr = document.createElement('tr');
+                const imgSrc = data.photo ? data.photo : 'https://placehold.co/50x50?text=No+Img';
+                const fullName = (data.salutation ? data.salutation + ' ' : '') + (data.name || '');
+                
+                tr.innerHTML = `
+                    <td><b>${serialNumber}</b></td>
+                    <td class="photo-cell"><img src="${imgSrc}" alt="Profile"></td>
+                    <td>${fullName}</td>
+                    <td>${data.designation || ''}</td>
+                    <td>${data.doj || ''}</td>
+                    <td>${data.qualification || ''}</td>
+                    <td>${data.mobile || ''}</td>
+                    <td>${data.bloodGroup || ''}</td>
+                    <td>${data.address || ''}</td>
+                    <td>
+                        <button class="edit-btn" data-id="${id}">Edit</button>
+                        <button class="delete-btn" data-id="${id}">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+                
+                serialNumber++;
+            });
+
+            loading.style.display = 'none';
+            table.style.display = 'table';
+            
+        } catch (error) {
+            console.error("Error getting documents: ", error);
+            loading.innerText = "Error loading data. Check console.";
+            loading.style.color = 'red';
+        }
+    }
+
+    document.getElementById('tableBody').addEventListener('click', async (e) => {
+        // DELETE BUTTON
+        if (e.target.classList.contains('delete-btn')) {
+            const id = e.target.getAttribute('data-id');
+            const confirmDelete = confirm("Are you sure you want to delete this teacher's data?");
+            
+            if (confirmDelete) {
+                e.target.innerText = "Deleting...";
+                try {
+                    await deleteDoc(doc(db, "teachers", id));
+                    loadData(); 
+                } catch (error) {
+                    console.error("Error deleting document: ", error);
+                    alert("Failed to delete document.");
+                    e.target.innerText = "Delete";
+                }
+            }
+        }
+
+        // EDIT BUTTON
+        if (e.target.classList.contains('edit-btn')) {
+            const id = e.target.getAttribute('data-id');
+            const data = teachersDataMap[id];
+
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-salutation').value = data.salutation || 'ଶ୍ରୀଯୁକ୍ତ';
+            document.getElementById('edit-name').value = data.name || '';
+            document.getElementById('edit-designation').value = data.designation || '';
+            document.getElementById('edit-doj').value = data.doj || '';
+            document.getElementById('edit-qualification').value = data.qualification || '';
+            document.getElementById('edit-mobile').value = data.mobile || '';
+            document.getElementById('edit-bloodGroup').value = data.bloodGroup || 'A+';
+            document.getElementById('edit-address').value = data.address || '';
+
+            document.getElementById('editModal').style.display = 'flex';
+        }
+    });
+
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+        document.getElementById('editModal').style.display = 'none';
+    });
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const saveBtn = document.getElementById('saveChangesBtn');
+        saveBtn.innerText = "Saving...";
+        saveBtn.disabled = true;
+
+        const id = document.getElementById('edit-id').value;
+        
+        const updatedData = {
+            salutation: document.getElementById('edit-salutation').value,
+            name: document.getElementById('edit-name').value,
+            designation: document.getElementById('edit-designation').value,
+            doj: document.getElementById('edit-doj').value,
+            qualification: document.getElementById('edit-qualification').value,
+            mobile: document.getElementById('edit-mobile').value,
+            bloodGroup: document.getElementById('edit-bloodGroup').value,
+            address: document.getElementById('edit-address').value,
+        };
+
+        try {
+            await updateDoc(doc(db, "teachers", id), updatedData);
+            document.getElementById('editModal').style.display = 'none';
+            loadData(); 
+        } catch (error) {
+            console.error("Error updating document: ", error);
+            alert("Failed to save changes.");
+        } finally {
+            saveBtn.innerText = "Save Changes";
+            saveBtn.disabled = false;
+        }
+    });
+
+    // Helper function to load an image from a URL or Base64 string
+    function loadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous'; // Crucial for loading external images onto a canvas
+            img.onload = () => resolve(img);
+            img.onerror = (e) => {
+                console.warn(`Failed to load image: ${src}. Generating placeholder.`, e);
+                // Create a placeholder canvas if image fails to load
+                const placeholder = document.createElement('canvas');
+                placeholder.width = 234; // right(433) - left(199)
+                placeholder.height = 236; // bottom(531) - top(295)
+                const ctx = placeholder.getContext('2d');
+                ctx.fillStyle = '#cccccc';
+                ctx.fillRect(0, 0, placeholder.width, placeholder.height);
+                ctx.fillStyle = '#000000';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('No Image', placeholder.width/2, placeholder.height/2);
+                resolve(placeholder);
+            };
+            img.src = src;
+        });
+    }
+
+    // Function to generate the QR Code as a data URL
+    function generateQRCodeDataUrl(profileUrl) {
+        try {
+            const qr = qrcode(0, 'M');
+            qr.addData(profileUrl);
+            qr.make();
+            return qr.createDataURL(10, 0); // High detail, no margin
+        } catch (e) {
+            console.error("QR Generation failed", e);
+            return null;
+        }
+    }
+
+    async function createFrontCard(teacherData, id, bgImage) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 638;
+        canvas.height = 1011;
+        const ctx = canvas.getContext('2d');
+
+        // Draw Background
+        ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+
+        // Define Fonts
+        const nameFont = 'bold 36px "Noto Sans Oriya", Arial, sans-serif';
+        const dataFont = '24px "Noto Sans Oriya", Arial, sans-serif';
+        const textColor = '#000000';
+
+        ctx.fillStyle = textColor;
+        ctx.textBaseline = 'middle';
+
+        // 1. Draw Name (Centered)
+        const fullName = (teacherData.salutation ? teacherData.salutation + ' ' : '') + (teacherData.name || '');
+        ctx.font = nameFont;
+        ctx.textAlign = 'center';
+        ctx.fillText(fullName, 311, 569); // X: 311, Y: 569
+
+        // 2. Draw Designation (Centered inside the blue pill)
+        ctx.font = 'bold 22px "Noto Sans Oriya", Arial, sans-serif';
+        ctx.fillStyle = '#FFFFFF'; // White text for designation
+        ctx.fillText(teacherData.designation || '', 311, 625);
+
+        // Reset fill style and alignment for the rest of the data
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'left';
+        ctx.font = dataFont;
+
+        // 3. Draw Data Fields (Left Aligned starting at X: 359)
+        const dataStartX = 359;
+        ctx.fillText(teacherData.qualification || '', dataStartX, 673);
+        ctx.fillText(teacherData.mobile || '', dataStartX, 724);
+        ctx.fillText(teacherData.bloodGroup || '', dataStartX, 775);
+        ctx.fillText(teacherData.doj || '', dataStartX, 826);
+        ctx.fillText(teacherData.address || '', dataStartX, 877);
+
+        // 4. Draw Photo (Cropped to Circle)
+        if (teacherData.photo) {
+            const photoImg = await loadImage(teacherData.photo);
+            
+            const pLeft = 199;
+            const pRight = 433;
+            const pTop = 295;
+            const pBottom = 531;
+            
+            const pWidth = pRight - pLeft; // 234
+            const pHeight = pBottom - pTop; // 236
+            
+            const centerX = pLeft + (pWidth / 2);
+            const centerY = pTop + (pHeight / 2);
+            const radius = Math.min(pWidth, pHeight) / 2;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip();
+
+            // Draw image covering the circle, maintaining aspect ratio (object-fit: cover equivalent)
+            const imgAspect = photoImg.width / photoImg.height;
+            const targetAspect = pWidth / pHeight;
+            let drawWidth = pWidth;
+            let drawHeight = pHeight;
+            let offsetX = 0;
+            let offsetY = 0;
+
+            if (imgAspect > targetAspect) {
+                // Image is wider than target
+                drawWidth = pHeight * imgAspect;
+                offsetX = (pWidth - drawWidth) / 2;
+            } else {
+                // Image is taller than target
+                drawHeight = pWidth / imgAspect;
+                offsetY = (pHeight - drawHeight) / 2;
+            }
+
+            ctx.drawImage(photoImg, pLeft + offsetX, pTop + offsetY, drawWidth, drawHeight);
+            ctx.restore();
+            
+            // Optional: Draw a border around the photo to match the design
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2, true);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#0e265c'; // Dark blue border
+            ctx.stroke();
+        }
+
+        return canvas.toDataURL('image/png').split(',')[1]; // Return base64 data
+    }
+
+    async function createBackCard(id, bgImage) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 638;
+        canvas.height = 1011;
+        const ctx = canvas.getContext('2d');
+
+        // Draw Background
+        ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+
+        // Generate and Draw QR Code
+        const profileUrl = new URL(`teacher-profile.html?id=${encodeURIComponent(id)}`, window.location.href).href;
+        const qrDataUrl = generateQRCodeDataUrl(profileUrl);
+        
+        if (qrDataUrl) {
+            const qrImg = await loadImage(qrDataUrl);
+            
+            // QR Coordinates given: TL(209, 530), TR(408, 530), BL(209, 728), BR(408, 728)
+            const qrX = 209;
+            const qrY = 530;
+            const qrWidth = 408 - 209; // 199
+            const qrHeight = 728 - 530; // 198
+
+            ctx.drawImage(qrImg, qrX, qrY, qrWidth, qrHeight);
+        }
+
+        return canvas.toDataURL('image/png').split(',')[1];
+    }
+
+    document.getElementById('generateIdsBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('generateIdsBtn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        
+        const teacherIds = Object.keys(teachersDataMap);
+        if (teacherIds.length === 0) {
+            alert("No teachers found to generate ID cards for.");
+            return;
+        }
+
+        btn.disabled = true;
+        progressContainer.style.display = 'block';
+        progressFill.style.width = '0%';
+        progressText.innerText = 'Loading resources...';
+
+        try {
+            // Pre-load background images
+            const frontBg = await loadImage('ssvmfront.jpg');
+            const backBg = await loadImage('ssvmback.jpg');
+
+            const zip = new JSZip();
+            const totalCards = teacherIds.length;
+            
+            for (let i = 0; i < totalCards; i++) {
+                const id = teacherIds[i];
+                const teacherData = teachersDataMap[id];
+                const safeName = (teacherData.name || `Teacher_${i}`).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+                // Generate Front
+                const frontBase64 = await createFrontCard(teacherData, id, frontBg);
+                zip.file(`${safeName}_front.png`, frontBase64, {base64: true});
+
+                // Generate Back
+                const backBase64 = await createBackCard(id, backBg);
+                zip.file(`${safeName}_back.png`, backBase64, {base64: true});
+
+                // Update Progress
+                const percent = Math.round(((i + 1) / totalCards) * 100);
+                progressFill.style.width = `${percent}%`;
+                progressText.innerText = `Generating... ${percent}% (${i + 1}/${totalCards})`;
+            }
+
+            progressText.innerText = 'Zipping files...';
+            
+            // Generate ZIP file and trigger download
+            const content = await zip.generateAsync({type:"blob"});
+            saveAs(content, "Teacher_ID_Cards.zip");
+            
+            progressText.innerText = 'Complete!';
+
+        } catch (error) {
+            console.error("Error generating ID cards:", error);
+            alert("An error occurred while generating ID cards. Check console for details.");
+            progressText.innerText = 'Error occurred.';
+        } finally {
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+                btn.disabled = false;
+            }, 3000); // Hide progress after 3 seconds
+        }
+    });
+
+    window.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>
