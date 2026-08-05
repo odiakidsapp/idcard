@@ -217,6 +217,29 @@
         return str.toString().replace(/[0-9]/g, match => odiaDigits[match]);
     }
 
+    // Auto-translate qualifications from English to Odia
+    function translateQualification(qual) {
+        if (!qual) return '';
+        let translated = qual;
+        // Dictionary for common abbreviations (handles case insensitivity and optional dots)
+        const replaceMap = [
+            { regex: /\bB\.?A\.?\b/gi, odia: 'ବି ଏ' },
+            { regex: /\bB\.?Ed\.?\b/gi, odia: 'ବି.ଏଡ' },
+            { regex: /\bM\.?A\.?\b/gi, odia: 'ଏମ ଏ' },
+            { regex: /\bM\.?Ed\.?\b/gi, odia: 'ଏମ.ଏଡ' },
+            { regex: /\bB\.?Sc\.?\b/gi, odia: 'ବି ଏସସି' },
+            { regex: /\bM\.?Sc\.?\b/gi, odia: 'ଏମ ଏସସି' },
+            { regex: /\bB\.?Com\.?\b/gi, odia: 'ବି କମ' },
+            { regex: /\bM\.?Com\.?\b/gi, odia: 'ଏମ କମ' },
+            { regex: /\bC\.?T\.?\b/gi, odia: 'ସି.ଟି' }
+        ];
+        
+        replaceMap.forEach(item => {
+            translated = translated.replace(item.regex, item.odia);
+        });
+        return translated;
+    }
+
     async function loadData() {
         const tableBody = document.getElementById('tableBody');
         const loading = document.getElementById('loading');
@@ -488,11 +511,13 @@
 
         // 3. Draw Data Fields (Left Aligned starting at X: 359) with Odia Digits
         const dataStartX = 359;
-        ctx.fillText(toOdiaDigits(teacherData.qualification || ''), dataStartX, 673);
-        ctx.fillText(toOdiaDigits(teacherData.mobile || ''), dataStartX, 724);
-        ctx.fillText(toOdiaDigits(teacherData.bloodGroup || ''), dataStartX, 775);
-        ctx.fillText(toOdiaDigits(dojFormatted), dataStartX, 826);
-        ctx.fillText(toOdiaDigits(teacherData.address || ''), dataStartX, 877);
+        const translatedQual = translateQualification(teacherData.qualification || '');
+        
+        ctx.fillText(toOdiaDigits(translatedQual), dataStartX, 675);
+        ctx.fillText(toOdiaDigits(teacherData.mobile || ''), dataStartX, 726);
+        ctx.fillText(toOdiaDigits(teacherData.bloodGroup || ''), dataStartX, 777);
+        ctx.fillText(toOdiaDigits(dojFormatted), dataStartX, 828);
+        ctx.fillText(toOdiaDigits(teacherData.address || ''), dataStartX, 879);
 
         // 4. Draw Photo (Cropped to Circle)
         if (teacherData.photo) {
