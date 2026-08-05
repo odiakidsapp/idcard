@@ -10,6 +10,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <!-- QRCode generator -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <!-- Cropper.js for image cropping -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
     <style>
         @font-face {
@@ -59,6 +62,10 @@
         .save-btn { background-color: #007bff; color: white; padding: 8px 15px; }
         .cancel-btn { background-color: #6c757d; color: white; padding: 8px 15px; }
         
+        /* Cropper Styles */
+        #cropper-container { max-height: 300px; margin-top: 10px; display: none; overflow: hidden; }
+        #cropper-image { max-width: 100%; display: block; }
+
         #progress-container {
             display: none;
             margin-top: 10px;
@@ -169,6 +176,13 @@
                 <label>Address</label>
                 <textarea id="edit-address" rows="3" required></textarea>
             </div>
+            <div class="form-group">
+                <label>Update Photo (Crop to Square)</label>
+                <input type="file" id="edit-photo-input" accept="image/*">
+                <div id="cropper-container">
+                    <img id="cropper-image" src="">
+                </div>
+            </div>
             <div class="modal-actions">
                 <button type="button" class="cancel-btn" id="closeModalBtn">Cancel</button>
                 <button type="submit" class="save-btn" id="saveChangesBtn">Save Changes</button>
@@ -194,6 +208,14 @@
     const db = getFirestore(app);
 
     let teachersDataMap = {};
+    let cropper = null;
+
+    // Convert English digits to Odia digits
+    function toOdiaDigits(str) {
+        if (!str) return '';
+        const odiaDigits = {'0':'୦', '1':'୧', '2':'୨', '3':'୩', '4':'୪', '5':'୫', '6':'୬', '7':'୭', '8':'୮', '9':'୯'};
+        return str.toString().replace(/[0-9]/g, match => odiaDigits[match]);
+    }
 
     async function loadData() {
         const tableBody = document.getElementById('tableBody');
@@ -286,7 +308,36 @@
             document.getElementById('edit-bloodGroup').value = data.bloodGroup || 'A+';
             document.getElementById('edit-address').value = data.address || '';
 
+            // Reset cropper & file input
+            document.getElementById('edit-photo-input').value = '';
+            document.getElementById('cropper-container').style.display = 'none';
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+
             document.getElementById('editModal').style.display = 'flex';
+        }
+    });
+
+    // Handle Image Selection for Cropping
+    document.getElementById('edit-photo-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = document.getElementById('cropper-image');
+                img.src = event.target.result;
+                document.getElementById('cropper-container').style.display = 'block';
+                
+                if (cropper) { cropper.destroy(); }
+                cropper = new Cropper(img, {
+                    aspectRatio: 1, // Enforce a 1:1 Square Crop
+                    viewMode: 1,
+                    background: false
+                });
+            };
+            reader.readAsDataURL(file);
         }
     });
 
@@ -301,6 +352,14 @@
         saveBtn.disabled = true;
 
         const id = document.getElementById('edit-id').value;
+        const existingData = teachersDataMap[id];
+        
+        // Get cropped image if available, else keep existing
+        let photoData = existingData.photo || null;
+        if (cropper) {
+            // Get cropped canvas and compress slightly for performance
+            photoData = cropper.getCroppedCanvas({ width: 400, height: 400 }).toDataURL('image/jpeg', 0.8);
+        }
         
         const updatedData = {
             salutation: document.getElementById('edit-salutation').value,
@@ -311,6 +370,7 @@
             mobile: document.getElementById('edit-mobile').value,
             bloodGroup: document.getElementById('edit-bloodGroup').value,
             address: document.getElementById('edit-address').value,
+            photo: photoData // Save the cropped image to database
         };
 
         try {
@@ -374,9 +434,9 @@
         // Draw Background
         ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
-        // Define Fonts
+        // Define Fonts (Reduced size for data fields)
         const nameFont = 'bold 36px "Noto Sans Oriya", Arial, sans-serif';
-        const dataFont = '24px "Noto Sans Oriya", Arial, sans-serif';
+        const dataFont = '19px "Noto Sans Oriya", Arial, sans-serif';
         const textColor = '#000000';
 
         ctx.fillStyle = textColor;
@@ -398,13 +458,20 @@
         ctx.textAlign = 'left';
         ctx.font = dataFont;
 
-        // 3. Draw Data Fields (Left Aligned starting at X: 359)
+        // Format Date of Joining (YYYY-MM-DD to DD-MM-YYYY) for better reading
+        let dojFormatted = teacherData.doj || '';
+        if (dojFormatted.includes('-')) {
+            const parts = dojFormatted.split('-');
+            if (parts.length === 3) dojFormatted = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+
+        // 3. Draw Data Fields (Left Aligned starting at X: 359) with Odia Digits
         const dataStartX = 359;
-        ctx.fillText(teacherData.qualification || '', dataStartX, 673);
-        ctx.fillText(teacherData.mobile || '', dataStartX, 724);
-        ctx.fillText(teacherData.bloodGroup || '', dataStartX, 775);
-        ctx.fillText(teacherData.doj || '', dataStartX, 826);
-        ctx.fillText(teacherData.address || '', dataStartX, 877);
+        ctx.fillText(toOdiaDigits(teacherData.qualification || ''), dataStartX, 673);
+        ctx.fillText(toOdiaDigits(teacherData.mobile || ''), dataStartX, 724);
+        ctx.fillText(toOdiaDigits(teacherData.bloodGroup || ''), dataStartX, 775);
+        ctx.fillText(toOdiaDigits(dojFormatted), dataStartX, 826);
+        ctx.fillText(toOdiaDigits(teacherData.address || ''), dataStartX, 877);
 
         // 4. Draw Photo (Cropped to Circle)
         if (teacherData.photo) {
