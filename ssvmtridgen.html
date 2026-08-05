@@ -93,7 +93,7 @@
 
 <div class="admin-container">
     <div class="header-actions">
-        <h2>Manage Registered_ Teachers</h2>
+        <h2>Manage Registered Teachers</h2>
         <button id="generateIdsBtn" class="generate-btn">Generate All ID Cards (ZIP)</button>
     </div>
     
@@ -513,14 +513,14 @@
         const dataStartX = 304;
         const translatedQual = translateQualification(teacherData.qualification || '');
         
-        ctx.fillText(toOdiaDigits(translatedQual), dataStartX, 675);
-        ctx.fillText(toOdiaDigits(teacherData.mobile || ''), dataStartX, 726);
-        ctx.fillText(toOdiaDigits(teacherData.bloodGroup || ''), dataStartX, 777);
-        ctx.fillText(toOdiaDigits(dojFormatted), dataStartX, 828);
+        ctx.fillText(toOdiaDigits(translatedQual), dataStartX, 685);
+        ctx.fillText(toOdiaDigits(teacherData.mobile || ''), dataStartX, 736);
+        ctx.fillText(toOdiaDigits(teacherData.bloodGroup || ''), dataStartX, 787);
+        ctx.fillText(toOdiaDigits(dojFormatted), dataStartX, 838);
 
         // Reduce font size specifically for the address
         ctx.font = '26px "Noto Sans Oriya", Arial, sans-serif';
-        ctx.fillText(toOdiaDigits(teacherData.address || ''), dataStartX, 879);
+        ctx.fillText(toOdiaDigits(teacherData.address || ''), dataStartX, 889);
 
         // 4. Draw Photo (Cropped to Circle)
         if (teacherData.photo) {
