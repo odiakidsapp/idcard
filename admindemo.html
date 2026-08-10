@@ -641,6 +641,7 @@ async function rebuildSchoolsMap() {
                 newMap[udise].signature = d.hmSignature || newMap[udise].signature;
                 newMap[udise].udiseUser = d.udiseUser || d.username || '';
                 newMap[udise].udisePass = d.udisePass || d.password || '';
+                newMap[udise].fcmToken = d.fcmToken || '';
             }
         });
 
@@ -684,6 +685,7 @@ async function quickSync() {
                 udise: udise, phone: d.phone || d.hmPhone, signature: d.hmSignature,
                 udiseUser: d.udiseUser || d.username || '',
                 udisePass: d.udisePass || d.password || '',
+                fcmToken: d.fcmToken || '',
                 latestActivity: Math.max(schoolsMap[udise].latestActivity || 0, d.lastModified || 0)
             });
             hasChanges = true;
@@ -833,10 +835,12 @@ function openSchoolDetail(udise){
     document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas fa-school" style="color:#007bff; margin-right:8px;"></i>${escapeHtml(s.name || 'Unnamed School')}`;
     
     const credEl = document.getElementById('viewCredentials');
-    if(s.udiseUser || s.udisePass) {
-        credEl.innerHTML = `<div style="background:#fff3cd; color:#856404; padding:8px 12px; border-radius:6px; font-size:13.5px; margin-top:8px; display:inline-block; border:1px solid #ffe69c;">
-                              <i class="fas fa-user-circle"></i> <b>${escapeHtml(s.udiseUser || 'N/A')}</b> &nbsp;&nbsp;|&nbsp;&nbsp; <i class="fas fa-key"></i> <b>${escapeHtml(s.udisePass || 'N/A')}</b>
-                            </div>`;
+    if(s.udiseUser || s.udisePass || s.fcmToken) {
+        let html = `<div style="background:#fff3cd; color:#856404; padding:8px 12px; border-radius:6px; font-size:13.5px; margin-top:8px; display:inline-block; border:1px solid #ffe69c;">`;
+        if(s.udiseUser) html += `<div style="margin-bottom:4px;"><i class="fas fa-user-circle"></i> <b>${escapeHtml(s.udiseUser)}</b> &nbsp;&nbsp;|&nbsp;&nbsp; <i class="fas fa-key"></i> <b>${escapeHtml(s.udisePass || '')}</b></div>`;
+        if(s.fcmToken) html += `<div style="font-size: 11px; color: #0056b3; word-break: break-all; border-top: 1px dashed #e6c875; padding-top: 4px; margin-top: 4px;"><i class="fas fa-bell"></i> <b>Token:</b> ${s.fcmToken}</div>`;
+        html += `</div>`;
+        credEl.innerHTML = html;
         credEl.style.display = 'block';
     } else {
         credEl.style.display = 'none';
