@@ -13,7 +13,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-const CACHE_NAME = 'student-data-v25-auto-load-update'; // Bumped to v25
+const CACHE_NAME = 'student-data-v26-auto-load-update'; // Bumped to v25
 
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
 
