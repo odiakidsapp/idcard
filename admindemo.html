@@ -641,7 +641,7 @@ async function rebuildSchoolsMap() {
                 newMap[udise].signature = d.hmSignature || newMap[udise].signature;
                 newMap[udise].udiseUser = d.udiseUser || d.username || '';
                 newMap[udise].udisePass = d.udisePass || d.password || '';
-                newMap[udise].fcmToken = d.fcmToken || '';
+                newMap[udise].fcmToken = d.fcmToken || ''; // FETCH TOKEN
             }
         });
 
@@ -685,7 +685,7 @@ async function quickSync() {
                 udise: udise, phone: d.phone || d.hmPhone, signature: d.hmSignature,
                 udiseUser: d.udiseUser || d.username || '',
                 udisePass: d.udisePass || d.password || '',
-                fcmToken: d.fcmToken || '',
+                fcmToken: d.fcmToken || '', // FETCH TOKEN
                 latestActivity: Math.max(schoolsMap[udise].latestActivity || 0, d.lastModified || 0)
             });
             hasChanges = true;
