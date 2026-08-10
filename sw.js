@@ -1,4 +1,20 @@
+// Add these imports to the VERY TOP of the file (Line 1)
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+    apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+    authDomain: "idcard-60586.firebaseapp.com",
+    projectId: "idcard-60586",
+    storageBucket: "idcard-60586.firebasestorage.app",
+    messagingSenderId: "331979663377",
+    appId: "1:331979663377:web:026e537a7fcaca813129b0"
+});
+
+const messaging = firebase.messaging();
+
+const CACHE_NAME = 'student-data-v25-auto-load-update'; // Bumped to v25
+
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
@@ -47,7 +63,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v23');
+        console.log('Opened cache v24');
         return cache.addAll(urlsToCache);
       })
   );
@@ -103,6 +119,7 @@ self.addEventListener('activate', event => {
   );
 });
 
+// ADD THIS TO THE VERY BOTTOM OF THE FILE
 // Handle Background Notifications
 messaging.onBackgroundMessage((payload) => {
   console.log('Received background message ', payload);
