@@ -13,22 +13,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-const CACHE_NAME = 'student-data-v26-auto-load-update'; // Bumped to v25
-
-importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
-
-firebase.initializeApp({
-    apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
-    authDomain: "idcard-60586.firebaseapp.com",
-    projectId: "idcard-60586",
-    storageBucket: "idcard-60586.firebasestorage.app",
-    messagingSenderId: "331979663377",
-    appId: "1:331979663377:web:026e537a7fcaca813129b0"
-});
-
-const messaging = firebase.messaging();
-
-const CACHE_NAME = 'student-data-v24-auto-load-update'; // Bumped to v24 to force update on all devices for Push Notifications
+const CACHE_NAME = 'student-data-v26-auto-load-update'; // Bumped to v26
 
 const urlsToCache = [
   './',
@@ -63,7 +48,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v24');
+        console.log('Opened cache v26');
         return cache.addAll(urlsToCache);
       })
   );
