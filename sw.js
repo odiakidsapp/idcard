@@ -13,7 +13,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-const CACHE_NAME = 'student-data-v26-auto-load-update'; // Bumped to v26
+const CACHE_NAME = 'student-data-v27-auto-load-update'; // Bumped to v27
 
 const urlsToCache = [
   './',
@@ -48,7 +48,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v26');
+        console.log('Opened cache v27');
         return cache.addAll(urlsToCache);
       })
   );
