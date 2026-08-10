@@ -732,6 +732,11 @@
         });
         
         if ('serviceWorker' in navigator) {
+            // CRITICAL FIX: Ensure Service Worker is registered here too!
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                console.log('Service Worker Registered!', reg);
+            }).catch(err => console.error('Service Worker Registration Failed!', err));
+
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 document.getElementById('updateBanner').classList.remove('hidden');
             });
@@ -764,7 +769,7 @@
         const firestore = firebase.firestore();
         const firebaseStorage = firebase.storage();
 
-        // --- NEW PUSH NOTIFICATION CODE ---
+        // --- PUSH NOTIFICATION CODE ---
         const VAPID_KEY = "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw";
         let messaging;
         try { messaging = firebase.messaging(); } catch(e) { console.warn("Messaging not supported", e); }
@@ -794,7 +799,7 @@
                 
                 if (permission === 'granted') {
                     bellBtn.classList.add('hidden');
-                    // Add a tiny delay to ensure Service Worker is fully active after permission grant
+                    // Small delay to ensure browser state is completely updated
                     setTimeout(async () => {
                         await generateAndSaveToken();
                         showToast("Notifications enabled!", "success");
@@ -812,35 +817,37 @@
         async function generateAndSaveToken() {
             if(!navigator.onLine || !currentSchoolData || !currentSchoolData.udise) return;
             try {
-                // FORCE the browser to wait until the Service Worker is actively controlling the page
-                const registration = await navigator.serviceWorker.ready;
+                console.log("1. Starting token generation...");
                 
+                // BULLETPROOF REGISTRATION CHECK:
+                const registration = await navigator.serviceWorker.getRegistration();
                 if (!registration) {
-                    throw new Error("No active Service Worker found.");
+                    console.error("No Service Worker registration found!");
+                    return;
                 }
+                console.log("2. Service Worker found:", registration);
 
-                console.log("Generating token with VAPID key...");
+                console.log("3. Requesting token from Firebase with VAPID key...");
                 const token = await messaging.getToken({
                     vapidKey: VAPID_KEY,
                     serviceWorkerRegistration: registration
                 });
                 
                 if(token) {
-                    console.log("Token generated:", token);
+                    console.log("4. Token generated successfully:", token);
                     await firestore.collection('schools').doc(currentSchoolData.udise).set({
                         fcmToken: token,
                         lastModified: Date.now()
                     }, { merge: true });
-                    console.log("Token saved to Firestore!");
+                    console.log("5. Token saved to Firestore!");
                 } else {
-                     throw new Error("getToken returned null.");
+                    console.error("getToken returned null.");
                 }
             } catch(e) {
                 console.error("Token generation failed:", e);
-                showToast("Push setup failed. Check console.", "error");
             }
         }
-        // --- END NEW PUSH NOTIFICATION CODE ---
+        // --- END PUSH NOTIFICATION CODE ---
 
         let db, currentSchool = null, currentSchoolData = null, students = [];
         let filteredStudents = [];
