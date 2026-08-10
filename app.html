@@ -12,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js"></script>
 
     <!-- Cropper.js for Gallery Image Cropping -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
@@ -42,6 +43,14 @@
             100% { transform: translateY(0px); }
         }
         .fab-hover { animation: float 3s ease-in-out infinite; }
+        
+        /* Floating Notification Bell Animation */
+        @keyframes gentle-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(147, 51, 234, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); }
+        }
+        .fab-pulse { animation: gentle-pulse 2s infinite; }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
@@ -255,6 +264,11 @@
     <a href="https://wa.me/917855800205" target="_blank" id="floatingWhatsappBtn" class="hidden fixed bottom-6 right-6 z-[90] w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center text-3xl shadow-[0_4px_12px_rgba(37,211,102,0.4)] hover:bg-[#1ebd5a] hover:scale-105 transition-all duration-300 fab-hover" title="WhatsApp Support">
         <i class="fab fa-whatsapp"></i>
     </a>
+
+    <!-- Floating Notification Bell (Shown to existing/new users to request permission) -->
+    <button onclick="requestNotificationPermission()" id="floatingNotificationBtn" class="hidden fixed bottom-24 right-6 z-[90] w-14 h-14 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl shadow-[0_4px_12px_rgba(147,51,234,0.4)] hover:bg-purple-700 hover:scale-105 transition-all duration-300 fab-pulse" title="Enable Notifications">
+        <i class="fas fa-bell"></i>
+    </button>
 
     <!-- ================= MODALS ================= -->
 
@@ -749,6 +763,65 @@
         }
         const firestore = firebase.firestore();
         const firebaseStorage = firebase.storage();
+
+        // --- NEW PUSH NOTIFICATION CODE ---
+        const VAPID_KEY = "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw";
+        let messaging;
+        try { messaging = firebase.messaging(); } catch(e) { console.warn("Messaging not supported", e); }
+
+        function checkNotificationStatus() {
+            if (!('Notification' in window) || !messaging) return;
+            
+            const bellBtn = document.getElementById('floatingNotificationBtn');
+            
+            if (Notification.permission === 'default') {
+                bellBtn.classList.remove('hidden');
+            } else if (Notification.permission === 'granted' && currentSchoolData && currentSchoolData.udise) {
+                bellBtn.classList.add('hidden');
+                // Silently refresh the token in case it expired
+                generateAndSaveToken();
+            } else {
+                bellBtn.classList.add('hidden');
+            }
+        }
+
+        window.requestNotificationPermission = async function() {
+            try {
+                const permission = await Notification.requestPermission();
+                const bellBtn = document.getElementById('floatingNotificationBtn');
+                
+                if (permission === 'granted') {
+                    bellBtn.classList.add('hidden');
+                    await generateAndSaveToken();
+                    showToast("Notifications enabled!", "success");
+                } else {
+                    alert("Notification permission denied. You won't receive updates.");
+                    bellBtn.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error("Error requesting permission:", e);
+            }
+        }
+
+        async function generateAndSaveToken() {
+            if(!navigator.onLine || !currentSchoolData || !currentSchoolData.udise) return;
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const token = await messaging.getToken({
+                    vapidKey: VAPID_KEY,
+                    serviceWorkerRegistration: registration
+                });
+                if(token) {
+                    await firestore.collection('schools').doc(currentSchoolData.udise).set({
+                        fcmToken: token,
+                        lastModified: Date.now()
+                    }, { merge: true });
+                }
+            } catch(e) {
+                console.error("Token generation failed", e);
+            }
+        }
+        // --- END NEW PUSH NOTIFICATION CODE ---
 
         let db, currentSchool = null, currentSchoolData = null, students = [];
         let filteredStudents = [];
@@ -1500,6 +1573,7 @@
             
             // ALWAYS setup the listener so we can catch background updates from the admin while waiting!
             setupRealtimeListener();
+            checkNotificationStatus(); // ADDED THIS TO CHECK EXISTING USERS
         }
 
         function updateSchoolHeader() {
