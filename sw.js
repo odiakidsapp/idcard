@@ -1,4 +1,18 @@
-const CACHE_NAME = 'student-data-v23-auto-load-update'; // Bumped to v23 to force update on all devices
+importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+    apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+    authDomain: "idcard-60586.firebaseapp.com",
+    projectId: "idcard-60586",
+    storageBucket: "idcard-60586.firebasestorage.app",
+    messagingSenderId: "331979663377",
+    appId: "1:331979663377:web:026e537a7fcaca813129b0"
+});
+
+const messaging = firebase.messaging();
+
+const CACHE_NAME = 'student-data-v24-auto-load-update'; // Bumped to v24 to force update on all devices for Push Notifications
 
 const urlsToCache = [
   './',
@@ -87,4 +101,16 @@ self.addEventListener('activate', event => {
       );
     })
   );
+});
+
+// Handle Background Notifications
+messaging.onBackgroundMessage((payload) => {
+  console.log('Received background message ', payload);
+  const notificationTitle = payload.notification.title || 'ID Cards Pro';
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: './icon-192.png'
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
 });
