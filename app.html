@@ -794,33 +794,50 @@
                 
                 if (permission === 'granted') {
                     bellBtn.classList.add('hidden');
-                    await generateAndSaveToken();
-                    showToast("Notifications enabled!", "success");
+                    // Add a tiny delay to ensure Service Worker is fully active after permission grant
+                    setTimeout(async () => {
+                        await generateAndSaveToken();
+                        showToast("Notifications enabled!", "success");
+                    }, 500);
                 } else {
                     alert("Notification permission denied. You won't receive updates.");
                     bellBtn.classList.add('hidden');
                 }
             } catch (e) {
                 console.error("Error requesting permission:", e);
+                showToast("Permission error: " + e.message, "error");
             }
         }
 
         async function generateAndSaveToken() {
             if(!navigator.onLine || !currentSchoolData || !currentSchoolData.udise) return;
             try {
+                // FORCE the browser to wait until the Service Worker is actively controlling the page
                 const registration = await navigator.serviceWorker.ready;
+                
+                if (!registration) {
+                    throw new Error("No active Service Worker found.");
+                }
+
+                console.log("Generating token with VAPID key...");
                 const token = await messaging.getToken({
                     vapidKey: VAPID_KEY,
                     serviceWorkerRegistration: registration
                 });
+                
                 if(token) {
+                    console.log("Token generated:", token);
                     await firestore.collection('schools').doc(currentSchoolData.udise).set({
                         fcmToken: token,
                         lastModified: Date.now()
                     }, { merge: true });
+                    console.log("Token saved to Firestore!");
+                } else {
+                     throw new Error("getToken returned null.");
                 }
             } catch(e) {
-                console.error("Token generation failed", e);
+                console.error("Token generation failed:", e);
+                showToast("Push setup failed. Check console.", "error");
             }
         }
         // --- END NEW PUSH NOTIFICATION CODE ---
