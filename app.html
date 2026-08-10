@@ -12,7 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js"></script> <!-- ADDED MESSAGING -->
 
     <!-- Cropper.js for Gallery Image Cropping -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
@@ -775,12 +775,14 @@
             const bellBtn = document.getElementById('floatingNotificationBtn');
             
             if (Notification.permission === 'default') {
+                // User hasn't chosen yet, show the bell
                 bellBtn.classList.remove('hidden');
             } else if (Notification.permission === 'granted' && currentSchoolData && currentSchoolData.udise) {
+                // User already allowed it. Hide bell and silently refresh token in background!
                 bellBtn.classList.add('hidden');
-                // Silently refresh the token in case it expired
                 generateAndSaveToken();
             } else {
+                // User blocked it. Hide bell.
                 bellBtn.classList.add('hidden');
             }
         }
@@ -1573,7 +1575,9 @@
             
             // ALWAYS setup the listener so we can catch background updates from the admin while waiting!
             setupRealtimeListener();
-            checkNotificationStatus(); // ADDED THIS TO CHECK EXISTING USERS
+            
+            // Trigger the Notification Check every time they log in or dashboard loads
+            checkNotificationStatus(); 
         }
 
         function updateSchoolHeader() {
