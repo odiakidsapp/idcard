@@ -781,17 +781,11 @@
                 
                 if (permission === 'granted') {
                     // Start the token logic manually
-                    await generateAndSaveToken(false);
-                } else {
-                    window.alert("Permission denied by user.", "error");
-                }
-            } catch (e) {
-                window.alert("Permission error: " + e.message, "error");
-            }
-        }
-
-        // --- LOUD DEBUGGING VERSION ---
+        // --- LOUD DEBUGGING VERSION WITH POLLING BYPASS ---
         async function generateAndSaveToken(isSilent = false) {
+            // For testing, force this to be loud so we see every step
+            isSilent = false; 
+
             if(!navigator.onLine) {
                 if(!isSilent) showToast("Abort: You are offline.", "error");
                 return;
@@ -802,22 +796,28 @@
             }
 
             try {
-                if(!isSilent) showToast("Step 1: Connecting to Service Worker...", "info");
+                if(!isSilent) showToast("Step 1: Registering Service Worker...", "info");
                 
-                // 1. Force the browser to register the file
-                await navigator.serviceWorker.register('./sw.js');
+                // Force the browser to register the worker right now
+                let registration = await navigator.serviceWorker.register('./sw.js');
                 
-                // 2. PAUSE and wait until the Service Worker is 100% ACTIVE
-                const registration = await navigator.serviceWorker.ready;
-                
+                // POLLING LOOP: Wait manually until it is active to bypass Chrome freezing
+                let attempts = 0;
+                while (!registration.active && attempts < 15) {
+                    if(!isSilent) showToast(`Waiting for worker to activate... (${attempts+1}/15)`, "info");
+                    await new Promise(r => setTimeout(r, 500)); // wait 0.5 seconds
+                    registration = await navigator.serviceWorker.getRegistration();
+                    attempts++;
+                }
+
                 if (!registration || !registration.active) {
-                    if(!isSilent) showToast("Abort: Service Worker registered but not active.", "error");
+                    if(!isSilent) showToast("Abort: Service Worker refused to activate.", "error");
                     return;
                 }
 
                 if(!isSilent) showToast("Step 2: Generating FCM Token...", "info");
                 
-                // 3. Ask Firebase for the token using the fully active registration
+                // Ask Firebase for the token using the fully active registration
                 const token = await messaging.getToken({
                     vapidKey: "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw",
                     serviceWorkerRegistration: registration
@@ -2007,4 +2007,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
