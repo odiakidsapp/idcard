@@ -13,25 +13,19 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-const CACHE_NAME = 'student-data-v27-auto-load-update'; // Bumped to v27
+const CACHE_NAME = 'student-data-v29-auto-load-update'; // Bumped to v29 to force a fresh install
 
 const urlsToCache = [
   './',
   './index.html',
-  './app.html', // Your main Data Entry App
-  './admin_apanel.html', // Admin Panel
+  './app.html', 
+  './admin_apanel.html', 
   './manifest.json',
-
-  // Fonts and Backgrounds cached for completely offline preview generation
   './OdiaFont.ttf',
   './background.png',
   './eng_background.png',
-
-  // Images 
   './icon-192.png',
   './icon-512.png',
-
-  // External Libraries (Cached for Offline Use)
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
@@ -44,21 +38,18 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Forces the waiting service worker to become the active service worker.
+  self.skipWaiting(); 
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v27');
+        console.log('Opened cache v29');
         return cache.addAll(urlsToCache);
       })
   );
 });
 
-// Dynamic Network-First fallback so bugs get patched on users' phones immediately
 self.addEventListener('fetch', event => {
   const req = event.request;
-
-  // Use Network-First for HTML files (gets bug fixes instantly, falls back to cache if offline)
   if (req.headers.get('accept') && req.headers.get('accept').includes('text/html')) {
     event.respondWith(
       fetch(req)
@@ -68,12 +59,10 @@ self.addEventListener('fetch', event => {
            return networkResponse;
         })
         .catch(() => {
-           // If completely offline, fall back to the cached HTML
            return caches.match(req);
         })
     );
   } else {
-    // For all other assets (JS, Images, Fonts), keep Cache-First for speed and offline capabilities
     event.respondWith(
       caches.match(req).then(cachedResponse => {
         if (cachedResponse) {
@@ -86,16 +75,13 @@ self.addEventListener('fetch', event => {
 });
 
 self.addEventListener('activate', event => {
-  // Take control of all open pages immediately
   event.waitUntil(clients.claim());
-  
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -104,15 +90,11 @@ self.addEventListener('activate', event => {
   );
 });
 
-// ADD THIS TO THE VERY BOTTOM OF THE FILE
-// Handle Background Notifications
 messaging.onBackgroundMessage((payload) => {
-  console.log('Received background message ', payload);
   const notificationTitle = payload.notification.title || 'ID Cards Pro';
   const notificationOptions = {
     body: payload.notification.body,
     icon: './icon-192.png'
   };
-
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
