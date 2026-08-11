@@ -41,6 +41,10 @@
         .photo-cell img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
         #loading { text-align: center; font-size: 18px; color: #666; margin-top: 20px; }
 
+        /* Checkbox styling */
+        .checkbox-cell { text-align: center; }
+        input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+
         /* Button Styles */
         button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 5px; margin-bottom: 3px; font-weight: bold;}
         .edit-btn { background-color: #ffc107; color: #000; }
@@ -93,8 +97,8 @@
 
 <div class="admin-container">
     <div class="header-actions">
-        <h2>Manage Registered_ Teachers</h2>
-        <button id="generateIdsBtn" class="generate-btn">Generate All ID Cards (ZIP)</button>
+        <h2>Manage Registered Teachers</h2>
+        <button id="generateIdsBtn" class="generate-btn">Generate Selected ID Cards (ZIP)</button>
     </div>
     
     <div id="progress-container">
@@ -106,6 +110,7 @@
     <table id="teachersTable" style="display:none;">
         <thead>
             <tr>
+                <th class="checkbox-cell"><input type="checkbox" id="selectAll"></th>
                 <th>#</th>
                 <th>Photo</th>
                 <th>Name</th>
@@ -221,7 +226,6 @@
     function translateQualification(qual) {
         if (!qual) return '';
         let translated = qual;
-        // Dictionary for common abbreviations (handles case insensitivity and optional dots)
         const replaceMap = [
             { regex: /\bB\.?A\.?\b/gi, odia: 'ବି.ଏ' },
             { regex: /\bB\.?Ed\.?\b/gi, odia: 'ବି.ଏଡ' },
@@ -268,6 +272,7 @@
                 const fullName = (data.salutation ? data.salutation + ' ' : '') + (data.name || '');
                 
                 tr.innerHTML = `
+                    <td class="checkbox-cell"><input type="checkbox" class="row-checkbox" value="${id}"></td>
                     <td><b>${serialNumber}</b></td>
                     <td class="photo-cell"><img src="${imgSrc}" alt="Profile"></td>
                     <td>${fullName}</td>
@@ -287,6 +292,9 @@
                 serialNumber++;
             });
 
+            // Reset select all checkbox
+            document.getElementById('selectAll').checked = false;
+
             loading.style.display = 'none';
             table.style.display = 'table';
             
@@ -296,6 +304,23 @@
             loading.style.color = 'red';
         }
     }
+
+    // Select All Checkbox Logic
+    document.getElementById('selectAll').addEventListener('change', function(e) {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = e.target.checked;
+        });
+    });
+
+    // Uncheck "Select All" if an individual checkbox is unchecked
+    document.getElementById('tableBody').addEventListener('change', function(e) {
+        if (e.target.classList.contains('row-checkbox')) {
+            const allCheckboxes = document.querySelectorAll('.row-checkbox');
+            const allChecked = document.querySelectorAll('.row-checkbox:checked');
+            document.getElementById('selectAll').checked = allCheckboxes.length === allChecked.length;
+        }
+    });
 
     document.getElementById('tableBody').addEventListener('click', async (e) => {
         // DELETE BUTTON
@@ -345,15 +370,14 @@
                 img.src = data.photo;
                 document.getElementById('cropper-container').style.display = 'block';
                 
-                // Initialize cropper once the existing image loads
                 img.onload = function() {
                     if (cropper) cropper.destroy();
                     cropper = new Cropper(img, {
-                        aspectRatio: 1, // Enforce a 1:1 Square Crop
+                        aspectRatio: 1, 
                         viewMode: 1,
                         background: false
                     });
-                    img.onload = null; // Clear onload to prevent double firing
+                    img.onload = null; 
                 };
             } else {
                 document.getElementById('cropper-container').style.display = 'none';
@@ -376,7 +400,7 @@
                 
                 if (cropper) { cropper.destroy(); }
                 cropper = new Cropper(img, {
-                    aspectRatio: 1, // Enforce a 1:1 Square Crop
+                    aspectRatio: 1,
                     viewMode: 1,
                     background: false
                 });
@@ -398,10 +422,8 @@
         const id = document.getElementById('edit-id').value;
         const existingData = teachersDataMap[id];
         
-        // Get cropped image if available, else keep existing
         let photoData = existingData.photo || null;
         if (cropper) {
-            // Get cropped canvas and compress slightly for performance
             photoData = cropper.getCroppedCanvas({ width: 400, height: 400 }).toDataURL('image/jpeg', 0.8);
         }
         
@@ -414,7 +436,7 @@
             mobile: document.getElementById('edit-mobile').value,
             bloodGroup: document.getElementById('edit-bloodGroup').value,
             address: document.getElementById('edit-address').value,
-            photo: photoData // Save the cropped image to database
+            photo: photoData
         };
 
         try {
@@ -430,18 +452,16 @@
         }
     });
 
-    // Helper function to load an image from a URL or Base64 string
     function loadImage(src) {
         return new Promise((resolve, reject) => {
             const img = new Image();
-            img.crossOrigin = 'Anonymous'; // Crucial for loading external images onto a canvas
+            img.crossOrigin = 'Anonymous';
             img.onload = () => resolve(img);
             img.onerror = (e) => {
                 console.warn(`Failed to load image: ${src}. Generating placeholder.`, e);
-                // Create a placeholder canvas if image fails to load
                 const placeholder = document.createElement('canvas');
-                placeholder.width = 234; // right(433) - left(199)
-                placeholder.height = 236; // bottom(531) - top(295)
+                placeholder.width = 234;
+                placeholder.height = 236;
                 const ctx = placeholder.getContext('2d');
                 ctx.fillStyle = '#cccccc';
                 ctx.fillRect(0, 0, placeholder.width, placeholder.height);
@@ -456,13 +476,12 @@
         });
     }
 
-    // Function to generate the QR Code as a data URL
     function generateQRCodeDataUrl(profileUrl) {
         try {
             const qr = qrcode(0, 'M');
             qr.addData(profileUrl);
             qr.make();
-            return qr.createDataURL(10, 0); // High detail, no margin
+            return qr.createDataURL(10, 0);
         } catch (e) {
             console.error("QR Generation failed", e);
             return null;
@@ -475,10 +494,8 @@
         canvas.height = 1011;
         const ctx = canvas.getContext('2d');
 
-        // Draw Background
         ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
-        // Define Fonts (Reduced size for data fields)
         const nameFont = 'bold 36px "Noto Sans Oriya", Arial, sans-serif';
         const dataFont = '27px "Noto Sans Oriya", Arial, sans-serif';
         const textColor = '#000000';
@@ -486,30 +503,25 @@
         ctx.fillStyle = textColor;
         ctx.textBaseline = 'middle';
 
-        // 1. Draw Name (Centered)
         const fullName = (teacherData.salutation ? teacherData.salutation + ' ' : '') + (teacherData.name || '');
         ctx.font = nameFont;
         ctx.textAlign = 'center';
-        ctx.fillText(fullName, 311, 569); // X: 311, Y: 569
+        ctx.fillText(fullName, 311, 569);
 
-        // 2. Draw Designation (Centered inside the blue pill)
         ctx.font = 'bold 22px "Noto Sans Oriya", Arial, sans-serif';
-        ctx.fillStyle = '#FFFFFF'; // White text for designation
+        ctx.fillStyle = '#FFFFFF';
         ctx.fillText(teacherData.designation || '', 311, 625);
 
-        // Reset fill style and alignment for the rest of the data
         ctx.fillStyle = textColor;
         ctx.textAlign = 'left';
         ctx.font = dataFont;
 
-        // Format Date of Joining (YYYY-MM-DD to DD-MM-YYYY) for better reading
         let dojFormatted = teacherData.doj || '';
         if (dojFormatted.includes('-')) {
             const parts = dojFormatted.split('-');
             if (parts.length === 3) dojFormatted = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
 
-        // 3. Draw Data Fields (Left Aligned starting at X: 304) with Odia Digits
         const dataStartX = 304;
         const translatedQual = translateQualification(teacherData.qualification || '');
         
@@ -518,11 +530,9 @@
         ctx.fillText(toOdiaDigits(teacherData.bloodGroup || ''), dataStartX, 787);
         ctx.fillText(toOdiaDigits(dojFormatted), dataStartX, 838);
 
-        // Reduce font size specifically for the address
         ctx.font = '26px "Noto Sans Oriya", Arial, sans-serif';
         ctx.fillText(toOdiaDigits(teacherData.address || ''), dataStartX, 889);
 
-        // 4. Draw Photo (Cropped to Circle)
         if (teacherData.photo) {
             const photoImg = await loadImage(teacherData.photo);
             
@@ -531,8 +541,8 @@
             const pTop = 295;
             const pBottom = 531;
             
-            const pWidth = pRight - pLeft; // 234
-            const pHeight = pBottom - pTop; // 236
+            const pWidth = pRight - pLeft; 
+            const pHeight = pBottom - pTop; 
             
             const centerX = pLeft + (pWidth / 2);
             const centerY = pTop + (pHeight / 2);
@@ -544,7 +554,6 @@
             ctx.closePath();
             ctx.clip();
 
-            // Draw image covering the circle, maintaining aspect ratio (object-fit: cover equivalent)
             const imgAspect = photoImg.width / photoImg.height;
             const targetAspect = pWidth / pHeight;
             let drawWidth = pWidth;
@@ -553,11 +562,9 @@
             let offsetY = 0;
 
             if (imgAspect > targetAspect) {
-                // Image is wider than target
                 drawWidth = pHeight * imgAspect;
                 offsetX = (pWidth - drawWidth) / 2;
             } else {
-                // Image is taller than target
                 drawHeight = pWidth / imgAspect;
                 offsetY = (pHeight - drawHeight) / 2;
             }
@@ -565,15 +572,14 @@
             ctx.drawImage(photoImg, pLeft + offsetX, pTop + offsetY, drawWidth, drawHeight);
             ctx.restore();
             
-            // Optional: Draw a border around the photo to match the design
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, Math.PI * 2, true);
             ctx.lineWidth = 4;
-            ctx.strokeStyle = '#0e265c'; // Dark blue border
+            ctx.strokeStyle = '#0e265c';
             ctx.stroke();
         }
 
-        return canvas.toDataURL('image/png').split(',')[1]; // Return base64 data
+        return canvas.toDataURL('image/png').split(',')[1];
     }
 
     async function createBackCard(id, bgImage) {
@@ -582,21 +588,18 @@
         canvas.height = 1011;
         const ctx = canvas.getContext('2d');
 
-        // Draw Background
         ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
-        // Generate and Draw QR Code
         const profileUrl = new URL(`teacher-profile.html?id=${encodeURIComponent(id)}`, window.location.href).href;
         const qrDataUrl = generateQRCodeDataUrl(profileUrl);
         
         if (qrDataUrl) {
             const qrImg = await loadImage(qrDataUrl);
             
-            // QR Coordinates given: TL(209, 530), TR(408, 530), BL(209, 728), BR(408, 728)
             const qrX = 209;
             const qrY = 530;
-            const qrWidth = 408 - 209; // 199
-            const qrHeight = 728 - 530; // 198
+            const qrWidth = 408 - 209; 
+            const qrHeight = 728 - 530; 
 
             ctx.drawImage(qrImg, qrX, qrY, qrWidth, qrHeight);
         }
@@ -604,17 +607,20 @@
         return canvas.toDataURL('image/png').split(',')[1];
     }
 
+    // UPDATE: Now checking specifically for checked row-checkboxes
     document.getElementById('generateIdsBtn').addEventListener('click', async () => {
+        const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+        const teacherIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+        if (teacherIds.length === 0) {
+            alert("Please select at least one teacher to generate ID cards for.");
+            return;
+        }
+
         const btn = document.getElementById('generateIdsBtn');
         const progressContainer = document.getElementById('progress-container');
         const progressFill = document.getElementById('progress-fill');
         const progressText = document.getElementById('progress-text');
-        
-        const teacherIds = Object.keys(teachersDataMap);
-        if (teacherIds.length === 0) {
-            alert("No teachers found to generate ID cards for.");
-            return;
-        }
 
         btn.disabled = true;
         progressContainer.style.display = 'block';
@@ -622,7 +628,6 @@
         progressText.innerText = 'Loading resources...';
 
         try {
-            // Pre-load background images
             const frontBg = await loadImage('ssvmfront.jpg');
             const backBg = await loadImage('ssvmback.jpg');
 
@@ -633,18 +638,14 @@
                 const id = teacherIds[i];
                 const teacherData = teachersDataMap[id];
                 
-                // Add index (i + 1) to guarantee unique filenames, preventing ZIP overwrites for duplicate names
                 const safeName = `${(teacherData.name || 'Teacher').replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${i + 1}`;
 
-                // Generate Front
                 const frontBase64 = await createFrontCard(teacherData, id, frontBg);
                 zip.file(`${safeName}_front.png`, frontBase64, {base64: true});
 
-                // Generate Back
                 const backBase64 = await createBackCard(id, backBg);
                 zip.file(`${safeName}_back.png`, backBase64, {base64: true});
 
-                // Update Progress
                 const percent = Math.round(((i + 1) / totalCards) * 100);
                 progressFill.style.width = `${percent}%`;
                 progressText.innerText = `Generating... ${percent}% (${i + 1}/${totalCards})`;
@@ -652,9 +653,8 @@
 
             progressText.innerText = 'Zipping files...';
             
-            // Generate ZIP file and trigger download
             const content = await zip.generateAsync({type:"blob"});
-            saveAs(content, "Teacher_ID_Cards.zip");
+            saveAs(content, "Selected_Teacher_ID_Cards.zip");
             
             progressText.innerText = 'Complete!';
 
@@ -666,7 +666,7 @@
             setTimeout(() => {
                 progressContainer.style.display = 'none';
                 btn.disabled = false;
-            }, 3000); // Hide progress after 3 seconds
+            }, 3000); 
         }
     });
 
