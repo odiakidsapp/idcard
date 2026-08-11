@@ -632,6 +632,17 @@ async function rebuildSchoolsMap() {
         schoolQs.forEach(doc => {
             const d = doc.data();
             let udise = doc.id;
+            
+            // FIX: If the school has 0 students, it won't be in newMap yet. We create it here so it forces its way onto the dashboard!
+            if (!newMap[udise]) {
+                newMap[udise] = {
+                    name: d.name || 'New Registration (0 Students)', completedCount: 0, pendingCount: 0,
+                    block: '', district: '', pin: '',
+                    udise: udise, phone: '', signature: '',
+                    latestActivity: d.lastModified || d.createdAt || 0, sources: {}, rawNameCounts: {}, missingUdise: false
+                };
+            }
+            
             if (newMap[udise]) {
                 newMap[udise].name = d.name || newMap[udise].name;
                 newMap[udise].block = d.block || newMap[udise].block;
@@ -760,9 +771,8 @@ async function quickSync() {
                     block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
                     latestActivity: maxId, sources: vars, rawNameCounts: rawCounts, missingUdise: field==='schoolName'
                 };
-            } else {
-                delete schoolsMap[udise];
             }
+            // FIX: Removed the code that deleted schools with 0 students. Now they stay visible forever.
         }
         
         if (hasChanges) {
