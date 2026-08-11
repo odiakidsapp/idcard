@@ -833,6 +833,19 @@ function showDashboard(){
     renderDashboard();
 }
 
+window.markPasswordInvalid = async function(udise) {
+    if(!(await showMsg(`Mark this password as invalid?<br><br>The user's app will immediately pause Auto-Load and force them to type a new password.`, true))) return;
+    try {
+        await db.collection('schools').doc(udise).update({
+            passwordInvalid: true,
+            lastModified: Date.now()
+        });
+        showMsg("Invalid password signal sent! Awaiting user correction.");
+    } catch(e) {
+        showMsg("Error sending signal: " + e.message);
+    }
+};
+
 function openSchoolDetail(udise){
     let s = schoolsMap[udise];
     if(!s) return;
