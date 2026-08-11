@@ -13,7 +13,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-const CACHE_NAME = 'student-data-v34-auto-load-update'; // Bumped to v34
+const CACHE_NAME = 'student-data-v35-auto-load-update'; // Bumped to v35
 
 const urlsToCache = [
   './',
@@ -42,8 +42,8 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(async cache => {
-        console.log('Opened cache v34');
-        // FIX: Cache files one by one so a single missing file doesn't crash the whole Service Worker
+        console.log('Opened cache v35');
+        // Cache files one by one so a single missing file doesn't crash the worker
         for (let url of urlsToCache) {
           try {
             await cache.add(url);
