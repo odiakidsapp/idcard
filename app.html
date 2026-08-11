@@ -807,11 +807,12 @@
             try {
                 window.alert("Step 1: Connecting to Service Worker...");
                 
-                // Get the active registration explicitly
-                const registration = await navigator.serviceWorker.getRegistration();
+                // BULLETPROOF FIX: Force register on the spot to guarantee we have the object
+                const registration = await navigator.serviceWorker.register('./sw.js');
+                await navigator.serviceWorker.ready; // Ensure it's fully awake
                 
                 if (!registration) {
-                    window.alert("Abort: No Service Worker found. Is sw.js registered?");
+                    window.alert("Abort: Browser absolutely refused to register sw.js.");
                     return;
                 }
 
