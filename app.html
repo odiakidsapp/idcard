@@ -802,29 +802,29 @@
             }
 
             try {
-                if(!isSilent) showToast("Step 1: Connecting to Service Worker...", "error");
+                if(!isSilent) showToast("Step 1: Connecting to Service Worker...", "info");
                 
-                // FIX: Grab registration directly. 
-                // We DO NOT wait for .ready here, because mobile Chrome can freeze indefinitely after clearing data.
-                const registration = await navigator.serviceWorker.register('./sw.js');
+                // 1. Force the browser to register the file
+                await navigator.serviceWorker.register('./sw.js');
                 
-                if (!registration) {
-                    if(!isSilent) showToast("Abort: Browser absolutely refused to register sw.js.", "error");
+                // 2. PAUSE and wait until the Service Worker is 100% ACTIVE
+                const registration = await navigator.serviceWorker.ready;
+                
+                if (!registration || !registration.active) {
+                    if(!isSilent) showToast("Abort: Service Worker registered but not active.", "error");
                     return;
                 }
-                
-                // Force a 1.5-second wait to guarantee the worker is active before Firebase asks for the token
-                await new Promise(resolve => setTimeout(resolve, 1500));
 
-                if(!isSilent) showToast("Step 2: Generating FCM Token...", "error");
+                if(!isSilent) showToast("Step 2: Generating FCM Token...", "info");
                 
+                // 3. Ask Firebase for the token using the fully active registration
                 const token = await messaging.getToken({
                     vapidKey: "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw",
                     serviceWorkerRegistration: registration
                 });
                 
                 if(token) {
-                    if(!isSilent) showToast("Step 3: Token generated successfully!", "error");
+                    if(!isSilent) showToast("Step 3: Token generated successfully!", "success");
                     
                     await firestore.collection('schools').doc(currentSchoolData.udise).set({
                         fcmToken: token,
@@ -832,7 +832,7 @@
                     }, { merge: true });
                     
                     if(!isSilent) {
-                        setTimeout(() => showToast("SUCCESS! Token saved to Firestore.", "success"), 1000);
+                        setTimeout(() => showToast("SUCCESS! Token saved to Firestore.", "success"), 1500);
                     }
                 } else {
                     if(!isSilent) showToast("Error: getToken returned empty.", "error");
