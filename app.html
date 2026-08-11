@@ -108,7 +108,7 @@
                 <i class="fab fa-whatsapp w-5 text-center text-[#25D366] text-lg"></i> WhatsApp Support
             </a>
             
-            <button onclick="requestNotificationPermission(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-purple-50 transition text-left text-purple-700 font-bold">
+            <button onclick="requestNotificationPermission(true); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-purple-50 transition text-left text-purple-700 font-bold">
                 <i class="fas fa-bell w-5 text-center text-purple-600"></i> Enable Notifications
             </button>
 
@@ -263,7 +263,7 @@
     </a>
 
     <!-- Floating Notification Bell -->
-    <button onclick="requestNotificationPermission()" id="floatingNotificationBtn" class="hidden fixed bottom-24 right-6 z-[90] w-14 h-14 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl shadow-[0_4px_12px_rgba(147,51,234,0.4)] hover:bg-purple-700 hover:scale-105 transition-all duration-300 fab-pulse" title="Enable Notifications">
+    <button onclick="requestNotificationPermission(true)" id="floatingNotificationBtn" class="hidden fixed bottom-24 right-6 z-[90] w-14 h-14 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl shadow-[0_4px_12px_rgba(147,51,234,0.4)] hover:bg-purple-700 hover:scale-105 transition-all duration-300 fab-pulse" title="Enable Notifications">
         <i class="fas fa-bell"></i>
     </button>
 
@@ -769,90 +769,66 @@
             }
         }
 
-        window.requestNotificationPermission = async function() {
+        window.requestNotificationPermission = async function(showFeedback = true) {
             try {
-                // Remove hidden class immediately just in case
                 const bellBtn = document.getElementById('floatingNotificationBtn');
                 if (bellBtn) bellBtn.classList.add('hidden');
 
                 const permission = await Notification.requestPermission();
                 
                 if (permission === 'granted') {
-                    // Call the token generation function
-                    generateAndSaveToken(false);
+                    generateAndSaveToken(showFeedback);
                 } else {
-                    showToast("Notification permission denied by browser.", "error");
+                    if (showFeedback) showToast("Notification permission denied by browser.", "error");
                 }
             } catch(e) {
                 console.error(e);
             }
         };
 
-        // --- LOUD DEBUGGING VERSION WITH POLLING BYPASS ---
-        async function generateAndSaveToken(isSilent = false) {
-            // For testing, force this to be loud so we see every step
-            isSilent = false; 
-
+        // Silent, robust polling token generation
+        async function generateAndSaveToken(showFeedback = true) {
             if(!navigator.onLine) {
-                if(!isSilent) showToast("Abort: You are offline.", "error");
+                if (showFeedback) showToast("You are offline. Cannot enable notifications.", "error");
                 return;
             }
-            if(!currentSchoolData || !currentSchoolData.udise) {
-                if(!isSilent) showToast("Abort: No UDISE found.", "error");
-                return;
-            }
+            if(!currentSchoolData || !currentSchoolData.udise) return;
 
             try {
-                if(!isSilent) showToast("Step 1: Registering Service Worker...", "info");
-                
-                // Force the browser to register the worker right now
                 let registration = await navigator.serviceWorker.register('./sw.js');
                 
-                // POLLING LOOP: Wait manually until it is active to bypass Chrome freezing
+                // Polling Loop: Wait manually until active to bypass Chrome freezing
                 let attempts = 0;
                 while (attempts < 15) {
-                    // SAFETY CHECK: Ensure registration actually exists before checking if it is active!
                     if (registration && registration.active) {
-                        break; // It is active! We can break out of the loop.
+                        break; 
                     }
-                    
-                    if(!isSilent) showToast(`Waiting for worker to activate... (${attempts+1}/15)`, "info");
-                    await new Promise(r => setTimeout(r, 500)); // wait 0.5 seconds
-                    
-                    // Fetch it again for the next loop
+                    await new Promise(r => setTimeout(r, 500)); 
                     registration = await navigator.serviceWorker.getRegistration();
                     attempts++;
                 }
 
                 if (!registration || !registration.active) {
-                    if(!isSilent) showToast("Abort: Service Worker refused to activate.", "error");
+                    if (showFeedback) showToast("Service Worker failed to activate.", "error");
                     return;
                 }
 
-                if(!isSilent) showToast("Step 2: Generating FCM Token...", "info");
-                
-                // Ask Firebase for the token using the fully active registration
                 const token = await messaging.getToken({
                     vapidKey: "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw",
                     serviceWorkerRegistration: registration
                 });
                 
                 if(token) {
-                    if(!isSilent) showToast("Step 3: Token generated successfully!", "success");
-                    
                     await firestore.collection('schools').doc(currentSchoolData.udise).set({
                         fcmToken: token,
                         lastModified: Date.now()
                     }, { merge: true });
                     
-                    if(!isSilent) {
-                        setTimeout(() => showToast("SUCCESS! Token saved to Firestore.", "success"), 1500);
-                    }
-                } else {
-                    if(!isSilent) showToast("Error: getToken returned empty.", "error");
+                    if(showFeedback) showToast("Notifications enabled successfully!", "success");
                 }
             } catch(e) {
-                if(!isSilent) showToast("FCM Error: " + e.message, "error");
+                console.error("FCM Error:", e);
+                if (showFeedback) showToast("Notification Setup Error: " + e.message, "error");
             }
         }
 
@@ -1522,6 +1498,13 @@
                     enterSchool(schoolObj); 
                     btn.innerHTML = origText;
                     btn.disabled = false;
+
+                    // --- AUTO-PROMPT FOR NEW USERS ---
+                    setTimeout(() => {
+                        if ('Notification' in window && Notification.permission === 'default') {
+                            requestNotificationPermission(false); 
+                        }
+                    }, 1500); 
                 };
             };
         };
@@ -2021,4 +2004,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
