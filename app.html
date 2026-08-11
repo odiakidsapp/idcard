@@ -152,8 +152,8 @@
 
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-800 mb-4">New School Details</h3>
-                <input type="text" id="newSchoolName" placeholder="Enter School Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
-                <input type="tel" id="newSchoolPhone" placeholder="School Contact Number" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <input type="text" id="newSchoolName" placeholder="Enter School Name *" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <input type="tel" id="newSchoolPhone" placeholder="Mobile Number (10 digits) *" maxlength="10" inputmode="numeric" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 
                 <div class="flex gap-3 mb-3">
                     <input type="text" id="newBlock" placeholder="Block" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
@@ -162,6 +162,11 @@
                 <div class="flex gap-3 mb-4">
                     <input type="number" id="newPin" placeholder="Pin Code" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                     <input type="text" id="newUdise" placeholder="UDISE (11 digits) *" maxlength="11" inputmode="numeric" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+
+                <div class="mb-5 pt-4 border-t border-gray-100">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">HM Signature <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+                    <input type="file" id="newHmSign" accept="image/*" class="w-full p-2 border border-gray-300 rounded-xl bg-gray-50 text-sm focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
                 </div>
 
                 <div class="mb-5 pt-4 border-t border-gray-100">
@@ -1419,8 +1424,13 @@
             const pin = document.getElementById('newPin').value.trim();
             const udise = document.getElementById('newUdise').value.trim();
             const uPass = document.getElementById('newUdisePass').value.trim();
+            const signFile = document.getElementById('newHmSign').files[0];
 
             if(!name) return alert("Enter School Name");
+            
+            if(!phone) return alert("Mobile Number is mandatory.");
+            if(!/^\d{10}$/.test(phone)) return alert("Mobile Number must be exactly 10 digits.");
+            
             if(!udise) return alert("UDISE Number is mandatory.");
             if(!/^\d{11}$/.test(udise)) return alert("UDISE must be exactly 11 digits.");
             
@@ -1453,6 +1463,34 @@
             btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Processing...";
             btn.disabled = true;
 
+            let finalSignUrl = '';
+            if (signFile) {
+                try {
+                    const img = new Image();
+                    img.src = URL.createObjectURL(signFile);
+                    await new Promise(r => { img.onload = r; });
+                    
+                    const cvs = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if(w > 400) { h = Math.round((h * 400) / w); w = 400; } // Compress size
+                    cvs.width = w; cvs.height = h;
+                    cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+                    
+                    // Fallback to local Base64 just in case they are offline
+                    finalSignUrl = cvs.toDataURL('image/png'); 
+                    
+                    if (navigator.onLine) {
+                        btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Uploading Sign...";
+                        const blob = await new Promise(r => cvs.toBlob(r, 'image/png'));
+                        const ref = firebaseStorage.ref(`school_signatures/${udise}_signature.png`);
+                        await ref.put(blob);
+                        finalSignUrl = await ref.getDownloadURL(); // Get true internet URL
+                    }
+                } catch(e) {
+                    console.error("Sign processing error", e);
+                }
+            }
+
             const localId = `[Manual] ${name}_${udise}`;
             
             const checkTx = db.transaction(['schools'], 'readonly');
@@ -1469,7 +1507,7 @@
                     realSchoolName: name,
                     source: 'manual',
                     phone: phone, block: block, district: district,
-                    pin: pin, udise: udise, hmSignature: '', createdAt: Date.now(),
+                    pin: pin, udise: udise, hmSignature: finalSignUrl, createdAt: Date.now(),
                     importStatus: 'manual', 
                     udiseUser: udise, 
                     udisePass: uPass
@@ -1483,7 +1521,7 @@
                     if(navigator.onLine) {
                         let fbData = {
                             name: name, phone: phone, block: block, district: district,
-                            pin: pin, udise: udise, hmSignature: '', createdAt: schoolObj.createdAt, lastModified: Date.now(),
+                            pin: pin, udise: udise, hmSignature: finalSignUrl, createdAt: schoolObj.createdAt, lastModified: Date.now(),
                             importStatus: 'manual'
                         };
                         
@@ -1499,7 +1537,6 @@
                     btn.innerHTML = origText;
                     btn.disabled = false;
 
-                    // --- AUTO-PROMPT FOR NEW USERS ---
                     setTimeout(() => {
                         if ('Notification' in window && Notification.permission === 'default') {
                             requestNotificationPermission(false); 
@@ -2004,4 +2041,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
