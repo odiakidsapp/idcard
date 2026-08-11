@@ -629,8 +629,8 @@
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             
-            let bgClass = type === 'error' ? 'bg-red-600' : 'bg-gray-900';
-            let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-red-400"></i>' : '<i class="fas fa-check-circle text-green-400"></i>';
+            let bgClass = type === 'error' ? 'bg-red-600' : (type === 'info' ? 'bg-blue-600' : 'bg-gray-900');
+            let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-white"></i>' : (type === 'info' ? '<i class="fas fa-info-circle text-white"></i>' : '<i class="fas fa-check-circle text-green-400"></i>');
 
             toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
             toast.innerHTML = `${icon} <span class="text-sm font-medium leading-snug">${msg}</span>`;
@@ -646,7 +646,7 @@
                 toast.classList.remove('toast-enter-active');
                 toast.classList.add('toast-exit-active');
                 setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            }, 4000);
         }
 
         function showConfirm(msg, title = "Are you sure?", confirmBtnText = "Yes, Continue", btnClass = "bg-red-600 hover:bg-red-700") {
@@ -764,8 +764,6 @@
                 if(bellBtn) bellBtn.classList.remove('hidden');
             } else if (Notification.permission === 'granted' && currentSchoolData && currentSchoolData.udise) {
                 if(bellBtn) bellBtn.classList.add('hidden');
-                // Don't run silent token generation for debugging purposes right now.
-                // generateAndSaveToken(true); 
             } else {
                 if(bellBtn) bellBtn.classList.add('hidden');
             }
@@ -780,7 +778,16 @@
                 const permission = await Notification.requestPermission();
                 
                 if (permission === 'granted') {
-                    // Start the token logic manually
+                    // Call the token generation function
+                    generateAndSaveToken(false);
+                } else {
+                    showToast("Notification permission denied by browser.", "error");
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        };
+
         // --- LOUD DEBUGGING VERSION WITH POLLING BYPASS ---
         async function generateAndSaveToken(isSilent = false) {
             // For testing, force this to be loud so we see every step
