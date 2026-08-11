@@ -12,7 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js"></script> <!-- ADDED MESSAGING -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js"></script>
 
     <!-- Cropper.js for Gallery Image Cropping -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
@@ -107,6 +107,11 @@
             <a href="https://wa.me/917855800205" target="_blank" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fab fa-whatsapp w-5 text-center text-[#25D366] text-lg"></i> WhatsApp Support
             </a>
+            
+            <button onclick="requestNotificationPermission(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-purple-50 transition text-left text-purple-700 font-bold">
+                <i class="fas fa-bell w-5 text-center text-purple-600"></i> Enable Notifications
+            </button>
+
             <button onclick="shareApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fas fa-share-nodes w-5 text-center text-gray-500"></i> Share App
             </button>
@@ -130,7 +135,6 @@
                 <h2 class="text-2xl font-bold text-gray-900">School Registration</h2>
             </div>
             
-            <!-- Restore Existing -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-dashed border-blue-300 mb-6">
                 <label class="block text-sm font-bold text-gray-700 mb-2">Existing User? Enter UDISE</label>
                 <input type="text" id="restoreUdiseInput" placeholder="Enter UDISE Number (11 digits)" maxlength="11" inputmode="numeric" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
@@ -146,7 +150,6 @@
                 <div class="flex-1 h-px bg-gray-300"></div>
             </div>
 
-            <!-- New Registration -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-800 mb-4">New School Details</h3>
                 <input type="text" id="newSchoolName" placeholder="Enter School Name" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
@@ -173,7 +176,6 @@
         <!-- ================= ENTRY SECTION ================= -->
         <div id="entrySection" class="hidden">
 
-            <!-- Waiting State Card (Shown if Auto-Load is pending) -->
             <div id="pendingImportCard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center mb-6 relative overflow-hidden">
                 <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 text-2xl animate-pulse">
                     <i class="fas fa-hourglass-half"></i>
@@ -188,10 +190,8 @@
                 </div>
             </div>
 
-            <!-- Standard Dashboard Controls (Hidden if pending) -->
             <div id="standardDashboardControls">
                 
-                <!-- Upgrade to Auto-Load Banner (Shown ONLY if user is in manual mode) -->
                 <div id="upgradeToAutoBanner" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-4 flex items-center justify-between">
                     <div>
                         <h4 class="font-bold text-blue-900 text-sm"><i class="fas fa-magic text-blue-500 mr-1"></i> Want your students list here automatically?</h4>
@@ -233,12 +233,10 @@
                     </div>
                 </div>
 
-                <!-- Add Student Button -->
                 <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
                     <i class="fas fa-user-plus"></i> <span>Add Student</span>
                 </button>
 
-                <!-- Student List Header -->
                 <div class="flex justify-between items-end mb-3 px-1">
                     <div>
                         <h3 class="font-bold text-gray-900 text-xl m-0">Student List</h3>
@@ -249,7 +247,6 @@
                     </button>
                 </div>
                 
-                <!-- Student List -->
                 <div id="studentList" class="flex flex-col gap-3"></div>
                 
                 <div id="noResultsMsg" class="hidden text-center py-8 text-gray-500">
@@ -260,19 +257,18 @@
         </div>
     </div>
 
-    <!-- Floating WhatsApp Support Button (Only shown on waiting screen) -->
+    <!-- Floating WhatsApp Support Button -->
     <a href="https://wa.me/917855800205" target="_blank" id="floatingWhatsappBtn" class="hidden fixed bottom-6 right-6 z-[90] w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center text-3xl shadow-[0_4px_12px_rgba(37,211,102,0.4)] hover:bg-[#1ebd5a] hover:scale-105 transition-all duration-300 fab-hover" title="WhatsApp Support">
         <i class="fab fa-whatsapp"></i>
     </a>
 
-    <!-- Floating Notification Bell (Shown to existing/new users to request permission) -->
+    <!-- Floating Notification Bell -->
     <button onclick="requestNotificationPermission()" id="floatingNotificationBtn" class="hidden fixed bottom-24 right-6 z-[90] w-14 h-14 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl shadow-[0_4px_12px_rgba(147,51,234,0.4)] hover:bg-purple-700 hover:scale-105 transition-all duration-300 fab-pulse" title="Enable Notifications">
         <i class="fas fa-bell"></i>
     </button>
 
     <!-- ================= MODALS ================= -->
 
-    <!-- UDISE Source Selector Modal (Used during manual restore if multiple sources exist) -->
     <div id="udiseSelectorModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
             <h3 class="text-xl font-bold text-blue-800 mb-2">Select Data Source</h3>
@@ -286,7 +282,6 @@
         </div>
     </div>
 
-    <!-- Upgrade to Auto-Load Modal (Only pops up if password wasn't given during registration) -->
     <div id="upgradeAutoModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
             <h3 class="text-xl font-bold text-blue-800 mb-2">Request Auto-Load</h3>
@@ -510,7 +505,6 @@
                 });
 
                 if (hasExcel) {
-                    // Instantly switch to Excel mode without any prompts!
                     currentSchoolData.source = 'excel';
                     currentSchoolData.importStatus = 'manual';
                     
@@ -522,12 +516,9 @@
                     return;
                 }
 
-                // NO EXCEL BATCH YET: Start the request flow
                 if (currentSchoolData.udisePass) {
-                    // Password already known from registration
                     await startAutoLoadProcess(currentSchoolData.udisePass);
                 } else {
-                    // Need to ask for password
                     document.getElementById('upgradeUdisePass').value = '';
                     document.getElementById('upgradeAutoModal').classList.remove('hidden');
                 }
@@ -550,7 +541,7 @@
 
                 await firestore.collection('schools').doc(currentSchoolData.udise).set({
                     importStatus: 'pending',
-                    udiseUser: currentSchoolData.udise, // UDISE is the username
+                    udiseUser: currentSchoolData.udise,
                     udisePass: uPass,
                     lastModified: Date.now()
                 }, {merge: true});
@@ -730,29 +721,9 @@
             const liveIndicator = document.getElementById('liveIndicator');
             if(liveIndicator) liveIndicator.classList.add('hidden');
         });
-        
-        if ('serviceWorker' in navigator) {
-            // CRITICAL FIX: Ensure Service Worker is registered here too!
-            navigator.serviceWorker.register('sw.js').then(reg => {
-                console.log('Service Worker Registered!', reg);
-            }).catch(err => console.error('Service Worker Registration Failed!', err));
-
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                document.getElementById('updateBanner').classList.remove('hidden');
-            });
-        }
-
-        window.openAddForm = function() {
-            resetForm(false); 
-            document.getElementById('formTitle').innerHTML = 'Add New Student';
-            document.getElementById('saveBtn').innerHTML = 'Save Student';
-            document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
-            
-            document.getElementById('addStudentModal').classList.remove('hidden');
-        }
 
         // ==========================================
-        // FIREBASE & INDEXEDDB SETUP
+        // FIREBASE & SERVICE WORKER SETUP
         // ==========================================
         const firebaseConfig = {
               apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
@@ -768,11 +739,21 @@
         }
         const firestore = firebase.firestore();
         const firebaseStorage = firebase.storage();
-
-        // --- PUSH NOTIFICATION CODE ---
-        const VAPID_KEY = "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw";
+        
         let messaging;
         try { messaging = firebase.messaging(); } catch(e) { console.warn("Messaging not supported", e); }
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                console.log('SW Registration Success:', reg);
+            }).catch(err => {
+                console.error('SW Registration Failed:', err);
+            });
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                document.getElementById('updateBanner').classList.remove('hidden');
+            });
+        }
 
         function checkNotificationStatus() {
             if (!('Notification' in window) || !messaging) return;
@@ -780,74 +761,93 @@
             const bellBtn = document.getElementById('floatingNotificationBtn');
             
             if (Notification.permission === 'default') {
-                // User hasn't chosen yet, show the bell
-                bellBtn.classList.remove('hidden');
+                if(bellBtn) bellBtn.classList.remove('hidden');
             } else if (Notification.permission === 'granted' && currentSchoolData && currentSchoolData.udise) {
-                // User already allowed it. Hide bell and silently refresh token in background!
-                bellBtn.classList.add('hidden');
-                generateAndSaveToken();
+                if(bellBtn) bellBtn.classList.add('hidden');
+                // Don't run silent token generation for debugging purposes right now.
+                // generateAndSaveToken(true); 
             } else {
-                // User blocked it. Hide bell.
-                bellBtn.classList.add('hidden');
+                if(bellBtn) bellBtn.classList.add('hidden');
             }
         }
 
         window.requestNotificationPermission = async function() {
             try {
-                const permission = await Notification.requestPermission();
+                // Remove hidden class immediately just in case
                 const bellBtn = document.getElementById('floatingNotificationBtn');
+                if (bellBtn) bellBtn.classList.add('hidden');
+
+                const permission = await Notification.requestPermission();
                 
                 if (permission === 'granted') {
-                    bellBtn.classList.add('hidden');
-                    // Small delay to ensure browser state is completely updated
-                    setTimeout(async () => {
-                        await generateAndSaveToken();
-                        showToast("Notifications enabled!", "success");
-                    }, 500);
+                    // Start the token logic manually
+                    await generateAndSaveToken(false);
                 } else {
-                    alert("Notification permission denied. You won't receive updates.");
-                    bellBtn.classList.add('hidden');
+                    window.alert("Permission denied by user.", "error");
                 }
             } catch (e) {
-                console.error("Error requesting permission:", e);
-                showToast("Permission error: " + e.message, "error");
+                window.alert("Permission error: " + e.message, "error");
             }
         }
 
-        async function generateAndSaveToken() {
-            if(!navigator.onLine || !currentSchoolData || !currentSchoolData.udise) return;
+        // --- LOUD DEBUGGING VERSION ---
+        async function generateAndSaveToken(isSilent = false) {
+            // FORCE LOUD MODE FOR TESTING
+            isSilent = false; 
+            
+            if(!navigator.onLine) {
+                window.alert("Abort: You are offline.");
+                return;
+            }
+            if(!currentSchoolData || !currentSchoolData.udise) {
+                window.alert("Abort: No UDISE found.");
+                return;
+            }
+
             try {
-                console.log("1. Starting token generation...");
+                window.alert("Step 1: Connecting to Service Worker...");
                 
-                // BULLETPROOF REGISTRATION CHECK:
+                // Get the active registration explicitly
                 const registration = await navigator.serviceWorker.getRegistration();
+                
                 if (!registration) {
-                    console.error("No Service Worker registration found!");
+                    window.alert("Abort: No Service Worker found. Is sw.js registered?");
                     return;
                 }
-                console.log("2. Service Worker found:", registration);
 
-                console.log("3. Requesting token from Firebase with VAPID key...");
+                window.alert("Step 2: Generating FCM Token. (If it freezes after this box, Firebase is blocking the request).");
+                
                 const token = await messaging.getToken({
-                    vapidKey: VAPID_KEY,
+                    vapidKey: "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw",
                     serviceWorkerRegistration: registration
                 });
                 
                 if(token) {
-                    console.log("4. Token generated successfully:", token);
+                    window.alert("Step 3: Token generated successfully! Length: " + token.length);
+                    
                     await firestore.collection('schools').doc(currentSchoolData.udise).set({
                         fcmToken: token,
                         lastModified: Date.now()
                     }, { merge: true });
-                    console.log("5. Token saved to Firestore!");
+                    
+                    window.alert("SUCCESS! Token saved to Firestore.");
                 } else {
-                    console.error("getToken returned null.");
+                    window.alert("Error: getToken returned empty.");
                 }
             } catch(e) {
-                console.error("Token generation failed:", e);
+                window.alert("FCM Error Caught: " + e.message);
             }
         }
-        // --- END PUSH NOTIFICATION CODE ---
+
+
+        window.openAddForm = function() {
+            resetForm(false); 
+            document.getElementById('formTitle').innerHTML = 'Add New Student';
+            document.getElementById('saveBtn').innerHTML = 'Save Student';
+            document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
+            
+            document.getElementById('addStudentModal').classList.remove('hidden');
+        }
 
         let db, currentSchool = null, currentSchoolData = null, students = [];
         let filteredStudents = [];
@@ -886,7 +886,6 @@
             const liveIndicator = document.getElementById('liveIndicator');
             if(liveIndicator) liveIndicator.classList.remove('hidden');
 
-            // 1. Listen to Students (Also unlocks 24-hour waiting state)
             unsubscribeRealtime = firestore.collection('students')
                 .where('udise', '==', currentSchoolData.udise)
                 .onSnapshot(snapshot => {
@@ -917,7 +916,6 @@
                     });
 
                     tx.oncomplete = () => {
-                        // SMART INTERCEPTION: If waiting for data and excel data arrives, break out of waiting state!
                         if (currentSchoolData.importStatus === 'pending' && foundExcel) {
                             currentSchoolData.source = 'excel';
                             currentSchoolData.importStatus = 'manual';
@@ -936,7 +934,6 @@
                     if(liveIndicator) liveIndicator.classList.add('hidden');
                 });
                 
-            // 2. Listen to Master School Profile for updates
             unsubscribeSchool = firestore.collection('schools').doc(currentSchoolData.udise)
                 .onSnapshot(doc => {
                     if (doc.exists) {
@@ -1294,7 +1291,6 @@
                 showToast(`Restored ${restoreCount} students successfully!`);
                 document.getElementById('restoreUdiseInput').value = '';
                 
-                // Fetch the password from Firebase to keep it synced locally
                 if(navigator.onLine) {
                     firestore.collection('schools').doc(udise).get().then(doc => {
                         if(doc.exists) {
@@ -1439,7 +1435,6 @@
             const btn = document.getElementById('addSchoolBtn');
             const origText = btn.innerHTML;
             
-            // SMART INTERCEPTION
             if (navigator.onLine) {
                 btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Checking UDISE...";
                 btn.disabled = true;
@@ -1524,7 +1519,6 @@
             tx.objectStore('schools').put(currentSchoolData);
             
             if(navigator.onLine) {
-                // Ensure we KEEP the udisePass in Firebase even if they cancel
                 firestore.collection('schools').doc(currentSchoolData.udise).set({
                     importStatus: 'manual',
                     lastModified: Date.now()
@@ -1583,7 +1577,6 @@
                 document.getElementById('pendingImportCard').classList.add('hidden');
                 if(fab) fab.classList.add('hidden');
                 
-                // Toggle Banner
                 const upgradeBanner = document.getElementById('upgradeToAutoBanner');
                 if (upgradeBanner) {
                     if (currentSchoolData.source === 'manual' && currentSchoolData.importStatus === 'manual') {
@@ -1597,10 +1590,7 @@
                 loadStudents();
             }
             
-            // ALWAYS setup the listener so we can catch background updates from the admin while waiting!
             setupRealtimeListener();
-            
-            // Trigger the Notification Check every time they log in or dashboard loads
             checkNotificationStatus(); 
         }
 
@@ -1850,7 +1840,6 @@
             renderList();
         }
 
-        // --- SAVE / EDIT ---
         document.getElementById('saveBtn').onclick = async () => {
             const idStr = document.getElementById('editId').value;
             const name = document.getElementById('sName').value.trim();
@@ -1998,9 +1987,6 @@
             }
         }
 
-        // ==========================================
-        // HARD DELETE LOGIC
-        // ==========================================
         window.deleteStudentForever = async function(idStr) {
             const id = Number(idStr);
             const confirmed = await showConfirm("Are you sure you want to permanently delete this student? This action CANNOT be undone.", "Delete Student?", "Yes, Delete");
@@ -2017,7 +2003,6 @@
                 }
             };
         }
-
     </script>
 </body>
 </html>
