@@ -1,1 +1,23 @@
-{ "name": "ID Card", "short_name": "Id Card", "description": "Student ID Card Data Entry", "start_url": "./index.html", "scope": "./", "display": "standalone", "background_color": "#f4f7f6", "theme_color": "#0056b3", "icons": [ { "src": "icon-192.png", "type": "image/png", "sizes": "192x192" }, { "src": "icon-512.png", "type": "image/png", "sizes": "512x512" } ] }
+{
+"name": "ID Cards Pro",
+"short_name": "ID Cards",
+"description": "Student Data Entry",
+"start_url": "./app.html",
+"scope": "./",
+"display": "standalone",
+"background_color": "#f4f7f6",
+"theme_color": "#0056b3",
+"gcm_sender_id": "103953800507",
+"icons": [
+{
+"src": "icon-192.png",
+"type": "image/png",
+"sizes": "192x192"
+},
+{
+"src": "icon-512.png",
+"type": "image/png",
+"sizes": "512x512"
+}
+]
+}
