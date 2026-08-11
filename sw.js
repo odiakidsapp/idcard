@@ -13,7 +13,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-const CACHE_NAME = 'student-data-v33-auto-load-update'; // Bumped to v33
+const CACHE_NAME = 'student-data-v34-auto-load-update'; // Bumped to v34
 
 const urlsToCache = [
   './',
@@ -41,9 +41,16 @@ self.addEventListener('install', event => {
   self.skipWaiting(); 
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache v33');
-        return cache.addAll(urlsToCache);
+      .then(async cache => {
+        console.log('Opened cache v34');
+        // FIX: Cache files one by one so a single missing file doesn't crash the whole Service Worker
+        for (let url of urlsToCache) {
+          try {
+            await cache.add(url);
+          } catch (err) {
+            console.warn('Could not cache file (skipping):', url, err);
+          }
+        }
       })
   );
 });
