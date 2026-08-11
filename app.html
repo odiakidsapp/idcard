@@ -792,31 +792,31 @@
 
         // --- LOUD DEBUGGING VERSION ---
         async function generateAndSaveToken(isSilent = false) {
-            // FORCE LOUD MODE FOR TESTING
-            isSilent = false; 
-            
             if(!navigator.onLine) {
-                window.alert("Abort: You are offline.");
+                if(!isSilent) showToast("Abort: You are offline.", "error");
                 return;
             }
             if(!currentSchoolData || !currentSchoolData.udise) {
-                window.alert("Abort: No UDISE found.");
+                if(!isSilent) showToast("Abort: No UDISE found.", "error");
                 return;
             }
 
             try {
-                window.alert("Step 1: Connecting to Service Worker...");
+                if(!isSilent) showToast("Step 1: Connecting to Service Worker...", "error");
                 
-                // BULLETPROOF FIX: Force register on the spot to guarantee we have the object
+                // FIX: Grab registration directly. 
+                // We DO NOT wait for .ready here, because mobile Chrome can freeze indefinitely after clearing data.
                 const registration = await navigator.serviceWorker.register('./sw.js');
-                await navigator.serviceWorker.ready; // Ensure it's fully awake
                 
                 if (!registration) {
-                    window.alert("Abort: Browser absolutely refused to register sw.js.");
+                    if(!isSilent) showToast("Abort: Browser absolutely refused to register sw.js.", "error");
                     return;
                 }
+                
+                // Force a 1.5-second wait to guarantee the worker is active before Firebase asks for the token
+                await new Promise(resolve => setTimeout(resolve, 1500));
 
-                window.alert("Step 2: Generating FCM Token. (If it freezes after this box, Firebase is blocking the request).");
+                if(!isSilent) showToast("Step 2: Generating FCM Token...", "error");
                 
                 const token = await messaging.getToken({
                     vapidKey: "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw",
@@ -824,22 +824,23 @@
                 });
                 
                 if(token) {
-                    window.alert("Step 3: Token generated successfully! Length: " + token.length);
+                    if(!isSilent) showToast("Step 3: Token generated successfully!", "error");
                     
                     await firestore.collection('schools').doc(currentSchoolData.udise).set({
                         fcmToken: token,
                         lastModified: Date.now()
                     }, { merge: true });
                     
-                    window.alert("SUCCESS! Token saved to Firestore.");
+                    if(!isSilent) {
+                        setTimeout(() => showToast("SUCCESS! Token saved to Firestore.", "success"), 1000);
+                    }
                 } else {
-                    window.alert("Error: getToken returned empty.");
+                    if(!isSilent) showToast("Error: getToken returned empty.", "error");
                 }
             } catch(e) {
-                window.alert("FCM Error Caught: " + e.message);
+                if(!isSilent) showToast("FCM Error: " + e.message, "error");
             }
         }
-
 
         window.openAddForm = function() {
             resetForm(false); 
