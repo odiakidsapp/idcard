@@ -810,9 +810,16 @@
                 
                 // POLLING LOOP: Wait manually until it is active to bypass Chrome freezing
                 let attempts = 0;
-                while (!registration.active && attempts < 15) {
+                while (attempts < 15) {
+                    // SAFETY CHECK: Ensure registration actually exists before checking if it is active!
+                    if (registration && registration.active) {
+                        break; // It is active! We can break out of the loop.
+                    }
+                    
                     if(!isSilent) showToast(`Waiting for worker to activate... (${attempts+1}/15)`, "info");
                     await new Promise(r => setTimeout(r, 500)); // wait 0.5 seconds
+                    
+                    // Fetch it again for the next loop
                     registration = await navigator.serviceWorker.getRegistration();
                     attempts++;
                 }
