@@ -38,6 +38,14 @@
         
         #sidebarOverlay { background-color: rgba(0, 0, 0, 0.5); transition: opacity 0.3s ease; }
         #sidebar { transition: transform 0.3s ease; }
+        
+        /* Floating Notification Bell Animation */
+        @keyframes gentle-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(147, 51, 234, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); }
+        }
+        .header-bell-pulse { animation: gentle-pulse 2s infinite; border-radius: 50%; }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
@@ -75,8 +83,8 @@
 
             <!-- Right: Dynamic Action Icons -->
             <div class="flex items-center gap-1 flex-shrink-0">
-                <button id="headerBellBtn" onclick="requestNotificationPermission(true)" class="hidden text-white hover:bg-white/20 w-9 h-9 rounded-full flex items-center justify-center transition" title="Enable Notifications">
-                    <i class="fas fa-bell animate-pulse text-lg"></i>
+                <button id="headerBellBtn" onclick="requestNotificationPermission(true)" class="hidden text-white hover:bg-white/20 w-9 h-9 flex items-center justify-center transition header-bell-pulse" title="Enable Notifications">
+                    <i class="fas fa-bell text-lg"></i>
                 </button>
                 <button id="headerInstallBtn" class="hidden text-white hover:bg-white/20 w-9 h-9 rounded-full flex items-center justify-center transition" title="Install App">
                     <i class="fas fa-download text-lg"></i>
@@ -288,6 +296,19 @@
                     <p>No students found matching your search.</p>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- WHATSAPP SUPPORT BOTTOM BAR -->
+    <div id="orderBottomBar" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] p-4 z-[80] transform transition-transform pb-safe">
+        <div class="max-w-lg mx-auto flex justify-between items-center">
+            <div>
+                <div class="text-xs text-gray-500 font-bold uppercase tracking-wider">Ready to Print</div>
+                <div class="text-xl font-black text-green-600 flex items-center gap-1"><span id="cartCount">0</span> <span class="text-sm text-gray-700 font-bold">Students</span></div>
+            </div>
+            <button onclick="window.open('https://wa.me/917855800205?text=Hello,%20I%20need%20support%20or%20want%20to%20place%20an%20order%20for%20my%20ID%20cards.', '_blank')" class="bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition flex items-center gap-2 transform hover:scale-105 active:scale-95">
+                <i class="fab fa-whatsapp text-lg"></i> WhatsApp Support
+            </button>
         </div>
     </div>
 
@@ -508,24 +529,11 @@
         </div>
     </div>
 
-    <!-- WHATSAPP SUPPORT BOTTOM BAR -->
-    <div id="orderBottomBar" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] p-4 z-[80] transform transition-transform pb-safe">
-        <div class="max-w-lg mx-auto flex justify-between items-center">
-            <div>
-                <div class="text-xs text-gray-500 font-bold uppercase tracking-wider">Ready to Print</div>
-                <div class="text-xl font-black text-green-600 flex items-center gap-1"><span id="cartCount">0</span> <span class="text-sm text-gray-700 font-bold">Students</span></div>
-            </div>
-            <button onclick="window.open('https://wa.me/917855800205?text=Hello,%20I%20need%20support%20or%20want%20to%20place%20an%20order%20for%20my%20ID%20cards.', '_blank')" class="bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition flex items-center gap-2 transform hover:scale-105 active:scale-95">
-                <i class="fab fa-whatsapp text-lg"></i> WhatsApp Support
-            </button>
-        </div>
-    </div>
-
     <!-- Fixed Toast Container -->
     <div id="toast-container" class="fixed bottom-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
 
     <script>
-        const WA_NUMBER = "917855800205"; // Your Admin WhatsApp Number
+        const WA_NUMBER = "917855800205"; // Admin WhatsApp Number
 
         // ==========================================
         // UI INTERACTION & HEADERS
@@ -782,54 +790,8 @@
             }
         };
 
-        function performRestore(docs, schoolName, udise, source, sData) {
-            const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
-            
-            const schoolObj = {
-                name: localId, 
-                realSchoolName: schoolName, 
-                source: source,
-                phone: sData.phone || (docs[0] ? docs[0].data.hmPhone : ''), 
-                block: sData.block || (docs[0] ? docs[0].data.block : ''),
-                district: sData.district || (docs[0] ? docs[0].data.district : ''), 
-                pin: sData.pin || (docs[0] ? docs[0].data.pin : ''), 
-                udise: udise,
-                hmSignature: sData.hmSignature || (docs[0] ? docs[0].data.hmSignature : ''), 
-                createdAt: Date.now(),
-                importStatus: 'manual',
-                udiseUser: sData.udiseUser || udise,
-                udisePass: sData.udisePass || '',
-                schoolType: sData.schoolType || 'govt',
-                customFields: sData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone']
-            };
-
-            const tx = db.transaction(['schools', 'students'], 'readwrite');
-            
-            tx.objectStore('schools').delete(localId);
-            tx.objectStore('schools').put(schoolObj);
-
-            const studentStore = tx.objectStore('students');
-            
-            docs.forEach(({ id, data }) => {
-                const student = { ...data, id: Number(id), synced: true, source: source };
-                delete student.submittedAt;
-                if(student.finalised === undefined) student.finalised = true;
-                studentStore.put(student);
-            });
-
-            tx.oncomplete = () => {
-                document.getElementById('loginUdise').value = '';
-                document.getElementById('loginPass').value = '';
-                setTimeout(() => enterSchool(schoolObj), 800);
-            };
-            tx.onerror = () => {
-                showToast("Failed saving locally.", "error");
-            };
-        }
-
-
         window.requestAutoLoad = async function() {
-            if (!navigator.onLine) return showToast("Internet required to request Auto-Load.", "error");
+            if (!navigator.onLine) return showToast("Internet required to check/request Auto-Load.", "error");
             
             const btn = document.querySelector('#upgradeToAutoBanner button');
             const origTxt = btn.innerHTML;
@@ -1044,7 +1006,6 @@
             deferredPrompt = null;
         });
 
-        // Detect successful installation natively
         window.addEventListener('appinstalled', () => {
             document.getElementById('headerInstallBtn').classList.add('hidden');
             showToast("App installed successfully! Check your home screen.", "success");
@@ -1097,7 +1058,6 @@
         let messaging;
         try { 
             messaging = firebase.messaging(); 
-            
             messaging.onMessage((payload) => {
                 showToast(`🔔 ${payload.notification.title}: ${payload.notification.body}`, 'info');
             });
@@ -1118,8 +1078,6 @@
         function checkNotificationStatus() {
             if (!('Notification' in window)) return;
             const bellBtn = document.getElementById('headerBellBtn');
-            
-            // Show bell if permission is NOT granted
             if (Notification.permission !== 'granted') {
                 if(bellBtn) bellBtn.classList.remove('hidden');
             } else {
@@ -1133,7 +1091,6 @@
                 if (bellBtn) bellBtn.classList.add('hidden');
 
                 const permission = await Notification.requestPermission();
-                
                 if (permission === 'granted') {
                     generateAndSaveToken(showFeedback);
                 } else {
@@ -1153,12 +1110,9 @@
 
             try {
                 let registration = await navigator.serviceWorker.register('./sw.js');
-                
                 let attempts = 0;
                 while (attempts < 15) {
-                    if (registration && registration.active) {
-                        break; 
-                    }
+                    if (registration && registration.active) break; 
                     await new Promise(r => setTimeout(r, 500)); 
                     registration = await navigator.serviceWorker.getRegistration();
                     attempts++;
