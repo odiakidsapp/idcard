@@ -53,8 +53,6 @@
     .detail-header { background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: start; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border: 1px solid #eaeaea;}
     .hm-sign-img { height: 60px; border: 1px dashed #ccc; margin-top: 8px; background: #fdfdfd; padding: 4px; border-radius: 4px; object-fit: contain;}
 
-    .stats-panel { background: white; padding: 20px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); display: flex; flex-wrap: wrap; gap: 20px; border: 1px solid #eaeaea;}
-    
     .status-badge { display:inline-block; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:bold; margin-left:5px; }
     .status-ok { background:#d4edda; color:#155724; }
     .status-err { background:#f8d7da; color:#721c24; }
@@ -82,6 +80,17 @@
     .modal-btns { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
     .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
     .danger-zone { margin-top: 30px; padding-top: 20px; border-top: 2px dashed #ffcdd2; display: flex; flex-direction: column; gap: 10px;}
+    
+    /* Layout Editor Specific Styles */
+    .layout-editor-modal .modal-content { max-width: 1000px; padding: 20px; }
+    .le-grid { display: flex; gap: 20px; height: 75vh; }
+    .le-controls { flex: 1; overflow-y: auto; padding-right: 15px; border-right: 1px solid #eee; }
+    .le-preview { flex: 1; display: flex; justify-content: center; align-items: center; background: #eef2f5; border-radius: 12px; overflow: hidden; position: relative; }
+    .le-field-box { background: #fdfdfd; border: 1px solid #eaeaea; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .le-field-box strong { display: block; font-size: 12px; color: #6b21a8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px;}
+    .le-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12px; }
+    .le-inputs input[type="number"] { width: 65px; padding: 6px; }
+    .le-inputs input[type="color"] { width: 35px; height: 35px; padding: 0; border: none; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -138,6 +147,7 @@
         </div>
     </div>
 
+    <!-- GOVT CONFIG PANEL -->
     <div class="config-panel" id="govtConfigPanel">
         <div>
             <label style="font-size:12px; font-weight:bold;">Card Language</label><br>
@@ -161,10 +171,14 @@
         </div>
     </div>
     
-    <div class="config-panel hidden" id="privateConfigPanel" style="background: #f3e8ff; border-color: #d8b4fe;">
+    <!-- PRIVATE CONFIG PANEL (NEW) -->
+    <div class="config-panel hidden" id="privateConfigPanel" style="background: #f3e8ff; border-color: #d8b4fe; justify-content: space-between;">
         <div>
-            <label style="font-size:14px; font-weight:bold; color: #6b21a8;"><i class="fas fa-magic"></i> Private School Dynamic Canvas Active</label>
-            <p style="font-size: 12px; color: #555; margin: 5px 0 0 0;">This school uses dynamic fields. The A4 printing and Face Detection AI will automatically apply to their custom layout.</p>
+            <label style="font-size:15px; font-weight:bold; color: #6b21a8;"><i class="fas fa-magic"></i> Private School Dynamic Canvas Active</label>
+            <p style="font-size: 13px; color: #555; margin: 5px 0 0 0;">This school uses requested dynamic fields. Face AI and A4 printing work automatically!</p>
+        </div>
+        <div>
+            <button class="btn btn-primary" style="background: #6b21a8; font-size: 15px; padding: 12px 24px; box-shadow: 0 4px 15px rgba(107,33,168,0.3);" onclick="openLayoutEditor()"><i class="fas fa-paint-roller"></i> Design Custom Layout</button>
         </div>
     </div>
 
@@ -278,7 +292,7 @@
     </div>
 </div>
 
-<!-- Edit Master Profile / Passwords Modal -->
+<!-- Edit Master Profile Modal -->
 <div id="editSchoolModal" class="modal">
     <div class="modal-content">
         <h3 style="color:#0b53a0; margin-top:0;"><i class="fas fa-sliders-h"></i> Master Configuration</h3>
@@ -295,6 +309,9 @@
             <div class="form-group" style="flex:1"><label>Block</label><input type="text" id="esBlock"></div>
             <div class="form-group" style="flex:1"><label>District</label><input type="text" id="esDistrict"></div>
         </div>
+        
+        <!-- FIXED: Added Pin Code to prevent JS Error! -->
+        <div class="form-group"><label>Pin Code</label><input type="text" id="esPin" style="width: 50%;"></div>
 
         <!-- PASSWORD SECTION -->
         <div style="background: #e6f2ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #b8daff;">
@@ -305,11 +322,11 @@
             </div>
         </div>
 
-        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;">
+        <div id="govtPassBox" style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;">
             <div class="form-group" style="margin-bottom: 0;">
                 <label style="color: #856404;"><i class="fas fa-university"></i> Govt UDISE Password</label>
                 <input type="text" id="esUdisePass" placeholder="e.g. GovtPass456" style="border-color: #ffeeba;">
-                <small style="color: #666; display: block; margin-top: 4px;">Used strictly for Admin Auto-Loading.</small>
+                <small style="color: #666; display: block; margin-top: 4px;">Used strictly for Admin Auto-Loading (Govt Only).</small>
             </div>
         </div>
 
@@ -336,6 +353,47 @@
             <h4 style="margin: 0 0 10px 0; color: #dc3545; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Danger Zone</h4>
             <div id="deleteOptionsContainer" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;"></div>
             <div id="mergeOptionsContainer" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- NEW: PRIVATE LAYOUT DESIGNER MODAL -->
+<div id="layoutEditorModal" class="modal layout-editor-modal">
+    <div class="modal-content">
+        <h3 style="color:#6b21a8; margin-bottom: 10px;"><i class="fas fa-paint-roller"></i> Dynamic Canvas Designer</h3>
+        <p style="font-size: 13px; color: #555; margin-bottom: 20px;">Upload a custom ID Card background for this private school and map the exact X and Y coordinates for their requested text fields.</p>
+        
+        <div class="le-grid">
+            <div class="le-controls">
+                <div class="le-field-box">
+                    <strong>1. Upload Custom Background</strong>
+                    <input type="file" id="plBgInput" accept="image/png, image/jpeg" style="width: 100%; padding: 6px;">
+                </div>
+                
+                <div class="le-field-box">
+                    <strong><i class="fas fa-camera"></i> Photo Placement Box</strong>
+                    <div class="le-inputs">
+                        <label>X: <input type="number" id="le_photo_x" oninput="updateLivePreview()"></label>
+                        <label>Y: <input type="number" id="le_photo_y" oninput="updateLivePreview()"></label>
+                        <label>W: <input type="number" id="le_photo_w" oninput="updateLivePreview()"></label>
+                        <label>H: <input type="number" id="le_photo_h" oninput="updateLivePreview()"></label>
+                    </div>
+                </div>
+
+                <div id="layoutFieldsContainer">
+                    <!-- Dynamic Coordinate Inputs go here -->
+                </div>
+            </div>
+            
+            <div class="le-preview">
+                <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; font-size: 11px; padding: 4px 8px; border-radius: 4px;">Live Preview</div>
+                <canvas id="plCanvas" style="max-height: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.15);"></canvas>
+            </div>
+        </div>
+        
+        <div class="modal-btns">
+            <button class="btn btn-secondary" onclick="document.getElementById('layoutEditorModal').style.display='none'">Cancel</button>
+            <button class="btn btn-primary" id="saveLayoutBtn" style="background:#6b21a8;"><i class="fas fa-save"></i> Save Coordinates</button>
         </div>
     </div>
 </div>
@@ -455,7 +513,7 @@ let lastSyncId = Number(localStorage.getItem('adminLastSyncId')) || 0;
 let currentSchoolStudents = [];
 let activeUdise = null;
 let activeSource = null; 
-let activeTab = 'govt'; // Track which Dashboard tab is open
+let activeTab = 'govt'; 
 
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
 
@@ -582,7 +640,7 @@ async function rebuildSchoolsMap() {
                     block: d.block||'', district: d.district||'', pin: d.pin||'',
                     udise: udise, phone: d.hmPhone||d.mobile||'', signature: d.hmSignature||'',
                     latestActivity: 0, sources: {}, rawNameCounts: {}, missingUdise: !d.udise,
-                    schoolType: 'govt', appPassword: '', udisePass: '', customFields: []
+                    schoolType: 'govt', appPassword: '', udisePass: '', customFields: [], layoutSettings: null, privateTemplateUrl: null
                 };
             }
             
@@ -615,7 +673,7 @@ async function rebuildSchoolsMap() {
                     name: d.name || 'New Registration (0 Students)', completedCount: 0, pendingCount: 0,
                     block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
                     latestActivity: d.lastModified || d.createdAt || 0, sources: {}, rawNameCounts: {}, missingUdise: false,
-                    schoolType: 'govt', appPassword: '', udisePass: '', customFields: []
+                    schoolType: 'govt', appPassword: '', udisePass: '', customFields: [], layoutSettings: null, privateTemplateUrl: null
                 };
             }
             
@@ -626,10 +684,12 @@ async function rebuildSchoolsMap() {
                 newMap[udise].pin = d.pin || newMap[udise].pin;
                 newMap[udise].phone = d.phone || d.hmPhone || newMap[udise].phone;
                 newMap[udise].signature = d.hmSignature || newMap[udise].signature;
-                newMap[udise].schoolType = d.schoolType || 'govt'; // FETCH TYPE
-                newMap[udise].appPassword = d.appPassword || ''; // FETCH APP PASSWORD
-                newMap[udise].udisePass = d.udisePass || d.password || ''; // FETCH GOVT PASSWORD
-                newMap[udise].customFields = d.customFields || []; // FETCH PRIVATE FIELDS
+                newMap[udise].schoolType = d.schoolType || 'govt'; 
+                newMap[udise].appPassword = d.appPassword || ''; 
+                newMap[udise].udisePass = d.udisePass || d.password || ''; 
+                newMap[udise].customFields = d.customFields || []; 
+                newMap[udise].layoutSettings = d.layoutSettings || null;
+                newMap[udise].privateTemplateUrl = d.privateTemplateUrl || null;
                 newMap[udise].fcmToken = d.fcmToken || ''; 
             }
         });
@@ -662,7 +722,7 @@ async function quickSync() {
             const d = doc.data();
             let udise = doc.id;
             if(!schoolsMap[udise]) {
-                schoolsMap[udise] = { completedCount:0, pendingCount:0, sources:{}, rawNameCounts:{}, missingUdise:false, schoolType:'govt', appPassword:'', udisePass:'', customFields:[] };
+                schoolsMap[udise] = { completedCount:0, pendingCount:0, sources:{}, rawNameCounts:{}, missingUdise:false, schoolType:'govt', appPassword:'', udisePass:'', customFields:[], layoutSettings: null, privateTemplateUrl: null };
             }
             Object.assign(schoolsMap[udise], {
                 name: d.name, block: d.block, district: d.district, pin: d.pin,
@@ -671,6 +731,8 @@ async function quickSync() {
                 appPassword: d.appPassword || '',
                 udisePass: d.udisePass || d.password || '',
                 customFields: d.customFields || [],
+                layoutSettings: d.layoutSettings || null,
+                privateTemplateUrl: d.privateTemplateUrl || null,
                 fcmToken: d.fcmToken || '',
                 latestActivity: Math.max(schoolsMap[udise].latestActivity || 0, d.lastModified || 0)
             });
@@ -725,7 +787,7 @@ async function quickSync() {
                     name: best, completedCount: comp, pendingCount: pend,
                     block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
                     latestActivity: maxId, sources: vars, rawNameCounts: rawCounts, missingUdise: field==='schoolName',
-                    schoolType: 'govt', appPassword: '', udisePass: '', customFields: []
+                    schoolType: 'govt', appPassword: '', udisePass: '', customFields: [], layoutSettings: null, privateTemplateUrl: null
                 };
             }
         }
@@ -743,7 +805,6 @@ function renderDashboard(){
     const grid = document.getElementById('schoolGrid');
     grid.innerHTML = '';
     
-    // Filter schools based on the active tab
     const udises = Object.keys(schoolsMap).filter(u => {
         const type = schoolsMap[u].schoolType || 'govt';
         return type === activeTab;
@@ -765,7 +826,7 @@ function renderDashboard(){
         if (s.appPassword || s.udisePass) {
             credsHtml = `<div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">`;
             if (s.appPassword) credsHtml += `<div style="padding: 6px 10px; background: #e6f2ff; border: 1px solid #b8daff; border-radius: 6px; font-size: 12px; color: #004085;"><i class="fas fa-lock"></i> App Pass: <b>${escapeHtml(s.appPassword)}</b></div>`;
-            if (s.udisePass) credsHtml += `<div style="padding: 6px 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; font-size: 12px; color: #856404;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
+            if (s.udisePass && activeTab === 'govt') credsHtml += `<div style="padding: 6px 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; font-size: 12px; color: #856404;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
             credsHtml += `</div>`;
         }
 
@@ -800,24 +861,24 @@ function openSchoolDetail(udise){
     document.getElementById('viewUdiseHead').textContent = s.missingUdise ? 'Legacy Profile' : `UDISE: ${udise}`;
     document.getElementById('viewSchoolNameMaster').innerHTML = `<i class="fas ${s.schoolType==='private'?'fa-building':'fa-school'}" style="color:${s.schoolType==='private'?'#6b21a8':'#007bff'}; margin-right:8px;"></i>${escapeHtml(s.name || 'Unnamed School')}`;
     
-    // Header Credentials Layout
     const credEl = document.getElementById('viewCredentials');
     let credHtml = '';
     if (s.appPassword) credHtml += `<div style="background:#e6f2ff; color:#004085; padding:8px 15px; border-radius:8px; border:1px solid #b8daff; font-size:14px;"><i class="fas fa-lock"></i> App Pass: <b>${escapeHtml(s.appPassword)}</b></div>`;
-    if (s.udisePass) credHtml += `<div style="background:#fff3cd; color:#856404; padding:8px 15px; border-radius:8px; border:1px solid #ffeeba; font-size:14px;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
+    if (s.udisePass && s.schoolType !== 'private') credHtml += `<div style="background:#fff3cd; color:#856404; padding:8px 15px; border-radius:8px; border:1px solid #ffeeba; font-size:14px;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
     credEl.innerHTML = credHtml;
     credEl.style.display = credHtml ? 'flex' : 'none';
 
     document.getElementById('viewAddress').innerHTML = `<i class="fas fa-map-marker-alt" style="color:#dc3545"></i> ${s.block}, ${s.district} - ${s.pin}`;
     document.getElementById('viewContact').innerHTML = `<i class="fas fa-phone-alt"></i> ${s.phone || 'No phone provided'}`;
     
-    // Toggle Config Panels based on school type
     if (s.schoolType === 'private') {
         document.getElementById('govtConfigPanel').classList.add('hidden');
         document.getElementById('privateConfigPanel').classList.remove('hidden');
+        document.getElementById('privateConfigPanel').style.display = 'flex';
     } else {
         document.getElementById('govtConfigPanel').classList.remove('hidden');
         document.getElementById('privateConfigPanel').classList.add('hidden');
+        document.getElementById('privateConfigPanel').style.display = 'none';
     }
 
     const sign = document.getElementById('viewHmSign');
@@ -866,9 +927,7 @@ function openSchoolDetail(udise){
     updateSelection();
 }
 
-function onSourceFilterChange(){
-    renderTable();
-}
+function onSourceFilterChange(){ renderTable(); }
 
 function downloadHmSignature() {
     if(!activeUdise || !schoolsMap[activeUdise] || !schoolsMap[activeUdise].signature) { showMsg("No signature available to download."); return; }
@@ -966,7 +1025,6 @@ function updateSelection(){
             genBtn.innerHTML = `⚠️ Cannot generate Pending Data`;
         } else {
             markPBtn.disabled = false; markUBtn.disabled = false;
-            // Private schools don't need background template/fonts loaded to generate!
             if(isPrivate || (window.assets.font && window.assets.template)) {
                 genBtn.disabled = false; verifyBtn.disabled = false;
                 genBtn.innerHTML = `<i class="fas fa-print mr-1"></i> Generate <b>${n}</b> Cards`;
@@ -1047,85 +1105,134 @@ async function initializeFaceDetector(){
 const canvas = document.getElementById('cardCanvas');
 const ctx = canvas.getContext('2d');
 
-// --- MAGIC DYNAMIC PRIVATE CANVAS LOGIC ---
 async function drawPrivateCard(s, sm) {
     canvas.width = CARD_W; canvas.height = CARD_H;
-    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, CARD_W, CARD_H); // Base white layer
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, CARD_W, CARD_H); // Solid White Base
     
-    // Header Banner
-    ctx.fillStyle = '#6f42c1'; ctx.fillRect(0, 0, CARD_W, 160);
-    ctx.fillStyle = 'white'; ctx.textAlign = 'center'; 
-    let printName = sm && sm.name ? sm.name : (s.schoolName || 'Private School');
-    let fs = 45; ctx.font = `bold ${fs}px Arial`;
-    while (ctx.measureText(printName).width > 600 && fs > 10) { fs--; ctx.font = `bold ${fs}px Arial`; }
-    ctx.fillText(printName, CARD_W/2, 95);
+    const layout = sm.layoutSettings;
+    const bgUrl = sm.privateTemplateUrl;
 
-    // AI Photo Cropping Logic
-    const px = 200, py = 190, pw = 238, ph = 300, border = 4;
-    ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
-    
-    if(s.photoBase64) {
-        const photo = new Image(); photo.crossOrigin = "Anonymous"; photo.src = s.photoBase64;
-        await new Promise(r => { photo.onload = r; photo.onerror = r; });
-        if (photo.width > 0) { 
-            let sx=0, sy=0, sw=photo.width, sh=photo.height;
-            if(window.assets.aiModel === 'loaded' && faceDetector) {
-                try {
-                    const det = faceDetector.detect(photo);
-                    if(det.detections.length > 0) {
-                        const b = det.detections[0].boundingBox;
-                        const ax=b.width*0.6, ay=b.height*1.4;
-                        sx=Math.max(0,b.originX-ax/2); sy=Math.max(0,b.originY-ay/2);
-                        sw=Math.min(photo.width-sx, b.width+ax); sh=Math.min(photo.height-sy, b.height+ay);
-                    }
-                } catch(e){}
-            }
-            ctx.drawImage(photo, sx, sy, sw, sh, px, py, pw, ph);
-        } else {
-             ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
-             ctx.fillStyle = '#999'; ctx.textAlign='center'; ctx.font = '20px Arial'; ctx.fillText('No Photo', px+pw/2, py+ph/2);
-        }
-    } else {
-        ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
-        ctx.fillStyle = '#999'; ctx.textAlign='center'; ctx.font = '20px Arial'; ctx.fillText('No Photo', px+pw/2, py+ph/2);
-    }
+    if (bgUrl && layout) {
+        // --- CUSTOM ADMIN LAYOUT MAPPING ---
+        try {
+            const bgImg = new Image(); bgImg.crossOrigin = "Anonymous"; bgImg.src = bgUrl;
+            await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
+            ctx.drawImage(bgImg, 0, 0, CARD_W, CARD_H);
+        } catch(e) { console.log("Failed to load custom BG", e); }
 
-    // Dynamic Fields Stacking
-    ctx.fillStyle = '#1e293b'; ctx.textAlign = 'left';
-    let startY = 560;
-    const fields = sm.customFields && sm.customFields.length > 0 ? sm.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
-
-    for (const field of fields) {
-        let val = s[field] || s[field === 'phone' ? 'mobile' : field] || '-';
-        if (field === 'name') {
-            ctx.font = 'bold 36px Arial';
-            ctx.fillText(`Name: ${val}`, 40, startY);
-            startY += 55;
-        } else {
-            ctx.font = 'bold 26px Arial';
-            // Custom label mappings
-            let label = field.toUpperCase();
-            if(field === 'dob') label = "D.O.B.";
-            if(field === 'blood') label = "BLOOD G.";
-            if(field === 'phone') label = "MOBILE";
+        // AI Photo Crop & Draw using custom coordinates
+        if (layout.photo && s.photoBase64) {
+            const px = parseInt(layout.photo.x) || 200, py = parseInt(layout.photo.y) || 190, 
+                  pw = parseInt(layout.photo.w) || 238, ph = parseInt(layout.photo.h) || 300, border = 4;
             
-            ctx.fillText(`${label}: ${val}`, 40, startY);
-            startY += 45;
+            ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
+            
+            const photo = new Image(); photo.crossOrigin = "Anonymous"; photo.src = s.photoBase64;
+            await new Promise(r => { photo.onload = r; photo.onerror = r; });
+            if (photo.width > 0) { 
+                let sx=0, sy=0, sw=photo.width, sh=photo.height;
+                if(window.assets.aiModel === 'loaded' && faceDetector) {
+                    try {
+                        const det = faceDetector.detect(photo);
+                        if(det.detections.length > 0) {
+                            const b = det.detections[0].boundingBox;
+                            const ax=b.width*0.6, ay=b.height*1.4;
+                            sx=Math.max(0,b.originX-ax/2); sy=Math.max(0,b.originY-ay/2);
+                            sw=Math.min(photo.width-sx, b.width+ax); sh=Math.min(photo.height-sy, b.height+ay);
+                        }
+                    } catch(e){}
+                }
+                ctx.drawImage(photo, sx, sy, sw, sh, px, py, pw, ph);
+            } else {
+                 ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
+            }
         }
-    }
 
-    // HM Sign
-    if(sm && sm.signature) {
-        const signImg = new Image(); signImg.crossOrigin = "Anonymous"; signImg.src = sm.signature;
-        await new Promise(r => signImg.onload=r);
-        const ratio = Math.min(180 / signImg.width, 80 / signImg.height);
-        ctx.drawImage(signImg, 420, 900, signImg.width * ratio, signImg.height * ratio);
+        // Custom Text Coordinates
+        const fields = sm.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+        for (const field of fields) {
+            if (layout[field]) {
+                const l = layout[field];
+                ctx.fillStyle = l.color || '#000000';
+                ctx.font = `bold ${l.size || 26}px Arial`;
+                ctx.textAlign = 'left';
+                
+                let val = s[field] || s[field === 'phone' ? 'mobile' : field] || '';
+                
+                if (l.showLabel) {
+                     let label = field.toUpperCase();
+                     if(field === 'dob') label = "D.O.B.";
+                     if(field === 'blood') label = "BLOOD G.";
+                     if(field === 'phone') label = "MOBILE";
+                     val = `${label}: ${val}`;
+                }
+                
+                ctx.fillText(val, parseInt(l.x) || 0, parseInt(l.y) || 0);
+            }
+        }
+        
+    } else {
+        // --- FALLBACK STACKING LAYOUT (If admin hasn't mapped coordinates yet) ---
+        ctx.fillStyle = '#6f42c1'; ctx.fillRect(0, 0, CARD_W, 160);
+        ctx.fillStyle = 'white'; ctx.textAlign = 'center'; 
+        let printName = sm && sm.name ? sm.name : (s.schoolName || 'Private School');
+        let fs = 45; ctx.font = `bold ${fs}px Arial`;
+        while (ctx.measureText(printName).width > 600 && fs > 10) { fs--; ctx.font = `bold ${fs}px Arial`; }
+        ctx.fillText(printName, CARD_W/2, 95);
+
+        const px = 200, py = 190, pw = 238, ph = 300, border = 4;
+        ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
+        
+        if(s.photoBase64) {
+            const photo = new Image(); photo.crossOrigin = "Anonymous"; photo.src = s.photoBase64;
+            await new Promise(r => { photo.onload = r; photo.onerror = r; });
+            if (photo.width > 0) { 
+                let sx=0, sy=0, sw=photo.width, sh=photo.height;
+                if(window.assets.aiModel === 'loaded' && faceDetector) {
+                    try {
+                        const det = faceDetector.detect(photo);
+                        if(det.detections.length > 0) {
+                            const b = det.detections[0].boundingBox;
+                            const ax=b.width*0.6, ay=b.height*1.4;
+                            sx=Math.max(0,b.originX-ax/2); sy=Math.max(0,b.originY-ay/2);
+                            sw=Math.min(photo.width-sx, b.width+ax); sh=Math.min(photo.height-sy, b.height+ay);
+                        }
+                    } catch(e){}
+                }
+                ctx.drawImage(photo, sx, sy, sw, sh, px, py, pw, ph);
+            } else {
+                 ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
+            }
+        } else {
+            ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
+        }
+
+        ctx.fillStyle = '#1e293b'; ctx.textAlign = 'left';
+        let startY = 560;
+        const fields = sm.customFields && sm.customFields.length > 0 ? sm.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+
+        for (const field of fields) {
+            let val = s[field] || s[field === 'phone' ? 'mobile' : field] || '-';
+            if (field === 'name') {
+                ctx.font = 'bold 36px Arial';
+                ctx.fillText(`Name: ${val}`, 40, startY);
+                startY += 55;
+            } else {
+                ctx.font = 'bold 26px Arial';
+                let label = field.toUpperCase();
+                if(field === 'dob') label = "D.O.B.";
+                if(field === 'blood') label = "BLOOD G.";
+                if(field === 'phone') label = "MOBILE";
+                
+                ctx.fillText(`${label}: ${val}`, 40, startY);
+                startY += 45;
+            }
+        }
     }
 
     return await new Promise(r => canvas.toBlob(r, 'image/png'));
 }
 
-// --- STANDARD GOVT CANVAS LOGIC ---
 async function drawGovtCard(s, sm) {
     canvas.width = CARD_W; canvas.height = CARD_H;
     ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, CARD_W, CARD_H);
@@ -1336,17 +1443,19 @@ async function openSchoolEdit(udise){
     document.getElementById('esPhone').value = s.phone || '';
     document.getElementById('esBlock').value = s.block || '';
     document.getElementById('esDistrict').value = s.district || '';
-    document.getElementById('esPin').value = s.pin || '';
+    document.getElementById('esPin').value = s.pin || ''; // FIXED: PIN mapping now exists!
     document.getElementById('esUdise').value = s.udise || '';
     
-    // NEW PASSWORD BINDINGS
     document.getElementById('esAppPassword').value = s.appPassword || '';
     document.getElementById('esUdisePass').value = s.udisePass || '';
 
-    // NEW PRIVATE FIELD CHECKBOXES
     const pContainer = document.getElementById('esPrivateFieldsContainer');
+    const gPassBox = document.getElementById('govtPassBox');
+    
     if (s.schoolType === 'private') {
         pContainer.classList.remove('hidden');
+        gPassBox.style.display = 'none'; // Hide govt password box for Private schools
+        
         const allFields = ['name', 'class', 'roll', 'dob', 'blood', 'phone', 'father', 'mother', 'address'];
         const activeFields = s.customFields && s.customFields.length > 0 ? s.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
         let html = '';
@@ -1357,6 +1466,7 @@ async function openSchoolEdit(udise){
         document.getElementById('esPrivateCheckboxes').innerHTML = html;
     } else {
         pContainer.classList.add('hidden');
+        gPassBox.style.display = 'block';
     }
 
     document.getElementById('esSignInput').value = ''; 
@@ -1587,7 +1697,6 @@ document.getElementById('previewEditBtn').onclick = async () => {
     const targetUdise = activeUdise || s.udise || ('NO_UDISE:' + s.schoolName);
     const sm = schoolsMap[targetUdise];
     
-    // Govt check only
     if((!sm || sm.schoolType !== 'private') && (!window.assets.font || !window.assets.template)) {
         await showMsg("Please ensure 'OdiaFont' and a Background PNG are loaded first in the config panel."); return;
     }
@@ -1614,6 +1723,144 @@ document.getElementById('previewEditBtn').onclick = async () => {
     document.getElementById('adminPreviewImg').src = cvs.toDataURL('image/png');
     document.getElementById('adminPreviewModal').style.display = 'flex';
     document.getElementById('previewEditBtn').textContent = "👁 Preview Card";
+};
+
+window.openLayoutEditor = function() {
+    const s = schoolsMap[activeUdise];
+    if(!s || s.schoolType !== 'private') return;
+    
+    // Copy existing settings to temporary window state for editing
+    window.currentLayoutSettings = s.layoutSettings ? JSON.parse(JSON.stringify(s.layoutSettings)) : {};
+    window.currentPrivateTemplateUrl = s.privateTemplateUrl || null;
+    
+    const container = document.getElementById('layoutFieldsContainer');
+    container.innerHTML = '';
+    
+    const fields = s.customFields && s.customFields.length > 0 ? s.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+    
+    // Provide cascading defaults if none exist
+    let defaultY = 560;
+    
+    fields.forEach(f => {
+        const defaultSize = f === 'name' ? 36 : 26;
+        const l = window.currentLayoutSettings[f] || { x: 40, y: defaultY, size: defaultSize, color: '#1e293b', showLabel: (f !== 'name') };
+        
+        container.innerHTML += `
+            <div class="le-field-box">
+                <strong>${f}</strong>
+                <div class="le-inputs">
+                    <label>X: <input type="number" id="le_${f}_x" value="${l.x}" oninput="updateLivePreview()"></label>
+                    <label>Y: <input type="number" id="le_${f}_y" value="${l.y}" oninput="updateLivePreview()"></label>
+                    <label>Size: <input type="number" id="le_${f}_size" value="${l.size}" style="width:50px" oninput="updateLivePreview()"></label>
+                    <input type="color" id="le_${f}_color" value="${l.color}" onchange="updateLivePreview()">
+                    <label><input type="checkbox" id="le_${f}_label" ${l.showLabel ? 'checked' : ''} onchange="updateLivePreview()"> Show Label</label>
+                </div>
+            </div>
+        `;
+        defaultY += 45;
+    });
+
+    const p = window.currentLayoutSettings.photo || { x: 200, y: 190, w: 238, h: 300 };
+    document.getElementById('le_photo_x').value = p.x;
+    document.getElementById('le_photo_y').value = p.y;
+    document.getElementById('le_photo_w').value = p.w;
+    document.getElementById('le_photo_h').value = p.h;
+
+    document.getElementById('layoutEditorModal').style.display = 'flex';
+    updateLivePreview();
+}
+
+document.getElementById('plBgInput').onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    
+    document.getElementById('saveLayoutBtn').innerHTML = "<i class='fas fa-spinner fa-spin'></i> Uploading BG...";
+    document.getElementById('saveLayoutBtn').disabled = true;
+    
+    try {
+        const ref = window.storage.ref(`private_templates/${activeUdise}_bg.png`);
+        await ref.put(f, { contentType: f.type });
+        window.currentPrivateTemplateUrl = await ref.getDownloadURL();
+        updateLivePreview();
+    } catch(err) {
+        alert("Upload failed: " + err.message);
+    } finally {
+        document.getElementById('saveLayoutBtn').innerHTML = "<i class='fas fa-save'></i> Save Coordinates";
+        document.getElementById('saveLayoutBtn').disabled = false;
+    }
+};
+
+window.updateLivePreview = async function() {
+    const s = schoolsMap[activeUdise];
+    if(!s) return;
+
+    // Gather settings from UI
+    const layout = {
+        photo: {
+            x: document.getElementById('le_photo_x').value,
+            y: document.getElementById('le_photo_y').value,
+            w: document.getElementById('le_photo_w').value,
+            h: document.getElementById('le_photo_h').value
+        }
+    };
+    
+    const fields = s.customFields && s.customFields.length > 0 ? s.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+    fields.forEach(f => {
+        layout[f] = {
+            x: document.getElementById(`le_${f}_x`).value,
+            y: document.getElementById(`le_${f}_y`).value,
+            size: document.getElementById(`le_${f}_size`).value,
+            color: document.getElementById(`le_${f}_color`).value,
+            showLabel: document.getElementById(`le_${f}_label`).checked
+        };
+    });
+
+    window.currentLayoutSettings = layout;
+
+    // Build Mock Student for preview
+    const mockStudent = {
+        schoolName: s.name,
+        name: "Abhishek Das", class: "10th", roll: "45", dob: "12/05/2010", bloodGroup: "O+", mobile: "9876543210", father: "Ramesh Das", mother: "Sita Das", address: "Bhubaneswar, Odisha"
+    };
+
+    // Temporarily trick the draw function into using our local un-saved state
+    const tempSm = { ...s, layoutSettings: layout, privateTemplateUrl: window.currentPrivateTemplateUrl };
+    
+    const blob = await drawPrivateCard(mockStudent, tempSm);
+    
+    const plCanvas = document.getElementById('plCanvas');
+    const plCtx = plCanvas.getContext('2d');
+    plCanvas.width = CARD_W; plCanvas.height = CARD_H;
+    
+    const img = new Image(); img.src = URL.createObjectURL(blob);
+    await new Promise(r => img.onload = r);
+    plCtx.drawImage(img, 0, 0);
+}
+
+document.getElementById('saveLayoutBtn').onclick = async () => {
+    const btn = document.getElementById('saveLayoutBtn');
+    btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Saving...";
+    btn.disabled = true;
+
+    try {
+        await db.collection('schools').doc(activeUdise).update({
+            layoutSettings: window.currentLayoutSettings,
+            privateTemplateUrl: window.currentPrivateTemplateUrl,
+            lastModified: Date.now()
+        });
+        
+        schoolsMap[activeUdise].layoutSettings = window.currentLayoutSettings;
+        schoolsMap[activeUdise].privateTemplateUrl = window.currentPrivateTemplateUrl;
+        
+        localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        showMsg("Custom Layout successfully saved!");
+        document.getElementById('layoutEditorModal').style.display = 'none';
+        
+    } catch(e) {
+        showMsg("Error saving layout: " + e.message);
+    } finally {
+        btn.innerHTML = "<i class='fas fa-save'></i> Save Coordinates";
+        btn.disabled = false;
+    }
 };
 
 </script>
