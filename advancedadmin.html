@@ -171,7 +171,7 @@
         </div>
     </div>
     
-    <!-- PRIVATE CONFIG PANEL (NEW) -->
+    <!-- PRIVATE CONFIG PANEL -->
     <div class="config-panel hidden" id="privateConfigPanel" style="background: #f3e8ff; border-color: #d8b4fe; justify-content: space-between;">
         <div>
             <label style="font-size:15px; font-weight:bold; color: #6b21a8;"><i class="fas fa-magic"></i> Private School Dynamic Canvas Active</label>
@@ -310,8 +310,7 @@
             <div class="form-group" style="flex:1"><label>District</label><input type="text" id="esDistrict"></div>
         </div>
         
-        <!-- FIXED: Added Pin Code to prevent JS Error! -->
-        <div class="form-group"><label>Pin Code</label><input type="text" id="esPin" style="width: 50%;"></div>
+        <div class="form-group"><label>Pin Code</label><input type="number" id="esPin" style="width: 50%;"></div>
 
         <!-- PASSWORD SECTION -->
         <div style="background: #e6f2ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #b8daff;">
@@ -324,9 +323,9 @@
 
         <div id="govtPassBox" style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;">
             <div class="form-group" style="margin-bottom: 0;">
-                <label style="color: #856404;"><i class="fas fa-university"></i> Govt UDISE Password</label>
+                <label style="color: #856404;"><i class="fas fa-university"></i> UDISE / Auto-Load Password</label>
                 <input type="text" id="esUdisePass" placeholder="e.g. GovtPass456" style="border-color: #ffeeba;">
-                <small style="color: #666; display: block; margin-top: 4px;">Used strictly for Admin Auto-Loading (Govt Only).</small>
+                <small style="color: #666; display: block; margin-top: 4px;">Used strictly for Admin Auto-Loading (Govt & Private).</small>
             </div>
         </div>
 
@@ -357,7 +356,7 @@
     </div>
 </div>
 
-<!-- NEW: PRIVATE LAYOUT DESIGNER MODAL -->
+<!-- PRIVATE LAYOUT DESIGNER MODAL -->
 <div id="layoutEditorModal" class="modal layout-editor-modal">
     <div class="modal-content">
         <h3 style="color:#6b21a8; margin-bottom: 10px;"><i class="fas fa-paint-roller"></i> Dynamic Canvas Designer</h3>
@@ -506,7 +505,6 @@ document.querySelectorAll('.modal').forEach(modal => {
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
 });
 
-// State
 let db = null;
 let schoolsMap = JSON.parse(localStorage.getItem('adminSchoolsMap')) || {};
 let lastSyncId = Number(localStorage.getItem('adminLastSyncId')) || 0;
@@ -662,7 +660,6 @@ async function rebuildSchoolsMap() {
             }
         });
 
-        // Pull Master School overrides
         const schoolQs = await db.collection('schools').get();
         schoolQs.forEach(doc => {
             const d = doc.data();
@@ -1443,18 +1440,16 @@ async function openSchoolEdit(udise){
     document.getElementById('esPhone').value = s.phone || '';
     document.getElementById('esBlock').value = s.block || '';
     document.getElementById('esDistrict').value = s.district || '';
-    document.getElementById('esPin').value = s.pin || ''; // FIXED: PIN mapping now exists!
+    document.getElementById('esPin').value = s.pin || ''; 
     document.getElementById('esUdise').value = s.udise || '';
     
     document.getElementById('esAppPassword').value = s.appPassword || '';
     document.getElementById('esUdisePass').value = s.udisePass || '';
 
     const pContainer = document.getElementById('esPrivateFieldsContainer');
-    const gPassBox = document.getElementById('govtPassBox');
     
     if (s.schoolType === 'private') {
         pContainer.classList.remove('hidden');
-        gPassBox.style.display = 'none'; // Hide govt password box for Private schools
         
         const allFields = ['name', 'class', 'roll', 'dob', 'blood', 'phone', 'father', 'mother', 'address'];
         const activeFields = s.customFields && s.customFields.length > 0 ? s.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
@@ -1466,7 +1461,6 @@ async function openSchoolEdit(udise){
         document.getElementById('esPrivateCheckboxes').innerHTML = html;
     } else {
         pContainer.classList.add('hidden');
-        gPassBox.style.display = 'block';
     }
 
     document.getElementById('esSignInput').value = ''; 
@@ -1729,7 +1723,6 @@ window.openLayoutEditor = function() {
     const s = schoolsMap[activeUdise];
     if(!s || s.schoolType !== 'private') return;
     
-    // Copy existing settings to temporary window state for editing
     window.currentLayoutSettings = s.layoutSettings ? JSON.parse(JSON.stringify(s.layoutSettings)) : {};
     window.currentPrivateTemplateUrl = s.privateTemplateUrl || null;
     
@@ -1738,7 +1731,6 @@ window.openLayoutEditor = function() {
     
     const fields = s.customFields && s.customFields.length > 0 ? s.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
     
-    // Provide cascading defaults if none exist
     let defaultY = 560;
     
     fields.forEach(f => {
@@ -1777,6 +1769,7 @@ document.getElementById('plBgInput').onchange = async e => {
     document.getElementById('saveLayoutBtn').disabled = true;
     
     try {
+        // FIXED THE PERMISSION ERROR BY USING window.storage!
         const ref = window.storage.ref(`private_templates/${activeUdise}_bg.png`);
         await ref.put(f, { contentType: f.type });
         window.currentPrivateTemplateUrl = await ref.getDownloadURL();
@@ -1793,7 +1786,6 @@ window.updateLivePreview = async function() {
     const s = schoolsMap[activeUdise];
     if(!s) return;
 
-    // Gather settings from UI
     const layout = {
         photo: {
             x: document.getElementById('le_photo_x').value,
@@ -1816,13 +1808,11 @@ window.updateLivePreview = async function() {
 
     window.currentLayoutSettings = layout;
 
-    // Build Mock Student for preview
     const mockStudent = {
         schoolName: s.name,
         name: "Abhishek Das", class: "10th", roll: "45", dob: "12/05/2010", bloodGroup: "O+", mobile: "9876543210", father: "Ramesh Das", mother: "Sita Das", address: "Bhubaneswar, Odisha"
     };
 
-    // Temporarily trick the draw function into using our local un-saved state
     const tempSm = { ...s, layoutSettings: layout, privateTemplateUrl: window.currentPrivateTemplateUrl };
     
     const blob = await drawPrivateCard(mockStudent, tempSm);
@@ -1862,7 +1852,6 @@ document.getElementById('saveLayoutBtn').onclick = async () => {
         btn.disabled = false;
     }
 };
-
 </script>
 </body>
 </html>
