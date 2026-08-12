@@ -256,15 +256,15 @@
     <div class="modal-content">
         <h3>Edit Student Details</h3>
         <input type="hidden" id="editId">
-        <div class="form-group"><label>Full Name</label><input type="text" id="editName"></div>
+        <div class="form-group"><label>Full Name</label><input type="text" id="editName" style="width: 100%;"></div>
         <div style="display:flex; gap:15px;">
-            <div class="form-group" style="flex:1"><label>Class</label><input type="text" id="editClass"></div>
-            <div class="form-group" style="flex:1"><label>Roll Number</label><input type="text" id="editRoll"></div>
+            <div class="form-group" style="flex:1"><label>Class</label><input type="text" id="editClass" style="width: 100%;"></div>
+            <div class="form-group" style="flex:1"><label>Roll Number</label><input type="text" id="editRoll" style="width: 100%;"></div>
         </div>
         <div style="display:flex; gap:15px;">
-            <div class="form-group" style="flex:1"><label>Date of Birth</label><input type="date" id="editDob"></div>
+            <div class="form-group" style="flex:1"><label>Date of Birth</label><input type="date" id="editDob" style="width: 100%;"></div>
             <div class="form-group" style="flex:1"><label>Blood Group</label>
-                <select id="editBlood">
+                <select id="editBlood" style="width: 100%;">
                     <option value="">- Select -</option>
                     <option value="A+">A+</option><option value="A-">A-</option>
                     <option value="B+">B+</option><option value="B-">B-</option>
@@ -273,7 +273,12 @@
                 </select>
             </div>
         </div>
-        <div class="form-group"><label>Mobile Number</label><input type="text" id="editPhone"></div>
+        <div class="form-group"><label>Mobile Number</label><input type="text" id="editPhone" style="width: 100%;"></div>
+        
+        <!-- NEW DYNAMIC FIELDS (For Private Schools) -->
+        <div id="editGroupFather" class="form-group hidden"><label>Father's Name</label><input type="text" id="editFather" style="width: 100%;"></div>
+        <div id="editGroupMother" class="form-group hidden"><label>Mother's Name</label><input type="text" id="editMother" style="width: 100%;"></div>
+        <div id="editGroupAddress" class="form-group hidden"><label>Address</label><input type="text" id="editAddress" style="width: 100%;"></div>
 
         <div id="undoReviewBox" class="hidden" style="background:#fff3cd; border:1px solid #ffe69c; padding:12px 14px; border-radius:10px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
             <div style="font-size:12.5px; color:#7a5b00; line-height:1.4;">
@@ -394,14 +399,6 @@
             <button class="btn btn-secondary" onclick="document.getElementById('layoutEditorModal').style.display='none'">Cancel</button>
             <button class="btn btn-primary" id="saveLayoutBtn" style="background:#6b21a8;"><i class="fas fa-save"></i> Save Coordinates</button>
         </div>
-    </div>
-</div>
-
-<div id="adminPreviewModal" class="modal">
-    <div class="modal-content" style="text-align: center; background: #eef2f5; z-index: 2500;">
-        <h3 style="margin-top:0; color: #0b53a0;">Card Preview</h3>
-        <img id="adminPreviewImg" src="" style="width:100%; max-width: 320px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin: 0 auto; display: block;">
-        <button class="btn btn-secondary" onclick="document.getElementById('adminPreviewModal').style.display='none'" style="margin-top: 25px; width: 100%;">Close Preview</button>
     </div>
 </div>
 
@@ -820,10 +817,12 @@ function renderDashboard(){
         let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(udise)}`;
 
         let credsHtml = '';
-        if (s.appPassword || s.udisePass) {
+        if (s.appPassword || s.udisePass || s.fcmToken) {
             credsHtml = `<div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">`;
             if (s.appPassword) credsHtml += `<div style="padding: 6px 10px; background: #e6f2ff; border: 1px solid #b8daff; border-radius: 6px; font-size: 12px; color: #004085;"><i class="fas fa-lock"></i> App Pass: <b>${escapeHtml(s.appPassword)}</b></div>`;
             if (s.udisePass && activeTab === 'govt') credsHtml += `<div style="padding: 6px 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; font-size: 12px; color: #856404;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
+            if (s.udisePass && activeTab === 'private') credsHtml += `<div style="padding: 6px 10px; background: #f3e8ff; border: 1px solid #d8b4fe; border-radius: 6px; font-size: 12px; color: #6b21a8;"><i class="fas fa-magic"></i> Auto Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
+            if (s.fcmToken) credsHtml += `<div style="padding: 6px 10px; background: #e8f5e9; border: 1px solid #c3e6cb; border-radius: 6px; font-size: 11px; color: #155724; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.fcmToken}"><i class="fas fa-bell"></i> Token: <b>${s.fcmToken}</b></div>`;
             credsHtml += `</div>`;
         }
 
@@ -862,6 +861,9 @@ function openSchoolDetail(udise){
     let credHtml = '';
     if (s.appPassword) credHtml += `<div style="background:#e6f2ff; color:#004085; padding:8px 15px; border-radius:8px; border:1px solid #b8daff; font-size:14px;"><i class="fas fa-lock"></i> App Pass: <b>${escapeHtml(s.appPassword)}</b></div>`;
     if (s.udisePass && s.schoolType !== 'private') credHtml += `<div style="background:#fff3cd; color:#856404; padding:8px 15px; border-radius:8px; border:1px solid #ffeeba; font-size:14px;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
+    if (s.udisePass && s.schoolType === 'private') credHtml += `<div style="background:#f3e8ff; color:#6b21a8; padding:8px 15px; border-radius:8px; border:1px solid #d8b4fe; font-size:14px;"><i class="fas fa-magic"></i> Auto Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
+    if (s.fcmToken) credHtml += `<div style="background:#e8f5e9; color:#155724; padding:8px 15px; border-radius:8px; border:1px solid #c3e6cb; font-size:12px; word-break: break-all;"><i class="fas fa-bell"></i> Token: <b>${s.fcmToken}</b></div>`;
+    
     credEl.innerHTML = credHtml;
     credEl.style.display = credHtml ? 'flex' : 'none';
 
@@ -1639,12 +1641,26 @@ function openEditModal(id){
     const s = currentSchoolStudents.find(x => x.id == id);
     if(!s) return;
     document.getElementById('editId').value = s.id;
-    document.getElementById('editName').value = s.name;
+    document.getElementById('editName').value = s.name || '';
     document.getElementById('editClass').value = normalizeClass(s.class);
-    document.getElementById('editRoll').value = s.roll;
-    document.getElementById('editDob').value = s.dob;
-    document.getElementById('editBlood').value = s.bloodGroup;
+    document.getElementById('editRoll').value = s.roll || '';
+    document.getElementById('editDob').value = s.dob || '';
+    document.getElementById('editBlood').value = s.bloodGroup || '';
     document.getElementById('editPhone').value = s.mobile || s.phone || '';
+    
+    // NEW: Load Private School fields if they exist
+    document.getElementById('editFather').value = s.father || '';
+    document.getElementById('editMother').value = s.mother || '';
+    document.getElementById('editAddress').value = s.address || '';
+
+    // Conditionally show Father, Mother, Address based on School's customFields
+    const targetUdise = activeUdise || s.udise || ('NO_UDISE:' + s.schoolName);
+    const sm = schoolsMap[targetUdise];
+    const customFields = sm && sm.customFields ? sm.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+    
+    document.getElementById('editGroupFather').classList.toggle('hidden', !customFields.includes('father'));
+    document.getElementById('editGroupMother').classList.toggle('hidden', !customFields.includes('mother'));
+    document.getElementById('editGroupAddress').classList.toggle('hidden', !customFields.includes('address'));
 
     const showUndo = s._source === 'excel' && s.finalised !== false;
     document.getElementById('undoReviewBox').classList.toggle('hidden', !showUndo);
@@ -1673,9 +1689,16 @@ document.getElementById('saveEditBtn').onclick = async () => {
 
     const id = document.getElementById('editId').value;
     const data = {
-        name: document.getElementById('editName').value, class: document.getElementById('editClass').value,
-        roll: document.getElementById('editRoll').value, dob: document.getElementById('editDob').value,
-        bloodGroup: document.getElementById('editBlood').value, mobile: document.getElementById('editPhone').value, lastModified: Date.now()
+        name: document.getElementById('editName').value, 
+        class: document.getElementById('editClass').value,
+        roll: document.getElementById('editRoll').value, 
+        dob: document.getElementById('editDob').value,
+        bloodGroup: document.getElementById('editBlood').value, 
+        mobile: document.getElementById('editPhone').value,
+        father: document.getElementById('editFather').value,
+        mother: document.getElementById('editMother').value,
+        address: document.getElementById('editAddress').value,
+        lastModified: Date.now()
     };
     try {
         await db.collection('students').doc(id.toString()).update(data);
@@ -1697,7 +1720,18 @@ document.getElementById('previewEditBtn').onclick = async () => {
     
     document.getElementById('previewEditBtn').textContent = "Generating...";
     
-    const tempStudent = { ...s, name: document.getElementById('editName').value, class: document.getElementById('editClass').value, roll: document.getElementById('editRoll').value, dob: document.getElementById('editDob').value, bloodGroup: document.getElementById('editBlood').value, mobile: document.getElementById('editPhone').value };
+    const tempStudent = { 
+        ...s, 
+        name: document.getElementById('editName').value, 
+        class: document.getElementById('editClass').value, 
+        roll: document.getElementById('editRoll').value, 
+        dob: document.getElementById('editDob').value, 
+        bloodGroup: document.getElementById('editBlood').value, 
+        mobile: document.getElementById('editPhone').value,
+        father: document.getElementById('editFather').value,
+        mother: document.getElementById('editMother').value,
+        address: document.getElementById('editAddress').value
+    };
 
     const blob = await drawCard(tempStudent);
 
@@ -1769,7 +1803,6 @@ document.getElementById('plBgInput').onchange = async e => {
     document.getElementById('saveLayoutBtn').disabled = true;
     
     try {
-        // FIXED THE PERMISSION ERROR BY USING window.storage!
         const ref = window.storage.ref(`private_templates/${activeUdise}_bg.png`);
         await ref.put(f, { contentType: f.type });
         window.currentPrivateTemplateUrl = await ref.getDownloadURL();
