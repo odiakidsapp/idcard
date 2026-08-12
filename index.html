@@ -58,27 +58,23 @@
 
     <!-- App Navigation Header -->
     <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white sticky top-0 z-50 shadow-md transition-all duration-300" id="mainHeader">
-        <div class="w-full max-w-lg mx-auto px-4 py-3 flex justify-between items-center relative min-h-[60px]">
+        <div class="flex items-center justify-between w-full max-w-lg mx-auto px-4 py-3 min-h-[60px] gap-3">
             
             <!-- Left: Hamburger Menu -->
-            <div class="absolute left-4 z-10">
-                <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none" title="Menu">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
+            <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+
+            <!-- Center: Title and Live Indicator -->
+            <div class="flex-1 flex items-center justify-center gap-2 min-w-0">
+                <h3 id="currentSchoolHeader" class="m-0 font-bold text-lg truncate">ID Cards Pro</h3>
+                <span id="liveIndicator" class="hidden bg-green-500/20 border border-green-400 text-green-100 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1 flex-shrink-0" title="Live Sync Active">
+                    <i class="fas fa-circle text-[6px] text-green-400 animate-pulse"></i>LIVE
+                </span>
             </div>
 
-            <!-- Center: Pure Title and Live Indicator -->
-            <div class="flex-1 text-center flex flex-col items-center justify-center pointer-events-none w-full">
-                <div class="flex items-center justify-center gap-2 pointer-events-auto">
-                    <h3 id="currentSchoolHeader" class="m-0 font-bold text-lg truncate">ID Cards Pro</h3>
-                    <span id="liveIndicator" class="hidden bg-green-500/20 border border-green-400 text-green-100 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1 flex-shrink-0" title="Live Sync Active">
-                        <i class="fas fa-circle text-[6px] text-green-400 animate-pulse"></i>LIVE
-                    </span>
-                </div>
-            </div>
-
-            <!-- Right: Dynamic Action Icons (Install & Notifications) -->
-            <div class="absolute right-4 flex items-center gap-1 z-10">
+            <!-- Right: Dynamic Action Icons -->
+            <div class="flex items-center gap-1 flex-shrink-0">
                 <button id="headerBellBtn" onclick="requestNotificationPermission(true)" class="hidden text-white hover:bg-white/20 w-9 h-9 rounded-full flex items-center justify-center transition" title="Enable Notifications">
                     <i class="fas fa-bell animate-pulse text-lg"></i>
                 </button>
@@ -99,7 +95,6 @@
         </div>
         <div class="flex-1 p-4 flex flex-col gap-2">
             
-            <!-- Moved Edit Profile here! -->
             <button id="sidebarEditProfileBtn" onclick="openEditSchoolModal(); toggleSidebar();" class="hidden flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fas fa-school w-5 text-center text-blue-500"></i> Edit School Profile
             </button>
@@ -1049,6 +1044,12 @@
             deferredPrompt = null;
         });
 
+        // Detect successful installation natively
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('headerInstallBtn').classList.add('hidden');
+            showToast("App installed successfully! Check your home screen.", "success");
+        });
+
         let unsubscribeRealtime = null;
         let unsubscribeSchool = null;
 
@@ -1115,9 +1116,11 @@
         }
 
         function checkNotificationStatus() {
-            if (!('Notification' in window) || !messaging) return;
+            if (!('Notification' in window)) return;
             const bellBtn = document.getElementById('headerBellBtn');
-            if (Notification.permission === 'default') {
+            
+            // Show bell if permission is NOT granted
+            if (Notification.permission !== 'granted') {
                 if(bellBtn) bellBtn.classList.remove('hidden');
             } else {
                 if(bellBtn) bellBtn.classList.add('hidden');
@@ -1290,13 +1293,6 @@
                     }
                 }, err => console.log("School sync error:", err));
         }
-
-        const blobToBase64 = blob => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-        });
 
         function openCropper(imageSrc) {
             const modal = document.getElementById('cropperModal');
@@ -1566,9 +1562,54 @@
                 if(schools.length > 0) {
                     enterSchool(schools[0]);
                 } else {
-                    document.getElementById('authSection').classList.remove('hidden');
+                    document.getElementById('schoolSection').classList.remove('hidden');
                     document.getElementById('entrySection').classList.add('hidden');
                 }
+            };
+        }
+
+        function performRestore(docs, schoolName, udise, source, sData) {
+            const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
+            
+            const schoolObj = {
+                name: localId, 
+                realSchoolName: schoolName, 
+                source: source,
+                phone: sData.phone || (docs[0] ? docs[0].data.hmPhone : ''), 
+                block: sData.block || (docs[0] ? docs[0].data.block : ''),
+                district: sData.district || (docs[0] ? docs[0].data.district : ''), 
+                pin: sData.pin || (docs[0] ? docs[0].data.pin : ''), 
+                udise: udise,
+                hmSignature: sData.hmSignature || (docs[0] ? docs[0].data.hmSignature : ''), 
+                createdAt: Date.now(),
+                importStatus: 'manual',
+                udiseUser: sData.udiseUser || udise,
+                udisePass: sData.udisePass || '',
+                schoolType: sData.schoolType || 'govt',
+                customFields: sData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone']
+            };
+
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
+            
+            tx.objectStore('schools').delete(localId);
+            tx.objectStore('schools').put(schoolObj);
+
+            const studentStore = tx.objectStore('students');
+            
+            docs.forEach(({ id, data }) => {
+                const student = { ...data, id: Number(id), synced: true, source: source };
+                delete student.submittedAt;
+                if(student.finalised === undefined) student.finalised = true;
+                studentStore.put(student);
+            });
+
+            tx.oncomplete = () => {
+                document.getElementById('loginUdise').value = '';
+                document.getElementById('loginPass').value = '';
+                setTimeout(() => enterSchool(schoolObj), 800);
+            };
+            tx.onerror = () => {
+                showToast("Failed saving locally.", "error");
             };
         }
 
@@ -1620,9 +1661,8 @@
             if (!currentSchoolData.source) currentSchoolData.source = 'manual';
             if (!currentSchoolData.importStatus) currentSchoolData.importStatus = 'manual';
 
-            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('schoolSection').classList.add('hidden');
             document.getElementById('entrySection').classList.remove('hidden');
-            document.getElementById('sidebarEditProfileBtn').classList.remove('hidden');
 
             updateSchoolHeader();
 
@@ -1678,7 +1718,7 @@
             const sName = currentSchoolData.realSchoolName || "Unknown School";
             const udise = currentSchoolData.udise || "No UDISE";
             const msg = `Hi Admin, I am from *${sName}* (UDISE: *${udise}*).\n\nI would like to rename some of my custom ID card fields (for example, change "Roll No" to "Address"). Can you please help me update my labels?`;
-            window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+            window.open(`https://wa.me/917855800205?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         document.getElementById('saveSchoolEditBtn').onclick = async () => {
