@@ -47,21 +47,20 @@
         .field-cb input { width: 18px; height: 18px; }
 
         /* Floating WhatsApp Button */
-        #waSupportBtn { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: none; }
+        #waSupportBtn { position: fixed; bottom: 20px; right: 20px; z-index: 900; display: none; }
         #waSupportBtn button { background: #25D366; color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 30px; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
         #waSupportBtn button:hover { transform: scale(1.05); }
         
         /* Modals */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
-        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 20px; padding: 24px; position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 20px; padding: 24px; position: relative; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         
         .hidden { display: none !important; }
-        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; text-align: center; white-space: nowrap; }
     </style>
 </head>
 <body>
 
-    <!-- Permanent Top Toolbar -->
     <div id="topToolbar">
         <div style="font-weight: bold; font-size: 18px;"><i class="fas fa-id-badge"></i> ID Cards Pro</div>
         <div style="display: flex; gap: 15px; align-items: center;">
@@ -158,7 +157,7 @@
                 <h3 id="dashSchoolName" style="margin: 0; font-size: 16px; color: #0f172a;">Loading...</h3>
                 <small id="dashUdise" style="color: #64748b;">UDISE: ---</small>
             </div>
-            <button onclick="logout()" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 6px 12px; border-radius: 6px; cursor: pointer;"><i class="fas fa-sign-out-alt"></i></button>
+            <button onclick="logout()" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;"><i class="fas fa-sign-out-alt"></i></button>
         </div>
 
         <div class="container">
@@ -256,6 +255,16 @@
         </div>
     </div>
 
+    <!-- CUSTOM ALERT MESSAGE BOX (Replaces standard window.alert) -->
+    <div id="messageBoxModal" class="modal" style="z-index: 9999;">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <div id="msgBoxIcon" style="font-size: 40px; margin-bottom: 15px;"></div>
+            <h2 id="msgBoxTitle" style="margin-top: 0; margin-bottom: 10px; font-size: 20px;">Notice</h2>
+            <p id="msgBoxText" style="color: #475569; margin-bottom: 25px; line-height: 1.5; font-size: 15px;"></p>
+            <button class="btn" id="msgBoxBtn" onclick="document.getElementById('messageBoxModal').style.display='none'">OK</button>
+        </div>
+    </div>
+
 <script>
     firebase.initializeApp({
         apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
@@ -271,6 +280,35 @@
     const ADMIN_WHATSAPP = "919090623315";
     let activeSchool = null;
     let studentCount = 0;
+
+    // --- CUSTOM ALERT FUNCTION (Replacing window.alert) ---
+    function customAlert(message, type = 'info') {
+        const modal = document.getElementById('messageBoxModal');
+        const icon = document.getElementById('msgBoxIcon');
+        const title = document.getElementById('msgBoxTitle');
+        const btn = document.getElementById('msgBoxBtn');
+
+        document.getElementById('msgBoxText').innerHTML = message;
+
+        if (type === 'error') {
+            icon.innerHTML = '<i class="fas fa-exclamation-circle" style="color: #ef4444;"></i>';
+            title.innerText = 'Error';
+            title.style.color = '#ef4444';
+            btn.style.background = '#ef4444';
+        } else if (type === 'success') {
+            icon.innerHTML = '<i class="fas fa-check-circle" style="color: #10b981;"></i>';
+            title.innerText = 'Success';
+            title.style.color = '#10b981';
+            btn.style.background = '#10b981';
+        } else {
+            icon.innerHTML = '<i class="fas fa-info-circle" style="color: #3b82f6;"></i>';
+            title.innerText = 'Notice';
+            title.style.color = '#3b82f6';
+            btn.style.background = '#3b82f6';
+        }
+
+        modal.style.display = 'flex';
+    }
 
     // --- PWA INSTALL BANNER ---
     let deferredPrompt;
@@ -306,9 +344,12 @@
         } catch (error) { console.log("Push error:", error); }
     };
     
-    // Foreground Notification Handler (Show toast even if app is open)
     messaging.onMessage((payload) => {
-        showToast(payload.notification?.body || payload.data?.body || "New Message from Admin");
+        const title = payload.notification?.title || payload.data?.title || 'Notification';
+        const body = payload.notification?.body || payload.data?.body || 'New Message from Admin';
+        showToast(body);
+        // Also show the big alert box just in case they miss the toast
+        customAlert(`<b>${title}</b><br>${body}`, 'info');
     });
 
     function showToast(msg) {
@@ -349,7 +390,10 @@
 
     window.forgotPassword = function() {
         const udise = document.getElementById('loginUdise').value.trim();
-        let msg = udise ? `Hi Admin, I forgot my App Password for ID: *${udise}*. Can you please help me recover it?` : `Hi Admin, I forgot my App Password for ID Cards Pro. Can you help?`;
+        let msg = "Hi Admin, I forgot my App Password for ID Cards Pro. Can you please help me reset or recover it?";
+        if (udise) {
+            msg = `Hi Admin, I forgot my App Password for UDISE: *${udise}*. Can you please help me recover it?`;
+        }
         window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
@@ -373,12 +417,13 @@
         }
     }
 
+    // Limit Private Checkboxes to Max 7
     document.querySelectorAll('.pvt-cb').forEach(cb => {
         cb.addEventListener('change', () => {
             if(!cb.checked) return;
             const count = document.querySelectorAll('.pvt-cb:checked').length;
             if(count > 7) {
-                alert("Maximum 7 fields allowed to fit on the ID Card!");
+                customAlert("Maximum 7 fields allowed to fit on the ID Card!", "error");
                 cb.checked = false;
             }
         });
@@ -391,7 +436,10 @@
         const name = document.getElementById('regName').value.trim();
         const btn = document.getElementById('regBtn');
 
-        if(!udise || !pass || !name) { alert("Please fill all fields."); return; }
+        if(!udise || !pass || !name) { 
+            customAlert("Please fill all required fields.", "error"); 
+            return; 
+        }
 
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
         btn.disabled = true;
@@ -399,7 +447,7 @@
         try {
             const existingDoc = await db.collection('schools').doc(udise).get();
             if (existingDoc.exists) {
-                alert("SECURITY ALERT: This ID is already registered! Please log in.");
+                customAlert("SECURITY ALERT:<br>This ID is already registered in our system! If this is your school, please go to the Login screen. If you forgot your password, contact Admin.", "error");
                 btn.innerHTML = 'Register School';
                 btn.disabled = false;
                 return;
@@ -419,11 +467,11 @@
                 createdAt: Date.now()
             });
 
-            alert("Registration Successful! Please log in now.");
+            customAlert("Registration Successful! You can now log in.", "success");
             switchTab('login');
             
         } catch(e) {
-            alert("Error: " + e.message);
+            customAlert("Error: " + e.message, "error");
         } finally {
             btn.innerHTML = 'Register School';
             btn.disabled = false;
@@ -436,28 +484,36 @@
         const pass = document.getElementById('loginPass').value.trim();
         const btn = document.getElementById('loginBtn');
 
-        if(!udise || !pass) { alert("Enter both ID and Password."); return; }
+        if(!udise || !pass) { 
+            customAlert("Enter both ID and Password.", "error"); 
+            return; 
+        }
+        
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
         btn.disabled = true;
 
         try {
             const doc = await db.collection('schools').doc(udise).get();
             if (!doc.exists) {
-                alert("School not found! Please register first.");
+                customAlert("School not found! Please register first.", "error");
             } else {
                 const data = doc.data();
                 if (!data.appPassword) {
-                    alert("Security Update: Account missing App Password. Click 'Forgot Password' to contact Admin!");
+                    customAlert("Security Update: Your account does not have an App Password yet. Please click 'Forgot Password' to contact the Admin and get your new password!", "error");
                 } else if (data.appPassword !== pass) {
-                    alert("Incorrect Password!");
+                    customAlert("Incorrect Password! Please try again or click Forgot Password.", "error");
                 } else {
                     activeSchool = data;
                     localStorage.setItem('activeUdise', udise);
                     showDashboard();
                 }
             }
-        } catch(e) { alert("Network error."); } 
-        finally { btn.innerHTML = 'Login to Dashboard'; btn.disabled = false; }
+        } catch(e) { 
+            customAlert("Network error connecting to server.", "error"); 
+        } finally { 
+            btn.innerHTML = 'Login to Dashboard'; 
+            btn.disabled = false; 
+        }
     };
 
     // --- DASHBOARD LOGIC ---
@@ -473,6 +529,7 @@
             document.getElementById('govtAutoLoadBox').style.display = 'none';
         }
 
+        // Dynamically Show/Hide form fields based on school type preferences
         const fields = activeSchool.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
         const allWraps = ['wrap-name', 'wrap-class', 'wrap-roll', 'wrap-dob', 'wrap-blood', 'wrap-phone', 'wrap-father', 'wrap-mother', 'wrap-address'];
         
@@ -487,7 +544,7 @@
             if(Notification.permission === 'default') requestPushPermission();
         }, 1500);
 
-        // Realtime listener for Admin Reject
+        // Realtime listener for Admin Rejecting Government Passwords
         db.collection('schools').doc(activeSchool.udise).onSnapshot(doc => {
             if(doc.exists && doc.data().udisePassInvalid) {
                 document.getElementById('fixPassModal').style.display = 'flex';
@@ -533,8 +590,8 @@
         if(!activeSchool) return;
         
         const isVis = (id) => !document.getElementById('wrap-' + id).classList.contains('hidden');
-        if(isVis('name') && !document.getElementById('stuName').value) return alert("Name is required");
-        if(isVis('class') && !document.getElementById('stuClass').value) return alert("Class is required");
+        if(isVis('name') && !document.getElementById('stuName').value) return customAlert("Name is required", "error");
+        if(isVis('class') && !document.getElementById('stuClass').value) return customAlert("Class is required", "error");
         
         const btn = document.getElementById('saveStudentBtn');
         btn.innerHTML = 'Saving...'; btn.disabled = true;
@@ -558,9 +615,14 @@
         try {
             await db.collection('students').add(data);
             document.getElementById('dataFormModal').style.display = 'none';
+            showToast("Student Saved!");
             loadStudents();
-        } catch(e) { alert("Error saving."); }
-        finally { btn.innerHTML = 'Save Entry'; btn.disabled = false; }
+        } catch(e) { 
+            customAlert("Error saving to database.", "error"); 
+        } finally { 
+            btn.innerHTML = 'Save Entry'; 
+            btn.disabled = false; 
+        }
     };
 
     function loadStudents() {
@@ -592,29 +654,35 @@
     // --- GOVT CREDENTIALS LOGIC ---
     window.submitGovtCredentials = async function() {
         const p = document.getElementById('udisePortalPass').value.trim();
-        if(!p) return alert("Please enter the password");
+        if(!p) return customAlert("Please enter the official government password", "error");
+        
         try {
             await db.collection('schools').doc(activeSchool.udise).update({
                 credentials: p,
                 credUpdatedAt: Date.now()
             });
-            alert("Credentials securely sent to Admin for auto-loading!");
+            customAlert("Credentials securely sent to Admin for auto-loading!", "success");
             document.getElementById('autoLoadModal').style.display='none';
-        } catch(e) { alert("Error sending."); }
+        } catch(e) { 
+            customAlert("Error sending credentials.", "error"); 
+        }
     };
 
     window.submitFixedGovtCredentials = async function() {
         const p = document.getElementById('fixUdisePass').value.trim();
-        if(!p) return alert("Please enter the correct password");
+        if(!p) return customAlert("Please enter the correct password", "error");
+        
         try {
             await db.collection('schools').doc(activeSchool.udise).update({
                 credentials: p,
                 credUpdatedAt: Date.now(),
                 udisePassInvalid: false
             });
-            alert("Updated password sent to Admin!");
+            customAlert("Updated password successfully sent to Admin!", "success");
             document.getElementById('fixPassModal').style.display='none';
-        } catch(e) { alert("Error updating."); }
+        } catch(e) { 
+            customAlert("Error updating credentials.", "error"); 
+        }
     };
 </script>
 </body>
