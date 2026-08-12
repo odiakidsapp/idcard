@@ -39,6 +39,7 @@
         #sidebarOverlay { background-color: rgba(0, 0, 0, 0.5); transition: opacity 0.3s ease; }
         #sidebar { transition: transform 0.3s ease; }
         
+        /* Floating WhatsApp Button Animation */
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-5px); }
@@ -46,6 +47,7 @@
         }
         .fab-hover { animation: float 3s ease-in-out infinite; }
         
+        /* Floating Notification Bell Animation */
         @keyframes gentle-pulse {
             0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(147, 51, 234, 0); }
@@ -55,6 +57,15 @@
     </style>
 </head>
 <body class="text-gray-800 pb-20">
+
+    <!-- Optional PWA Install Banner -->
+    <div id="installToolbar" class="hidden bg-indigo-600 text-white px-4 py-2 shadow flex justify-between items-center z-[55] relative">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-download"></i>
+            <span class="text-sm font-bold">Install App for Offline Use</span>
+        </div>
+        <button id="installAppBtn" class="bg-white text-indigo-600 px-3 py-1 rounded-full text-xs font-bold shadow hover:bg-gray-100 transition">Install</button>
+    </div>
 
     <!-- Offline Banner -->
     <div id="offlineBanner" class="hidden fixed top-0 inset-x-0 z-[70] bg-red-500 text-white px-4 py-2 shadow-md flex justify-center items-center text-sm font-bold transition-transform duration-300 transform -translate-y-full">
@@ -68,15 +79,6 @@
             <span class="text-sm font-medium">A new version is available!</span>
         </div>
         <button onclick="window.location.reload()" class="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow hover:bg-gray-100 transition">Refresh Now</button>
-    </div>
-
-    <!-- PWA Install Toolbar (Hidden initially) -->
-    <div id="installToolbar" class="hidden bg-indigo-600 text-white px-4 py-2 shadow flex justify-between items-center z-[55] relative">
-        <div class="flex items-center gap-2">
-            <i class="fas fa-download"></i>
-            <span class="text-sm font-bold">Install App for Offline Use</span>
-        </div>
-        <button id="installAppBtn" class="bg-white text-indigo-600 px-3 py-1 rounded-full text-xs font-bold shadow hover:bg-gray-100 transition">Install</button>
     </div>
 
     <!-- App Navigation Header -->
@@ -96,14 +98,9 @@
                 <p id="currentSchoolSubHeader" class="text-blue-100 text-xs truncate w-full text-center">Data Entry Portal</p>
             </div>
 
-            <div class="flex gap-2">
-                <button onclick="requestNotificationPermission(true)" id="headerBellBtn" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Enable Notifications">
-                    <i class="fas fa-bell text-xs"></i>
-                </button>
-                <button id="editSchoolBtn" onclick="openEditSchoolModal()" class="hidden bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Edit School">
-                    <i class="fas fa-pen text-xs"></i>
-                </button>
-            </div>
+            <button id="editSchoolBtn" onclick="openEditSchoolModal()" class="hidden bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Edit School">
+                <i class="fas fa-pen text-xs"></i>
+            </button>
             <div id="headerSpacer" class="w-9 h-9 flex-shrink-0"></div>
         </div>
     </header>
@@ -319,6 +316,11 @@
         <i class="fab fa-whatsapp"></i>
     </a>
 
+    <!-- Floating Notification Bell -->
+    <button onclick="requestNotificationPermission(true)" id="floatingNotificationBtn" class="hidden fixed bottom-24 right-6 z-[90] w-14 h-14 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl shadow-[0_4px_12px_rgba(147,51,234,0.4)] hover:bg-purple-700 hover:scale-105 transition-all duration-300 fab-pulse" title="Enable Notifications">
+        <i class="fas fa-bell"></i>
+    </button>
+
     <!-- ================= MODALS ================= -->
 
     <div id="udiseSelectorModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
@@ -348,7 +350,7 @@
         </div>
     </div>
 
-    <!-- Add/Edit Student Modal (Dynamic Fields) -->
+    <!-- Add/Edit Student Modal (Dynamic Fields Added) -->
     <div id="addStudentModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl p-5 relative" id="addStudentFormContainer">
             
@@ -361,7 +363,9 @@
             
             <input type="hidden" id="editId">
             
-            <div id="wrap-name" class="mb-3"><input type="text" id="sName" placeholder="Full Name" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
+            <div id="wrap-name" class="mb-3">
+                <input type="text" id="sName" placeholder="Full Name" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            </div>
             
             <div class="flex gap-3 mb-3">
                 <div id="wrap-class" class="w-1/2">
@@ -388,7 +392,10 @@
             <div id="wrap-father" class="mb-3 hidden"><input type="text" id="sFather" placeholder="Father's Name" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
             <div id="wrap-mother" class="mb-3 hidden"><input type="text" id="sMother" placeholder="Mother's Name" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
             <div id="wrap-address" class="mb-3 hidden"><input type="text" id="sAddress" placeholder="Home Address" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
-            <div id="wrap-phone" class="mb-3"><input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
+            
+            <div id="wrap-phone" class="mb-3">
+                <input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            </div>
 
             <div class="flex gap-3 mb-4">
                <div id="wrap-dob" class="w-1/2">
@@ -522,12 +529,66 @@
         </div>
     </div>
 
+    <!-- ORDER CHECKOUT BOTTOM BAR -->
+    <div id="orderBottomBar" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] p-4 z-[80] transform transition-transform pb-safe">
+        <div class="max-w-lg mx-auto flex justify-between items-center">
+            <div>
+                <div class="text-xs text-gray-500 font-bold uppercase tracking-wider">Ready to Print</div>
+                <div class="text-xl font-black text-green-600 flex items-center gap-1"><span id="cartCount">0</span> <span class="text-sm text-gray-700 font-bold">Students</span></div>
+            </div>
+            <button onclick="document.getElementById('orderModal').classList.remove('hidden')" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition flex items-center gap-2 transform hover:scale-105 active:scale-95">
+                <i class="fas fa-shopping-bag"></i> Place Order
+            </button>
+        </div>
+    </div>
+
+    <!-- ORDER MODAL -->
+    <div id="orderModal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md shadow-2xl p-6 relative animate-slide-up">
+            <div class="flex justify-between items-center mb-2">
+                <div>
+                    <h3 class="text-2xl font-black text-gray-900 leading-tight">Finalize Order</h3>
+                    <h4 class="text-sm font-bold text-blue-600">ଅର୍ଡର ନିଶ୍ଚିତ କରନ୍ତୁ</h4>
+                </div>
+                <button onclick="document.getElementById('orderModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 bg-gray-50 w-8 h-8 rounded-full flex items-center justify-center transition"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="text-sm text-gray-600 mb-2 font-medium">You have <b class="text-green-600 text-lg" id="modalCartCount">0</b> completed ID cards ready for processing.</p>
+            <p class="text-xs text-gray-500 mb-5 font-medium border-b border-gray-100 pb-4">ଆପଣଙ୍କର ପ୍ରସ୍ତୁତ ଥିବା କାର୍ଡଗୁଡ଼ିକ ପାଇଁ ଆପଣ କଣ କରିବାକୁ ଚାହୁଁଛନ୍ତି?</p>
+            
+            <div class="flex flex-col gap-4">
+                <!-- Option 1: Verification -->
+                <button onclick="sendWaVerification()" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 p-4 rounded-2xl transition flex items-start gap-4 text-left group">
+                    <div class="bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 group-hover:scale-110 transition"><i class="fas fa-file-pdf"></i></div>
+                    <div>
+                        <div class="font-bold text-base mb-0.5">Request Verification Proof</div>
+                        <div class="text-xs font-bold text-blue-700 mb-1">ଯାଞ୍ଚ ପାଇଁ PDF ମାଗନ୍ତୁ</div>
+                        <div class="text-[11px] text-blue-600/80 leading-tight">Send a WhatsApp request to get a soft copy (PDF) to check for spelling mistakes before printing. <br><span class="opacity-80 mt-1 block font-medium">ପ୍ରିଣ୍ଟ କରିବା ପୂର୍ବରୁ ବନାନ (spelling) ଯାଞ୍ଚ କରିବା ପାଇଁ WhatsApp ରେ PDF କପି ମାଗନ୍ତୁ।</span></div>
+                    </div>
+                </button>
+
+                <!-- Option 2: Final Print -->
+                <button onclick="sendWaOrder()" class="w-full bg-green-50 hover:bg-green-100 border border-green-200 text-green-900 p-4 rounded-2xl transition flex items-start gap-4 text-left group">
+                    <div class="bg-green-500 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 group-hover:scale-110 transition"><i class="fas fa-print"></i></div>
+                    <div>
+                        <div class="font-bold text-base mb-0.5">Confirm & Order Prints</div>
+                        <div class="text-xs font-bold text-green-700 mb-1">ପ୍ରିଣ୍ଟ ପାଇଁ ଅର୍ଡର କରନ୍ତୁ</div>
+                        <div class="text-[11px] text-green-700/80 leading-tight">Send a WhatsApp message to officially place the print order for these ID cards.<br><span class="opacity-80 mt-1 block font-medium">ଏହି ସମସ୍ତ ID କାର୍ଡ ପ୍ରିଣ୍ଟ କରିବା ପାଇଁ WhatsApp ରେ ଫାଇନାଲ ଅର୍ଡର ଦିଅନ୍ତୁ।</span></div>
+                    </div>
+                </button>
+            </div>
+            
+            <div class="mt-6 text-center">
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Secure WhatsApp Checkout</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Fixed Toast Container -->
     <div id="toast-container" class="fixed bottom-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
 
     <script>
         const WA_NUMBER = "917855800205"; // Your Admin WhatsApp Number
-        
+
         // ==========================================
         // PWA INSTALL LOGIC
         // ==========================================
@@ -597,6 +658,7 @@
             window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
         };
 
+        // NEW LOGIN (Replaces restoreUdiseBtn logic)
         window.loginSchool = async function() {
             const udise = document.getElementById('loginUdise').value.trim();
             const pass = document.getElementById('loginPass').value.trim();
@@ -613,28 +675,34 @@
                 
                 if (!schoolDoc.exists) {
                     showToast("School not found! Please register.", "error");
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Load Data';
+                    btn.disabled = false;
                     return;
                 }
                 
                 const sData = schoolDoc.data();
                 
-                // Legacy check
                 if (!sData.appPassword) {
                     await showConfirm("Security Update: Your account needs a security update. Please contact the Admin to get an App Password.", "Account Locked", "Contact Admin").then(res => {
                         if(res) forgotPassword();
                     });
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Load Data';
+                    btn.disabled = false;
                     return;
                 }
                 
                 if (sData.appPassword !== pass) {
                     showToast("Incorrect Password!", "error");
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Load Data';
+                    btn.disabled = false;
                     return;
                 }
 
-                // Auth Success! Now run the Restore logic to grab all their data locally
+                // Auth Success! Now run the Restore logic exactly like old `restoreUdiseBtn`
                 showToast("Login Success! Loading your data...", "success");
                 
                 const snapshot = await firestore.collection('students').where('udise', '==', udise).get();
+                
                 if (!snapshot.empty) {
                     const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
                     const groups = {};
@@ -649,7 +717,6 @@
                     const keys = Object.keys(groups);
                     if (keys.length === 1) {
                         const g = groups[keys[0]];
-                        // Add custom properties to the group name object
                         g.schoolType = sData.schoolType || 'govt';
                         g.customFields = sData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
                         performRestore(g.docs, g.name, udise, g.source, sData);
@@ -708,6 +775,7 @@
             }
         };
 
+        // NEW REGISTER (Replaces addSchoolBtn logic)
         window.registerSchool = async function() {
             const type = document.getElementById('regType').value;
             const udise = document.getElementById('newUdise').value.trim();
@@ -779,67 +847,55 @@
             }
         };
 
-        // Modify performRestore to use the master object
-        function performRestore(docs, schoolName, udise, source, sData) {
-            const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
-            const schoolObj = {
-                name: localId, realSchoolName: schoolName, source: source,
-                phone: sData.phone || '', block: sData.block || '', district: sData.district || '', pin: sData.pin || '', 
-                udise: udise, hmSignature: sData.hmSignature || '', createdAt: sData.createdAt || Date.now(),
-                importStatus: sData.importStatus || 'manual', udiseUser: sData.udiseUser || udise, udisePass: sData.udisePass || '',
-                schoolType: sData.schoolType || 'govt', customFields: sData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone']
-            };
-
-            const tx = db.transaction(['schools', 'students'], 'readwrite');
-            tx.objectStore('schools').delete(localId);
-            tx.objectStore('schools').put(schoolObj);
-
-            const studentStore = tx.objectStore('students');
-            docs.forEach(({ id, data }) => {
-                const student = { ...data, id: Number(id), synced: true, source: source };
-                delete student.submittedAt;
-                if(student.finalised === undefined) student.finalised = true;
-                studentStore.put(student);
-            });
-
-            tx.oncomplete = () => {
-                document.getElementById('loginUdise').value = '';
-                document.getElementById('loginPass').value = '';
-                enterSchool(schoolObj);
-            };
-        }
-
-
         // ==========================================
-        // UI INTERACTION (Sidebar, Modals)
+        // UI INTERACTION
         // ==========================================
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
+            
             if (sidebar.classList.contains('-translate-x-full')) {
                 overlay.classList.remove('hidden');
-                setTimeout(() => { overlay.classList.remove('opacity-0'); sidebar.classList.remove('-translate-x-full'); }, 10);
+                setTimeout(() => {
+                    overlay.classList.remove('opacity-0');
+                    sidebar.classList.remove('-translate-x-full');
+                }, 10);
             } else {
-                overlay.classList.add('opacity-0'); sidebar.classList.add('-translate-x-full');
-                setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+                overlay.classList.add('opacity-0');
+                sidebar.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                }, 300);
             }
         }
 
         window.requestAutoLoad = async function() {
             if (!navigator.onLine) return alert("Internet required to check/request Auto-Load.");
+            
             const btn = document.querySelector('#upgradeToAutoBanner button');
             const origTxt = btn.innerHTML;
-            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>"; btn.disabled = true;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>";
+            btn.disabled = true;
 
             try {
-                const snap = await firestore.collection('students').where('udise', '==', currentSchoolData.udise).limit(100).get();
+                // SMART CHECK: Does an Excel batch already exist for this UDISE?
+                const snap = await firestore.collection('students')
+                    .where('udise', '==', currentSchoolData.udise)
+                    .limit(100)
+                    .get();
+
                 let hasExcel = false;
-                snap.forEach(doc => { if (getStudentSource(doc.data()) === 'excel') hasExcel = true; });
+                snap.forEach(doc => {
+                    if (getStudentSource(doc.data()) === 'excel') hasExcel = true;
+                });
 
                 if (hasExcel) {
-                    currentSchoolData.source = 'excel'; currentSchoolData.importStatus = 'manual';
+                    currentSchoolData.source = 'excel';
+                    currentSchoolData.importStatus = 'manual';
+                    
                     const tx = db.transaction(['schools'], 'readwrite');
                     tx.objectStore('schools').put(currentSchoolData);
+                    
                     showToast("Switched to Auto-Loaded students!", "success");
                     enterSchool(currentSchoolData);
                     return;
@@ -851,39 +907,55 @@
                     document.getElementById('upgradeUdisePass').value = '';
                     document.getElementById('upgradeAutoModal').classList.remove('hidden');
                 }
-            } catch (err) { alert("Error checking data: " + err.message); } 
-            finally { btn.innerHTML = origTxt; btn.disabled = false; }
+            } catch (err) {
+                alert("Error checking data: " + err.message);
+            } finally {
+                btn.innerHTML = origTxt;
+                btn.disabled = false;
+            }
         };
 
         async function startAutoLoadProcess(uPass) {
             showToast("Requesting Auto-Load...", "info");
             try {
-                currentSchoolData.importStatus = 'pending'; currentSchoolData.udisePass = uPass;
+                currentSchoolData.importStatus = 'pending';
+                currentSchoolData.udisePass = uPass;
+
                 const tx = db.transaction(['schools'], 'readwrite');
                 tx.objectStore('schools').put(currentSchoolData);
 
                 await firestore.collection('schools').doc(currentSchoolData.udise).set({
-                    importStatus: 'pending', udiseUser: currentSchoolData.udise, udisePass: uPass, lastModified: Date.now()
+                    importStatus: 'pending',
+                    udiseUser: currentSchoolData.udise,
+                    udisePass: uPass,
+                    lastModified: Date.now()
                 }, {merge: true});
 
                 showToast("Auto-Load requested successfully!");
                 document.getElementById('upgradeAutoModal').classList.add('hidden');
                 enterSchool(currentSchoolData); 
-            } catch (err) { alert("Error submitting request: " + err.message); }
+            } catch (err) {
+                alert("Error submitting request: " + err.message);
+            }
         }
 
         document.getElementById('submitUpgradeBtn').onclick = async () => {
             const uPass = document.getElementById('upgradeUdisePass').value.trim();
             if (!uPass) return alert("Please provide the Password.");
+
             const btn = document.getElementById('submitUpgradeBtn');
             const origText = btn.innerHTML;
-            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Submitting..."; btn.disabled = true;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Submitting...";
+            btn.disabled = true;
+
             await startAutoLoadProcess(uPass);
-            btn.innerHTML = origText; btn.disabled = false;
+
+            btn.innerHTML = origText;
+            btn.disabled = false;
         };
 
         // ==========================================
-        // DATA NORMALIZATION
+        // DATA NORMALIZATION (Excel Mappers)
         // ==========================================
         function normalizeClass(cls) {
             if (!cls) return "";
@@ -941,13 +1013,25 @@
         function showToast(msg, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
+            
             let bgClass = type === 'error' ? 'bg-red-600' : (type === 'info' ? 'bg-blue-600' : 'bg-gray-900');
             let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-white"></i>' : (type === 'info' ? '<i class="fas fa-info-circle text-white"></i>' : '<i class="fas fa-check-circle text-green-400"></i>');
+
             toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
             toast.innerHTML = `${icon} <span class="text-sm font-medium leading-snug">${msg}</span>`;
+            
             container.appendChild(toast);
-            requestAnimationFrame(() => { toast.classList.remove('toast-enter'); toast.classList.add('toast-enter-active'); });
-            setTimeout(() => { toast.classList.remove('toast-enter-active'); toast.classList.add('toast-exit-active'); setTimeout(() => toast.remove(), 300); }, 4000);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-enter-active');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('toast-enter-active');
+                toast.classList.add('toast-exit-active');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
         }
 
         function showConfirm(msg, title = "Are you sure?", confirmBtnText = "Yes, Continue", btnClass = "bg-red-600 hover:bg-red-700") {
@@ -955,99 +1039,208 @@
                 const modal = document.getElementById('customConfirmModal');
                 const box = document.getElementById('confirmBox');
                 const okBtn = document.getElementById('confirmOkBtn');
-                document.getElementById('confirmTitle').textContent = title; document.getElementById('confirmMsg').textContent = msg;
-                okBtn.textContent = confirmBtnText; okBtn.className = `flex-1 text-white py-3 rounded-xl font-bold transition ${btnClass}`;
-                modal.classList.remove('hidden'); setTimeout(() => box.classList.remove('scale-95'), 10);
-                const cleanup = () => { box.classList.add('scale-95'); setTimeout(() => modal.classList.add('hidden'), 200); };
-                okBtn.onclick = () => { cleanup(); resolve(true); }; document.getElementById('confirmCancelBtn').onclick = () => { cleanup(); resolve(false); };
+
+                document.getElementById('confirmTitle').textContent = title;
+                document.getElementById('confirmMsg').textContent = msg;
+                okBtn.textContent = confirmBtnText;
+                okBtn.className = `flex-1 text-white py-3 rounded-xl font-bold transition ${btnClass}`;
+                
+                modal.classList.remove('hidden');
+                setTimeout(() => box.classList.remove('scale-95'), 10);
+
+                const cleanup = () => {
+                    box.classList.add('scale-95');
+                    setTimeout(() => modal.classList.add('hidden'), 200);
+                };
+
+                okBtn.onclick = () => { cleanup(); resolve(true); };
+                document.getElementById('confirmCancelBtn').onclick = () => { cleanup(); resolve(false); };
             });
         }
+
         window.alert = function(msg) { showToast(msg, 'error'); };
 
         async function shareApp() {
             if (navigator.share) {
-                try { await navigator.share({ title: 'ID CARDS PRO', text: 'Install this app to collect student data completely offline!', url: window.location.href }); } 
-                catch (err) {}
+                try {
+                    await navigator.share({
+                        title: 'AN ID CARDS - Data Entry',
+                        text: 'Install this app to collect student ID card data completely offline!',
+                        url: window.location.href
+                    });
+                } catch (err) {
+                    console.log('User cancelled share or error:', err);
+                }
             } else {
-                navigator.clipboard.writeText(window.location.href); showToast("Link copied to clipboard!", "success");
+                navigator.clipboard.writeText(window.location.href);
+                showToast("Link copied to clipboard!", "success");
             }
         }
 
-        let unsubscribeRealtime = null; let unsubscribeSchool = null;
+        // Live Sync State
+        let unsubscribeRealtime = null;
+        let unsubscribeSchool = null;
+
         function updateOnlineStatus() {
             const banner = document.getElementById('offlineBanner');
-            if (navigator.onLine) { banner.classList.add('-translate-y-full'); } 
-            else { banner.classList.remove('hidden'); setTimeout(() => { banner.classList.remove('-translate-y-full'); }, 10); }
+            if (navigator.onLine) {
+                banner.classList.add('-translate-y-full');
+            } else {
+                banner.classList.remove('hidden');
+                setTimeout(() => {
+                    banner.classList.remove('-translate-y-full');
+                }, 10);
+            }
         }
-        window.addEventListener('online', () => { updateOnlineStatus(); syncAllPending(); setupRealtimeListener(); });
+        
+        window.addEventListener('online', () => { 
+            updateOnlineStatus(); 
+            syncAllPending(); 
+            setupRealtimeListener(); 
+        });
+        
         window.addEventListener('offline', () => {
             updateOnlineStatus();
             if(unsubscribeRealtime) { unsubscribeRealtime(); unsubscribeRealtime = null; }
             if(unsubscribeSchool) { unsubscribeSchool(); unsubscribeSchool = null; }
-            const liveIndicator = document.getElementById('liveIndicator'); if(liveIndicator) liveIndicator.classList.add('hidden');
+            const liveIndicator = document.getElementById('liveIndicator');
+            if(liveIndicator) liveIndicator.classList.add('hidden');
         });
 
         // ==========================================
-        // FIREBASE SETUP & NOTIFICATIONS
+        // FIREBASE & SERVICE WORKER SETUP
         // ==========================================
+        const firebaseConfig = {
+              apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+              authDomain: "idcard-60586.firebaseapp.com",
+              projectId: "idcard-60586",
+              storageBucket: "idcard-60586.firebasestorage.app",
+              messagingSenderId: "331979663377",
+              appId: "1:331979663377:web:026e537a7fcaca813129b0",
+              measurementId: "G-PXVV87C78S"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const firestore = firebase.firestore();
         const firebaseStorage = firebase.storage();
         
         let messaging;
         try { 
             messaging = firebase.messaging(); 
-            messaging.onMessage((payload) => { showToast(`🔔 ${payload.notification.title}: ${payload.notification.body}`, 'info'); });
-        } catch(e) {}
+            
+            // NEW: Listen for messages when the app is OPEN and you are looking at it!
+            messaging.onMessage((payload) => {
+                console.log('Message received in foreground: ', payload);
+                // Show our custom blue toast with the notification text
+                showToast(`🔔 ${payload.notification.title}: ${payload.notification.body}`, 'info');
+            });
+            
+        } catch(e) { console.warn("Messaging not supported", e); }
         
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(reg => {}).catch(err => {});
-            navigator.serviceWorker.addEventListener('controllerchange', () => { document.getElementById('updateBanner').classList.remove('hidden'); });
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                console.log('SW Registration Success:', reg);
+            }).catch(err => {
+                console.error('SW Registration Failed:', err);
+            });
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                document.getElementById('updateBanner').classList.remove('hidden');
+            });
         }
 
         function checkNotificationStatus() {
             if (!('Notification' in window) || !messaging) return;
-            const bellBtn = document.getElementById('headerBellBtn');
-            if (Notification.permission === 'default') { if(bellBtn) bellBtn.classList.remove('hidden'); } 
-            else if (Notification.permission === 'granted' && currentSchoolData && currentSchoolData.udise) { if(bellBtn) bellBtn.classList.add('hidden'); } 
-            else { if(bellBtn) bellBtn.classList.add('hidden'); }
+            
+            const bellBtn = document.getElementById('floatingNotificationBtn');
+            
+            if (Notification.permission === 'default') {
+                if(bellBtn) bellBtn.classList.remove('hidden');
+            } else if (Notification.permission === 'granted' && currentSchoolData && currentSchoolData.udise) {
+                if(bellBtn) bellBtn.classList.add('hidden');
+            } else {
+                if(bellBtn) bellBtn.classList.add('hidden');
+            }
         }
 
         window.requestNotificationPermission = async function(showFeedback = true) {
             try {
-                const bellBtn = document.getElementById('headerBellBtn'); if (bellBtn) bellBtn.classList.add('hidden');
+                const bellBtn = document.getElementById('floatingNotificationBtn');
+                if (bellBtn) bellBtn.classList.add('hidden');
+
                 const permission = await Notification.requestPermission();
-                if (permission === 'granted') { generateAndSaveToken(showFeedback); } 
-                else { if (showFeedback) showToast("Notification permission denied by browser.", "error"); }
-            } catch(e) {}
+                
+                if (permission === 'granted') {
+                    generateAndSaveToken(showFeedback);
+                } else {
+                    if (showFeedback) showToast("Notification permission denied by browser.", "error");
+                }
+            } catch(e) {
+                console.error(e);
+            }
         };
 
+        // Silent, robust polling token generation
         async function generateAndSaveToken(showFeedback = true) {
-            if(!navigator.onLine) { if (showFeedback) showToast("You are offline. Cannot enable notifications.", "error"); return; }
+            if(!navigator.onLine) {
+                if (showFeedback) showToast("You are offline. Cannot enable notifications.", "error");
+                return;
+            }
             if(!currentSchoolData || !currentSchoolData.udise) return;
+
             try {
                 let registration = await navigator.serviceWorker.register('./sw.js');
+                
+                // Polling Loop: Wait manually until active to bypass Chrome freezing
                 let attempts = 0;
                 while (attempts < 15) {
-                    if (registration && registration.active) break; 
+                    if (registration && registration.active) {
+                        break; 
+                    }
                     await new Promise(r => setTimeout(r, 500)); 
                     registration = await navigator.serviceWorker.getRegistration();
                     attempts++;
                 }
-                if (!registration || !registration.active) return;
-                const token = await messaging.getToken({ vapidKey: "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw", serviceWorkerRegistration: registration });
+
+                if (!registration || !registration.active) {
+                    if (showFeedback) showToast("Service Worker failed to activate.", "error");
+                    return;
+                }
+
+                const token = await messaging.getToken({
+                    vapidKey: "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw",
+                    serviceWorkerRegistration: registration
+                });
+                
                 if(token) {
-                    await firestore.collection('schools').doc(currentSchoolData.udise).set({ fcmToken: token, lastModified: Date.now() }, { merge: true });
+                    await firestore.collection('schools').doc(currentSchoolData.udise).set({
+                        fcmToken: token,
+                        lastModified: Date.now()
+                    }, { merge: true });
+                    
                     if(showFeedback) showToast("Notifications enabled successfully!", "success");
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.error("FCM Error:", e);
+                if (showFeedback) showToast("Notification Setup Error: " + e.message, "error");
+            }
         }
 
-        // ==========================================
-        // INDEXEDDB SETUP
-        // ==========================================
+        window.openAddForm = function() {
+            resetForm(false); 
+            document.getElementById('formTitle').innerHTML = 'Add New Student';
+            document.getElementById('saveBtn').innerHTML = 'Save Student';
+            document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
+            
+            document.getElementById('addStudentModal').classList.remove('hidden');
+        }
+
         let db, currentSchool = null, currentSchoolData = null, students = [];
         let filteredStudents = [];
-        let currentPhotoBlob = null; let visibleCount = 50; let cropper = null;
+        let currentPhotoBlob = null;
+        let visibleCount = 50; 
+        let cropper = null;
 
         const req = indexedDB.open('SchoolDataApp', 6); 
         req.onupgradeneeded = e => {
@@ -1058,392 +1251,492 @@
                 st.createIndex('schoolName', 'schoolName', {unique:false});
             }
         };
-        req.onsuccess = e => { db = e.target.result; loadSchools(); updateOnlineStatus(); if (navigator.onLine) syncAllPending(); };
-
-        function loadSchools() {
-            const tx = db.transaction(['schools'], 'readonly');
-            tx.objectStore('schools').getAll().onsuccess = e => {
-                const schools = e.target.result;
-                if(schools.length > 0) { enterSchool(schools[0]); } 
-                else {
-                    document.getElementById('authSection').classList.remove('hidden');
-                    document.getElementById('entrySection').classList.add('hidden');
-                    document.getElementById('editSchoolBtn').classList.add('hidden');
-                }
-            };
-        }
-
-        function enterSchool(schoolObj) {
-            currentSchool = schoolObj.name; currentSchoolData = schoolObj;
-            if (!currentSchoolData.realSchoolName) currentSchoolData.realSchoolName = currentSchoolData.name;
-            if (!currentSchoolData.source) currentSchoolData.source = 'manual';
-            if (!currentSchoolData.importStatus) currentSchoolData.importStatus = 'manual';
-
-            document.getElementById('authSection').classList.add('hidden');
-            document.getElementById('entrySection').classList.remove('hidden');
-            document.getElementById('editSchoolBtn').classList.remove('hidden');
-            document.getElementById('headerSpacer').classList.add('hidden');
-            
-            // Dynamic Form Toggle Logic
-            const fields = currentSchoolData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
-            const allWraps = ['wrap-name', 'wrap-class', 'wrap-roll', 'wrap-dob', 'wrap-blood', 'wrap-phone', 'wrap-father', 'wrap-mother', 'wrap-address'];
-            allWraps.forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('hidden'); });
-            fields.forEach(f => { const wrap = document.getElementById('wrap-' + f); if(wrap) wrap.classList.remove('hidden'); });
-
-            updateSchoolHeader();
-            const fab = document.getElementById('floatingWhatsappBtn');
-
-            if (currentSchoolData.importStatus === 'pending') {
-                document.getElementById('standardDashboardControls').classList.add('hidden');
-                document.getElementById('pendingImportCard').classList.remove('hidden');
-                if(fab) fab.classList.remove('hidden');
-            } else {
-                document.getElementById('standardDashboardControls').classList.remove('hidden');
-                document.getElementById('pendingImportCard').classList.add('hidden');
-                if(fab) fab.classList.remove('hidden'); // Ensure visible on dashboard
-                
-                const upgradeBanner = document.getElementById('upgradeToAutoBanner');
-                if (upgradeBanner) {
-                    if (currentSchoolData.source === 'manual' && currentSchoolData.importStatus === 'manual' && currentSchoolData.schoolType !== 'private') {
-                        upgradeBanner.classList.remove('hidden');
-                    } else { upgradeBanner.classList.add('hidden'); }
-                }
-                visibleCount = 50; loadStudents();
+        
+        req.onsuccess = e => {
+            db = e.target.result;
+            loadSchools();
+            updateOnlineStatus();
+            if (navigator.onLine) {
+                syncAllPending();
             }
-            setupRealtimeListener(); checkNotificationStatus(); 
-        }
-
-        window.cancelPendingImport = async function() {
-            if(!currentSchoolData) return;
-            currentSchoolData.importStatus = 'manual';
-            const tx = db.transaction(['schools'], 'readwrite');
-            tx.objectStore('schools').put(currentSchoolData);
-            if(navigator.onLine) {
-                firestore.collection('schools').doc(currentSchoolData.udise).set({ importStatus: 'manual', lastModified: Date.now() }, {merge: true});
-            }
-            showToast("Switched to manual entry mode.", "info"); enterSchool(currentSchoolData);
-        }
-
-        window.hardResetApp = async function() {
-            const checkTx = db.transaction(['students'], 'readonly');
-            checkTx.objectStore('students').getAll().onsuccess = async e => {
-                const unsynced = e.target.result.filter(s => !s.synced);
-                if (unsynced.length > 0) return alert(`WARNING: You have ${unsynced.length} unsynced students! Sync online before logging out.`);
-                const confirmed = await showConfirm("Logging out will clear the current school and local data from this device. Are you sure?", "Logout?", "Yes, Logout");
-                if(!confirmed) return;
-                if(unsubscribeRealtime) unsubscribeRealtime(); if(unsubscribeSchool) unsubscribeSchool();
-                const tx = db.transaction(['schools', 'students'], 'readwrite');
-                tx.objectStore('schools').clear(); tx.objectStore('students').clear();
-                tx.oncomplete = () => { location.reload(); };
-            };
-        }
-
-        function updateSchoolHeader() {
-            let display = currentSchoolData.realSchoolName;
-            const srcBadge = currentSchoolData.source === 'excel' 
-                ? `<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2 py-0.5 rounded text-[9px] ml-2 tracking-wide font-black">EXCEL BATCH</span>` 
-                : `<span class="bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded text-[9px] ml-2 tracking-wide font-black">MANUAL</span>`;
-            document.getElementById('currentSchoolHeader').innerHTML = `${escapeHtml(display)} ${srcBadge}`;
-            document.getElementById('currentSchoolSubHeader').textContent = `${currentSchoolData.district || 'Data Portal'} | UDISE: ${currentSchoolData.udise || 'N/A'}`;
-        }
+        };
 
         // ==========================================
-        // REALTIME LISTENER
+        // REALTIME SYNC LISTENER
         // ==========================================
         function setupRealtimeListener() {
             if(!currentSchoolData || !currentSchoolData.udise || !navigator.onLine) return;
-            if(unsubscribeRealtime) unsubscribeRealtime(); if(unsubscribeSchool) unsubscribeSchool();
+            
+            if(unsubscribeRealtime) unsubscribeRealtime();
+            if(unsubscribeSchool) unsubscribeSchool();
 
-            const liveIndicator = document.getElementById('liveIndicator'); if(liveIndicator) liveIndicator.classList.remove('hidden');
+            const liveIndicator = document.getElementById('liveIndicator');
+            if(liveIndicator) liveIndicator.classList.remove('hidden');
 
-            unsubscribeRealtime = firestore.collection('students').where('udise', '==', currentSchoolData.udise).onSnapshot(snapshot => {
-                const tx = db.transaction(['students'], 'readwrite');
-                const studentStore = tx.objectStore('students');
-                let hasUpdates = false; let foundExcel = false; 
+            unsubscribeRealtime = firestore.collection('students')
+                .where('udise', '==', currentSchoolData.udise)
+                .onSnapshot(snapshot => {
+                    const tx = db.transaction(['students'], 'readwrite');
+                    const studentStore = tx.objectStore('students');
+                    let hasUpdates = false;
+                    let foundExcel = false; 
 
-                snapshot.docChanges().forEach(change => {
-                    const data = change.doc.data();
-                    const actualSource = getStudentSource(data);
-                    if (actualSource === 'excel') foundExcel = true;
-                    const student = { ...data, id: Number(change.doc.id), synced: true, source: actualSource };
-                    delete student.submittedAt; if(student.finalised === undefined) student.finalised = true;
+                    snapshot.docChanges().forEach(change => {
+                        const data = change.doc.data();
+                        const actualSource = getStudentSource(data);
+                        
+                        if (actualSource === 'excel') foundExcel = true;
+                        
+                        const student = { ...data, id: Number(change.doc.id), synced: true, source: actualSource };
+                        delete student.submittedAt;
 
-                    if (change.type === 'added' || change.type === 'modified') { studentStore.put(student); hasUpdates = true; }
-                    if (change.type === 'removed') { studentStore.delete(student.id); hasUpdates = true; }
+                        if(student.finalised === undefined) student.finalised = true;
+
+                        if (change.type === 'added' || change.type === 'modified') {
+                            studentStore.put(student);
+                            hasUpdates = true;
+                        }
+                        if (change.type === 'removed') {
+                            studentStore.delete(student.id);
+                            hasUpdates = true;
+                        }
+                    });
+
+                    tx.oncomplete = () => {
+                        if (currentSchoolData.importStatus === 'pending' && foundExcel) {
+                            currentSchoolData.source = 'excel';
+                            currentSchoolData.importStatus = 'manual';
+                            
+                            const sTx = db.transaction(['schools'], 'readwrite');
+                            sTx.objectStore('schools').put(currentSchoolData);
+                            
+                            showToast("Excel data automatically loaded!", "success");
+                            enterSchool(currentSchoolData); 
+                        } else if (hasUpdates && currentSchoolData.importStatus !== 'pending') {
+                            loadStudents();
+                        }
+                    };
+                }, error => {
+                    console.error("Live sync error:", error);
+                    if(liveIndicator) liveIndicator.classList.add('hidden');
                 });
-
-                tx.oncomplete = () => {
-                    if (currentSchoolData.importStatus === 'pending' && foundExcel) {
-                        currentSchoolData.source = 'excel'; currentSchoolData.importStatus = 'manual';
-                        const sTx = db.transaction(['schools'], 'readwrite'); sTx.objectStore('schools').put(currentSchoolData);
-                        showToast("Excel data automatically loaded!", "success"); enterSchool(currentSchoolData); 
-                    } else if (hasUpdates && currentSchoolData.importStatus !== 'pending') { loadStudents(); }
-                };
-            }, error => { if(liveIndicator) liveIndicator.classList.add('hidden'); });
                 
-            unsubscribeSchool = firestore.collection('schools').doc(currentSchoolData.udise).onSnapshot(doc => {
-                if (doc.exists) {
-                    const adminData = doc.data(); let needsUpdate = false;
-                    if (adminData.name && adminData.name !== currentSchoolData.realSchoolName) { currentSchoolData.realSchoolName = adminData.name; needsUpdate = true; }
-                    if (adminData.district !== undefined && adminData.district !== currentSchoolData.district) { currentSchoolData.district = adminData.district; needsUpdate = true; }
-                    if (needsUpdate) {
-                        const tx = db.transaction(['schools'], 'readwrite'); tx.objectStore('schools').put(currentSchoolData); updateSchoolHeader();
+            unsubscribeSchool = firestore.collection('schools').doc(currentSchoolData.udise)
+                .onSnapshot(doc => {
+                    if (doc.exists) {
+                        const adminData = doc.data();
+                        let needsUpdate = false;
+                        
+                        if (adminData.name && adminData.name !== currentSchoolData.realSchoolName) {
+                            currentSchoolData.realSchoolName = adminData.name;
+                            needsUpdate = true;
+                        }
+                        if (adminData.district !== undefined && adminData.district !== currentSchoolData.district) {
+                            currentSchoolData.district = adminData.district;
+                            needsUpdate = true;
+                        }
+
+                        if (needsUpdate) {
+                            const tx = db.transaction(['schools'], 'readwrite');
+                            tx.objectStore('schools').put(currentSchoolData);
+                            updateSchoolHeader();
+                        }
                     }
-                }
-            }, err => {});
+                }, err => console.log("School sync error:", err));
         }
 
+
         // ==========================================
-        // CROPPER & CAMERA
+        // IMAGE PROCESSING (CROPPER & CAMERA)
         // ==========================================
+        const blobToBase64 = blob => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+        });
+
         function openCropper(imageSrc) {
-            const modal = document.getElementById('cropperModal'); const imgElement = document.getElementById('imageToCrop');
-            imgElement.src = imageSrc; modal.classList.remove('hidden');
+            const modal = document.getElementById('cropperModal');
+            const imgElement = document.getElementById('imageToCrop');
+            imgElement.src = imageSrc;
+            modal.classList.remove('hidden');
+
             setTimeout(() => {
                 if (cropper) cropper.destroy();
-                cropper = new Cropper(imgElement, { aspectRatio: 3 / 4, viewMode: 1, autoCropArea: 0.9, dragMode: 'move', background: false });
+                cropper = new Cropper(imgElement, {
+                    aspectRatio: 3 / 4,
+                    viewMode: 1,
+                    autoCropArea: 0.9,
+                    dragMode: 'move',
+                    background: false,
+                });
             }, 50);
         }
-        function closeCropper() { if (cropper) { cropper.destroy(); cropper = null; } document.getElementById('cropperModal').classList.add('hidden'); document.getElementById('fileInput').value = ''; }
+
+        function closeCropper() {
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            document.getElementById('cropperModal').classList.add('hidden');
+            document.getElementById('fileInput').value = '';
+        }
 
         document.getElementById('cropSaveBtn').onclick = () => {
             if (!cropper) return;
-            const canvas = cropper.getCroppedCanvas({ width: 300, height: 400, fillColor: '#fff' });
+            const canvas = cropper.getCroppedCanvas({
+                width: 300,
+                height: 400,
+                fillColor: '#fff'
+            });
+            
             const croppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
             setPreviewImage(croppedBase64);
-            fetch(croppedBase64).then(res => res.blob()).then(blob => { currentPhotoBlob = blob; closeCropper(); });
+            
+            fetch(croppedBase64)
+                .then(res => res.blob())
+                .then(blob => {
+                    currentPhotoBlob = blob;
+                    closeCropper();
+                });
         };
 
         document.getElementById('openCam').onclick = async () => {
             document.getElementById('cameraModal').classList.remove('hidden');
-            try { document.getElementById('cameraVideo').srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); } 
-            catch(e) { showToast("Camera access denied", "error"); closeCam(); }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                document.getElementById('cameraVideo').srcObject = stream;
+            } catch(e) {
+                showToast("Camera access denied", "error");
+                closeCam();
+            }
         };
 
         document.getElementById('snap').onclick = async () => {
-            const video = document.getElementById('cameraVideo'); if(!video.videoWidth) return;
-            const overlay = document.getElementById('cameraOverlay');
-            const scale = Math.max(video.clientWidth / video.videoWidth, video.clientHeight / video.videoHeight);
-            const renderW = video.videoWidth * scale; const renderH = video.videoHeight * scale;
-            const offsetX = (video.clientWidth - renderW) / 2; const offsetY = (video.clientHeight - renderH) / 2;
-            const overlayRect = overlay.getBoundingClientRect(); const videoRect = video.getBoundingClientRect();
-            const cropX = ((overlayRect.left - videoRect.left) - offsetX) / scale;
-            const cropY = ((overlayRect.top - videoRect.top) - offsetY) / scale;
+            const video = document.getElementById('cameraVideo');
+            if(!video.videoWidth) return;
             
-            const tempCanvas = document.createElement('canvas'); tempCanvas.width = 300; tempCanvas.height = 400;
-            tempCanvas.getContext('2d').drawImage(video, cropX, cropY, overlayRect.width / scale, overlayRect.height / scale, 0, 0, 300, 400);
+            const overlay = document.getElementById('cameraOverlay');
+            
+            const vidW = video.videoWidth;
+            const vidH = video.videoHeight;
+            const rectW = video.clientWidth;
+            const rectH = video.clientHeight;
+            
+            const scale = Math.max(rectW / vidW, rectH / vidH);
+            const renderW = vidW * scale;
+            const renderH = vidH * scale;
+            
+            const offsetX = (rectW - renderW) / 2;
+            const offsetY = (rectH - renderH) / 2;
+            
+            const overlayRect = overlay.getBoundingClientRect();
+            const videoRect = video.getBoundingClientRect();
+            
+            const overlayLeft = overlayRect.left - videoRect.left;
+            const overlayTop = overlayRect.top - videoRect.top;
+            
+            const cropX = (overlayLeft - offsetX) / scale;
+            const cropY = (overlayTop - offsetY) / scale;
+            const cropW = overlayRect.width / scale;
+            const cropH = overlayRect.height / scale;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 300; 
+            tempCanvas.height = 400;
+            const ctx = tempCanvas.getContext('2d');
+            
+            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, 300, 400);
             const imgData = tempCanvas.toDataURL('image/jpeg', 0.75);
-            setPreviewImage(imgData); currentPhotoBlob = await (await fetch(imgData)).blob(); closeCam();
+            
+            setPreviewImage(imgData);
+            
+            const response = await fetch(imgData);
+            currentPhotoBlob = await response.blob();
+            
+            closeCam();
         };
 
-        function closeCam() { const s = document.getElementById('cameraVideo').srcObject; if(s) s.getTracks().forEach(t=>t.stop()); document.getElementById('cameraModal').classList.add('hidden'); }
-        document.getElementById('fileInput').onchange = e => { const file = e.target.files[0]; if (file) { const r = new FileReader(); r.onload = (event) => openCropper(event.target.result); r.readAsDataURL(file); } };
+        function closeCam() {
+            const s = document.getElementById('cameraVideo').srcObject;
+            if(s) s.getTracks().forEach(t=>t.stop());
+            document.getElementById('cameraModal').classList.add('hidden');
+        }
+
+        document.getElementById('fileInput').onchange = e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => openCropper(event.target.result);
+                reader.readAsDataURL(file);
+            }
+        };
 
         function setPreviewImage(src) {
-            const preview = document.getElementById('preview'); const removeBtn = document.getElementById('removePhotoBtn');
-            preview.src = src; preview.classList.remove('hidden'); removeBtn.classList.remove('hidden');
+            const preview = document.getElementById('preview');
+            const removeBtn = document.getElementById('removePhotoBtn');
+            preview.src = src;
+            preview.classList.remove('hidden');
+            removeBtn.classList.remove('hidden');
         }
-        window.removePhoto = function() { document.getElementById('preview').src = ''; document.getElementById('preview').classList.add('hidden'); document.getElementById('removePhotoBtn').classList.add('hidden'); currentPhotoBlob = null; document.getElementById('fileInput').value = ''; }
+
+        window.removePhoto = function() {
+            document.getElementById('preview').src = '';
+            document.getElementById('preview').classList.add('hidden');
+            document.getElementById('removePhotoBtn').classList.add('hidden');
+            currentPhotoBlob = null;
+            document.getElementById('fileInput').value = '';
+        }
 
         // ==========================================
         // SYNC LOGIC
         // ==========================================
         let isSyncing = false;
         async function syncAllPending() {
-            if(!db || !navigator.onLine || isSyncing) return;
-            isSyncing = true; const btn = document.getElementById('manualSyncBtn');
+            if(!db || !navigator.onLine) return;
+            if(isSyncing) return;
+            isSyncing = true;
+            const btn = document.getElementById('manualSyncBtn');
+
             const unsyncedIds = [];
-            await new Promise((res) => {
-                const tx = db.transaction(['students'], 'readonly'); const cur = tx.objectStore('students').openCursor();
-                cur.onsuccess = e => { if(e.target.result) { if(!e.target.result.value.synced) unsyncedIds.push(e.target.result.value.id); e.target.result.continue(); } else res(); };
+            await new Promise((resolve) => {
+                const tx = db.transaction(['students'], 'readonly');
+                const cursorReq = tx.objectStore('students').openCursor();
+                cursorReq.onsuccess = e => {
+                    const cursor = e.target.result;
+                    if (cursor) {
+                        if (!cursor.value.synced) unsyncedIds.push(cursor.value.id);
+                        cursor.continue();
+                    } else resolve();
+                };
             });
 
             if (unsyncedIds.length === 0) {
-                if (btn) { btn.innerHTML = "<i class='fas fa-check'></i> All Synced"; setTimeout(() => { btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync"; }, 2000); }
-                isSyncing = false; return;
+                if (btn) {
+                    btn.innerHTML = "<i class='fas fa-check'></i> All Synced";
+                    btn.classList.replace('bg-blue-100', 'bg-green-100');
+                    btn.classList.replace('text-blue-600', 'text-green-600');
+                    setTimeout(() => {
+                        btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync";
+                        btn.classList.replace('bg-green-100', 'bg-blue-100');
+                        btn.classList.replace('text-green-600', 'text-blue-600');
+                    }, 2000);
+                }
+                isSyncing = false;
+                return;
             }
 
             try {
-                let fails = 0;
+                let successCount = 0, failCount = 0;
                 for (let i = 0; i < unsyncedIds.length; i++) {
                     if (btn) btn.innerHTML = `<i class='fas fa-spinner fa-spin'></i> ${i + 1}/${unsyncedIds.length}`;
                     try {
-                        const student = await new Promise((res) => {
-                            const tx = db.transaction(['students'], 'readonly'); const req = tx.objectStore('students').get(unsyncedIds[i]);
-                            req.onsuccess = () => res(req.result);
+                        const student = await new Promise((resolve) => {
+                            const tx = db.transaction(['students'], 'readonly');
+                            const getReq = tx.objectStore('students').get(unsyncedIds[i]);
+                            getReq.onsuccess = () => resolve(getReq.result);
                         });
+                        
                         if (!student || student.synced) continue; 
                         
-                        if (student.photoBase64 && !student.photoBase64.startsWith('http')) {
-                            const ref = firebaseStorage.ref(`student_photos/${student.udise}_${student.id}.jpg`);
-                            await ref.putString(student.photoBase64, 'data_url', {contentType: 'image/jpeg'});
-                            student.photoBase64 = await ref.getDownloadURL();
+                        await syncToFirebase(student);
+                        successCount++;
+
+                        if (student.syncError) {
+                            delete student.syncError;
+                            const tx2 = db.transaction(['students'], 'readwrite');
+                            tx2.objectStore('students').put(student);
                         }
-                        await firestore.collection('students').doc(String(student.id)).set(student);
-                        student.synced = true;
-                        await new Promise((res) => { const tx = db.transaction(['students'], 'readwrite'); tx.objectStore('students').put(student); tx.oncomplete = res; });
-                    } catch (err) { fails++; }
+                    } catch (err) {
+                        failCount++;
+                        try {
+                            const tx3 = db.transaction(['students'], 'readwrite');
+                            const getReq2 = tx3.objectStore('students').get(unsyncedIds[i]);
+                            getReq2.onsuccess = () => {
+                                const rec = getReq2.result;
+                                if (rec) {
+                                    rec.syncError = (err && err.message) ? err.message : String(err);
+                                    tx3.objectStore('students').put(rec);
+                                }
+                            };
+                        } catch (e2) {}
+                    }
                 }
+
                 if (btn) {
-                    btn.innerHTML = fails === 0 ? "<i class='fas fa-check'></i> Synced" : `<i class='fas fa-exclamation-triangle'></i> ${fails} failed`;
-                    setTimeout(() => { btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync"; }, 3000);
+                    if (failCount === 0) {
+                        btn.innerHTML = "<i class='fas fa-check'></i> Synced";
+                        btn.classList.replace('bg-blue-100', 'bg-green-100');
+                        btn.classList.replace('text-blue-600', 'text-green-600');
+                    }
+                    else {
+                        btn.innerHTML = `<i class='fas fa-exclamation-triangle'></i> ${failCount} failed`;
+                        btn.classList.replace('bg-blue-100', 'bg-amber-100');
+                        btn.classList.replace('text-blue-600', 'text-amber-600');
+                    }
+                    setTimeout(() => {
+                        btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync";
+                        btn.className = "bg-blue-100 text-blue-600 hover:bg-blue-200 px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2";
+                    }, 3000);
                 }
-            } finally { isSyncing = false; loadStudents(); }
-        }
-
-        // ==========================================
-        // STUDENT LIST & FORM LOGIC
-        // ==========================================
-        window.openAddForm = function() {
-            resetForm(false); 
-            document.getElementById('formTitle').innerHTML = 'Add New Student';
-            document.getElementById('saveBtn').innerHTML = 'Save Student';
-            document.getElementById('addStudentModal').classList.remove('hidden');
-        }
-
-        function loadStudents() {
-            const tx = db.transaction(['students'], 'readonly');
-            tx.objectStore('students').getAll().onsuccess = e => {
-                const targetUdise = currentSchoolData.udise; const targetSource = currentSchoolData.source || 'manual';
-                students = e.target.result.filter(s => {
-                    if (!targetUdise || !s.udise) return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
-                    return s.udise === targetUdise && getStudentSource(s) === targetSource;
-                }).sort((a,b) => (b.lastModified || b.id) - (a.lastModified || a.id));
-                students.forEach(s => { if (s.finalised === undefined) s.finalised = true; });
-                updateStats(); populateClassFilter(); applyFilters(); 
-            };
-        }
-
-        function updateStats() {
-            const completed = students.filter(s => s.finalised).length;
-            document.getElementById('statTotal').textContent = students.length;
-            document.getElementById('statCompleted').textContent = completed;
-            document.getElementById('statPending').textContent = students.length - completed;
-            
-            // ORDER CART
-            document.querySelectorAll('#cartCount, #modalCartCount').forEach(el => el.textContent = completed);
-        }
-
-        function populateClassFilter() {
-            const classSelect = document.getElementById('filterClass'); const currentVal = classSelect.value;
-            const classes = [...new Set(students.map(s => normalizeClass(s.class)))].filter(Boolean).sort();
-            let opts = '<option value="ALL">All Classes</option>';
-            classes.forEach(c => { opts += `<option value="${c}">${c} (${students.filter(s => normalizeClass(s.class) === c).length})</option>`; });
-            classSelect.innerHTML = opts; if (classes.includes(currentVal) || currentVal === 'ALL') classSelect.value = currentVal;
-        }
-
-        function applyFilters() {
-            const term = document.getElementById('searchInput').value.toLowerCase();
-            const cls = document.getElementById('filterClass').value;
-            filteredStudents = students.filter(s => (s.name.toLowerCase().includes(term) || (s.roll && s.roll.toLowerCase().includes(term))) && (cls === 'ALL' || normalizeClass(s.class) === cls));
-            visibleCount = 50; renderList();
-        }
-        document.getElementById('searchInput').addEventListener('input', applyFilters);
-        document.getElementById('filterClass').addEventListener('change', applyFilters);
-
-        function renderList() {
-            const list = document.getElementById('studentList'); const msg = document.getElementById('noResultsMsg');
-            list.innerHTML = ''; document.getElementById('listCounter').textContent = `Showing: ${filteredStudents.length} / ${students.length}`;
-            if (filteredStudents.length === 0) { msg.classList.remove('hidden'); return; } else { msg.classList.add('hidden'); }
-
-            filteredStudents.slice(0, visibleCount).forEach((s, index) => {
-                const div = document.createElement('div'); div.className = 'bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden';
-                let photoHtml = s.photoBase64 ? `<img src="${s.photoBase64}" class="w-14 h-14 rounded-lg object-cover shadow-sm flex-shrink-0 border border-gray-200">` : `<div class="w-14 h-14 rounded-lg bg-red-50 flex flex-col items-center justify-center text-red-400 border border-red-100 flex-shrink-0"><i class="fas fa-user-slash mb-1"></i><span class="text-[8px] font-bold">NO PHOTO</span></div>`;
-                let statusHtml = !s.finalised ? `<span class="text-amber-600 font-bold text-[10px] bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fas fa-exclamation-circle"></i> Pending Review</span>` : (!s.synced ? `<span class="text-blue-500 font-bold text-[10px] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200"><i class="fas fa-cloud-upload-alt"></i> Syncing...</span>` : `<span class="text-green-600 font-bold text-[10px] bg-green-50 px-1.5 py-0.5 rounded border border-green-200"><i class="fas fa-check-circle"></i> Completed</span>`);
-                
-                div.innerHTML = `
-                    <div class="p-3 flex items-center gap-2">
-                        <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0">#${filteredStudents.length - index}</div>
-                        <div class="flex-shrink-0">${photoHtml}</div>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-gray-900 text-sm truncate pr-2">${escapeHtml(s.name)}</div>
-                            <div class="text-xs text-gray-600 font-medium mt-1">Class: <span class="text-gray-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-gray-300">|</span> Roll: <span class="text-gray-800">${escapeHtml(s.roll)}</span></div>
-                            <div class="mt-1">${statusHtml}</div>
-                        </div>
-                        <div class="flex-shrink-0 pl-1 flex items-center gap-3 border-l border-gray-100 ml-1 pl-3">
-                            <button onclick="editStudent('${s.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-11 h-11 rounded-full transition shadow-sm"><i class="fas fa-pen"></i></button>
-                            <button onclick="deleteStudentForever('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                `;
-                list.appendChild(div);
-            });
-            if (filteredStudents.length > visibleCount) {
-                const btn = document.createElement('div'); btn.className = "text-center mt-2 pb-4";
-                btn.innerHTML = `<button onclick="window.loadMore()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2.5 px-6 rounded-full text-sm shadow-sm transition mx-auto flex items-center">Load More <i class="fas fa-chevron-down ml-2"></i></button>`;
-                list.appendChild(btn);
+            } finally {
+                isSyncing = false;
+                loadStudents(); 
             }
         }
-        window.loadMore = function() { visibleCount += 50; renderList(); }
 
-        document.getElementById('saveBtn').onclick = async () => {
-            const isVis = (id) => !document.getElementById('wrap-' + id).classList.contains('hidden');
+        async function syncToFirebase(student) {
+            try {
+                if (student.photoBase64 && !student.photoBase64.startsWith('http')) {
+                    const storageRef = firebaseStorage.ref(`student_photos/${student.udise}_${student.id}.jpg`);
+                    const metadata = { contentType: 'image/jpeg' };
+                    await storageRef.putString(student.photoBase64, 'data_url', metadata);
+                    
+                    const downloadURL = await storageRef.getDownloadURL();
+                    student.photoBase64 = downloadURL;
+                    
+                    await new Promise((resolve, reject) => {
+                        const tx = db.transaction(['students'], 'readwrite');
+                        tx.objectStore('students').put(student);
+                        tx.oncomplete = resolve;
+                        tx.onerror = reject;
+                    });
+                }
 
-            const idStr = document.getElementById('editId').value;
-            const name = document.getElementById('sName').value.trim();
-            const cls = document.getElementById('sClass').value;
-            const roll = document.getElementById('sRoll').value.trim();
-            
-            if(isVis('name') && !name) return showToast('Name is required.', 'error');
-            if(isVis('class') && !cls) return showToast('Class is required.', 'error');
-            
-            const btn = document.getElementById('saveBtn'); const orig = btn.innerHTML;
-            btn.innerHTML = "<i class='fas fa-spinner fa-spin mr-2'></i> Saving..."; btn.disabled = true;
-            
-            const id = idStr ? Number(idStr) : Date.now();
-            let existingData = idStr ? (students.find(x => x.id === id) || {}) : {};
-            let base64 = currentPhotoBlob ? await blobToBase64(currentPhotoBlob) : (idStr ? existingData.photoBase64 : null);
+                await firestore.collection('students').doc(String(student.id)).set(student);
 
-            const student = {
-                ...existingData, id: id, schoolName: currentSchoolData.realSchoolName || currentSchoolData.name,
-                hmSignature: currentSchoolData.hmSignature || '', block: currentSchoolData.block || '', district: currentSchoolData.district || '',
-                pin: currentSchoolData.pin || '', udise: currentSchoolData.udise || '', hmPhone: currentSchoolData.phone || '',
-                name: name, class: cls, roll: roll,
-                father: document.getElementById('sFather').value, mother: document.getElementById('sMother').value, address: document.getElementById('sAddress').value,
-                dob: document.getElementById('sDob').value, bloodGroup: document.getElementById('sBlood').value, mobile: document.getElementById('sPhone').value,
-                photoBase64: base64, photoName: existingData.photoName || `${Date.now()}.jpg`, finalised: true, synced: false, lastModified: Date.now(),
-                source: currentSchoolData.source || 'manual' 
+                student.synced = true;
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction(['students'], 'readwrite');
+                    tx.objectStore('students').put(student);
+                    tx.oncomplete = resolve;
+                    tx.onerror = reject;
+                });
+                
+            } catch (err) {
+                console.error(`Sync failed:`, err);
+                throw err;
+            }
+        }
+
+        // ==========================================
+        // SCHOOL LOGIC (Registration, Restore, Intercept)
+        // ==========================================
+        function loadSchools() {
+            const tx = db.transaction(['schools'], 'readonly');
+            tx.objectStore('schools').getAll().onsuccess = e => {
+                const schools = e.target.result;
+                if(schools.length > 0) {
+                    enterSchool(schools[0]);
+                } else {
+                    document.getElementById('authSection').classList.remove('hidden');
+                    document.getElementById('entrySection').classList.add('hidden');
+                    document.getElementById('editSchoolBtn').classList.add('hidden');
+                    document.getElementById('headerSpacer').classList.remove('hidden');
+                }
+            };
+        }
+
+        function performRestore(docs, schoolName, udise, source, sData) {
+            const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
+            
+            const schoolObj = {
+                name: localId, 
+                realSchoolName: schoolName, 
+                source: source,
+                phone: sData.phone || (docs[0] ? docs[0].data.hmPhone : ''), 
+                block: sData.block || (docs[0] ? docs[0].data.block : ''),
+                district: sData.district || (docs[0] ? docs[0].data.district : ''), 
+                pin: sData.pin || (docs[0] ? docs[0].data.pin : ''), 
+                udise: udise,
+                hmSignature: sData.hmSignature || (docs[0] ? docs[0].data.hmSignature : ''), 
+                createdAt: Date.now(),
+                importStatus: 'manual',
+                udiseUser: sData.udiseUser || udise,
+                udisePass: sData.udisePass || '',
+                schoolType: sData.schoolType || 'govt',
+                customFields: sData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone']
             };
 
-            const tx = db.transaction(['students'], 'readwrite'); tx.objectStore('students').put(student);
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
+            
+            tx.objectStore('schools').delete(localId);
+            tx.objectStore('schools').put(schoolObj);
+
+            const studentStore = tx.objectStore('students');
+            
+            docs.forEach(({ id, data }) => {
+                const student = { ...data, id: Number(id), synced: true, source: source };
+                delete student.submittedAt;
+                if(student.finalised === undefined) student.finalised = true;
+                studentStore.put(student);
+            });
+
             tx.oncomplete = () => {
-                showToast(idStr ? "Student Updated!" : "Student Saved!"); resetForm(); 
-                if (!idStr) { document.getElementById('searchInput').value = ''; document.getElementById('filterClass').value = 'ALL'; }
-                loadStudents(); if (navigator.onLine) syncToFirebase(student).then(() => loadStudents()).catch(console.error);
-                btn.innerHTML = orig; btn.disabled = false;
+                document.getElementById('loginUdise').value = '';
+                document.getElementById('loginPass').value = '';
+                setTimeout(() => enterSchool(schoolObj), 800);
             };
-        };
+            tx.onerror = () => {
+                showToast("Failed saving locally.", "error");
+            };
+        }
 
-        window.editStudent = function(idStr) {
-            const id = Number(idStr); const s = students.find(x => x.id === id); if(!s) return;
-            document.getElementById('editId').value = s.id; document.getElementById('sName').value = s.name;
-            const mCls = normalizeClass(s.class); const cSel = document.getElementById('sClass');
-            cSel.value = Array.from(cSel.options).some(o=>o.value === mCls) ? mCls : "";
-            document.getElementById('sRoll').value = s.roll || ''; document.getElementById('sPhone').value = s.mobile || s.phone || '';
-            document.getElementById('sFather').value = s.father || ''; document.getElementById('sMother').value = s.mother || ''; document.getElementById('sAddress').value = s.address || '';
-            const dob = document.getElementById('sDob'); const pDob = formatDateForInput(s.dob);
-            if (/^\d{4}-\d{2}-\d{2}$/.test(pDob)) { dob.type = 'date'; dob.value = pDob; } else { dob.type = 'text'; dob.value = s.dob || ''; }
-            document.getElementById('sBlood').value = s.bloodGroup || '';
-            if (s.photoBase64) setPreviewImage(s.photoBase64); else window.removePhoto();
+        function enterSchool(schoolObj) {
+            currentSchool = schoolObj.name;
+            currentSchoolData = schoolObj;
+            if (!currentSchoolData.realSchoolName) currentSchoolData.realSchoolName = currentSchoolData.name;
+            if (!currentSchoolData.source) currentSchoolData.source = 'manual';
+            if (!currentSchoolData.importStatus) currentSchoolData.importStatus = 'manual';
+
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('entrySection').classList.remove('hidden');
             
-            document.getElementById('formTitle').innerHTML = 'Edit Student <i class="fas fa-pen text-sm text-gray-400 ml-1"></i>';
-            document.getElementById('addStudentModal').classList.remove('hidden');
+            document.getElementById('editSchoolBtn').classList.remove('hidden');
+            document.getElementById('headerSpacer').classList.add('hidden');
+            
+            // DYNAMIC FIELDS TOGGLE
+            const fields = currentSchoolData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+            const allWraps = ['wrap-name', 'wrap-class', 'wrap-roll', 'wrap-dob', 'wrap-blood', 'wrap-phone', 'wrap-father', 'wrap-mother', 'wrap-address'];
+            allWraps.forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('hidden'); });
+            fields.forEach(f => { const wrap = document.getElementById('wrap-' + f); if(wrap) wrap.classList.remove('hidden'); });
+
+            updateSchoolHeader();
+            
+            if (currentSchoolData.importStatus === 'pending') {
+                document.getElementById('standardDashboardControls').classList.add('hidden');
+                document.getElementById('pendingImportCard').classList.remove('hidden');
+            } else {
+                document.getElementById('standardDashboardControls').classList.remove('hidden');
+                document.getElementById('pendingImportCard').classList.add('hidden');
+                
+                const upgradeBanner = document.getElementById('upgradeToAutoBanner');
+                if (upgradeBanner) {
+                    if (currentSchoolData.source === 'manual' && currentSchoolData.importStatus === 'manual' && currentSchoolData.schoolType !== 'private') {
+                        upgradeBanner.classList.remove('hidden');
+                    } else {
+                        upgradeBanner.classList.add('hidden');
+                    }
+                }
+                
+                visibleCount = 50; 
+                loadStudents();
+            }
+            
+            setupRealtimeListener();
+            checkNotificationStatus(); 
         }
 
-        window.resetForm = function(hideForm = true) {
-            document.getElementById('editId').value = ''; document.getElementById('sName').value = ''; document.getElementById('sClass').value = '';
-            document.getElementById('sRoll').value = ''; document.getElementById('sPhone').value = ''; document.getElementById('sDob').value = '';
-            document.getElementById('sFather').value = ''; document.getElementById('sMother').value = ''; document.getElementById('sAddress').value = '';
-            document.getElementById('sDob').type = 'text'; document.getElementById('sBlood').value = ''; window.removePhoto();
-            document.getElementById('formTitle').innerHTML = 'Add Student';
-            if (hideForm) document.getElementById('addStudentModal').classList.add('hidden');
-        }
-
-        window.deleteStudentForever = async function(idStr) {
-            const id = Number(idStr); const confirmed = await showConfirm("Are you sure you want to permanently delete this student?", "Delete Student?", "Yes, Delete");
-            if(!confirmed) return;
-            const tx = db.transaction(['students'], 'readwrite'); tx.objectStore('students').delete(id);
-            tx.oncomplete = () => { showToast("Student deleted permanently", "success"); loadStudents(); if(navigator.onLine) firestore.collection('students').doc(String(id)).delete(); };
+        function updateSchoolHeader() {
+            let display = currentSchoolData.realSchoolName;
+            
+            const srcBadge = currentSchoolData.source === 'excel' 
+                ? `<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2 py-0.5 rounded text-[9px] ml-2 tracking-wide font-black">EXCEL BATCH</span>` 
+                : `<span class="bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded text-[9px] ml-2 tracking-wide font-black">MANUAL</span>`;
+                
+            document.getElementById('currentSchoolHeader').innerHTML = `${escapeHtml(display)} ${srcBadge}`;
+            document.getElementById('currentSchoolSubHeader').textContent = `${currentSchoolData.district || 'Unknown District'} | UDISE: ${currentSchoolData.udise || 'N/A'}`;
         }
 
         window.openEditSchoolModal = function() {
@@ -1458,19 +1751,463 @@
 
         document.getElementById('saveSchoolEditBtn').onclick = async () => {
             const newName = document.getElementById('editSchoolNameInput').value.trim();
+            const newPhone = document.getElementById('editSchoolPhoneInput').value.trim();
+            const newBlock = document.getElementById('editSchoolBlock').value.trim();
+            const newDistrict = document.getElementById('editSchoolDistrict').value.trim();
+            const newPin = document.getElementById('editSchoolPin').value.trim();
             const newUdise = document.getElementById('editSchoolUdise').value.trim();
+
             if(!newName) return alert("Name cannot be empty");
-            if(!newUdise) return alert("UDISE is mandatory.");
+            if(!newUdise) return alert("UDISE Number is mandatory.");
+            if(!/^\d{11}$/.test(newUdise)) return alert("UDISE must be exactly 11 digits.");
 
-            const updatedSchool = { ...currentSchoolData, realSchoolName: newName, phone: document.getElementById('editSchoolPhoneInput').value, block: document.getElementById('editSchoolBlock').value, district: document.getElementById('editSchoolDistrict').value, pin: document.getElementById('editSchoolPin').value, udise: newUdise };
-            const firestoreUpdates = { name: newName, phone: updatedSchool.phone, block: updatedSchool.block, district: updatedSchool.district, pin: updatedSchool.pin, udise: newUdise, lastModified: Date.now() };
+            const btn = document.getElementById('saveSchoolEditBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Saving...";
+            btn.disabled = true;
+
+            const updatedSchool = { 
+                ...currentSchoolData, 
+                realSchoolName: newName, 
+                phone: newPhone, 
+                block: newBlock, 
+                district: newDistrict, 
+                pin: newPin, 
+                udise: newUdise 
+            };
+
+            const firestoreUpdates = { name: newName, phone: newPhone, block: newBlock, district: newDistrict, pin: newPin, udise: newUdise, lastModified: Date.now() };
             
-            if(navigator.onLine) firestore.collection('schools').doc(newUdise).set(firestoreUpdates, {merge:true});
+            if(navigator.onLine) {
+                 firestore.collection('schools').doc(newUdise).set(firestoreUpdates, {merge:true}).catch(e => console.log(e));
+                 if(currentSchoolData.udise !== newUdise) {
+                     firestore.collection('schools').doc(currentSchoolData.udise).delete().catch(e => console.log(e));
+                 }
+            }
 
-            const tx = db.transaction(['schools'], 'readwrite'); tx.objectStore('schools').put(updatedSchool);
-            tx.oncomplete = () => { showToast("School Details Updated!"); currentSchoolData = updatedSchool; updateSchoolHeader(); document.getElementById('editSchoolModal').classList.add('hidden'); setupRealtimeListener(); loadStudents(); };
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
+            tx.objectStore('schools').put(updatedSchool);
+
+            const targetUdise = currentSchoolData.udise;
+            const targetSource = currentSchoolData.source;
+            
+            const stStore = tx.objectStore('students');
+            stStore.getAll().onsuccess = (e) => {
+                e.target.result.forEach(s => {
+                    if( (!s.udise && s.schoolName === currentSchoolData.name) || 
+                        (s.udise === targetUdise && getStudentSource(s) === targetSource)) {
+                        
+                        s.schoolName = newName; 
+                        s.block = newBlock; s.district = newDistrict;
+                        s.pin = newPin; s.udise = newUdise; s.hmPhone = newPhone;
+                        s.source = targetSource; 
+                        stStore.put(s); 
+                        
+                        if(navigator.onLine) {
+                             firestore.collection('students').doc(String(s.id)).update({
+                                  schoolName: newName, block: newBlock, district: newDistrict, pin: newPin, udise: newUdise, hmPhone: newPhone
+                             }).catch(e=>{});
+                        }
+                    }
+                });
+            };
+
+            tx.oncomplete = () => {
+                showToast("School Details Updated!");
+                currentSchoolData = updatedSchool;
+                updateSchoolHeader();
+                document.getElementById('editSchoolModal').classList.add('hidden');
+                btn.innerHTML = origText;
+                btn.disabled = false;
+                
+                setupRealtimeListener(); 
+                loadStudents();
+            };
         };
 
+        function loadStudents() {
+            const tx = db.transaction(['students'], 'readonly');
+            tx.objectStore('students').getAll().onsuccess = e => {
+                const targetUdise = currentSchoolData.udise;
+                const targetSource = currentSchoolData.source || 'manual';
+                
+                let all = e.target.result;
+                
+                students = all.filter(s => {
+                    if (!targetUdise || !s.udise) {
+                        return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
+                    }
+                    return s.udise === targetUdise && getStudentSource(s) === targetSource;
+                });
+                
+                students.sort((a,b) => {
+                    const timeB = b.lastModified || b.id;
+                    const timeA = a.lastModified || a.id;
+                    return timeB - timeA;
+                });
+                
+                students.forEach(s => {
+                    if (s.finalised === undefined) s.finalised = true; 
+                });
+
+                updateStats();
+                populateClassFilter();
+                applyFilters(); 
+            };
+        }
+
+        function updateStats() {
+            const total = students.length;
+            const completed = students.filter(s => s.finalised).length;
+            const pending = total - completed;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statCompleted').textContent = completed;
+            document.getElementById('statPending').textContent = pending;
+            
+            // ORDER CART LOGIC
+            const orderBar = document.getElementById('orderBottomBar');
+            const cartCountEls = document.querySelectorAll('#cartCount, #modalCartCount');
+            
+            cartCountEls.forEach(el => el.textContent = completed);
+            
+            if (completed > 0) {
+                orderBar.classList.remove('hidden');
+                document.body.style.paddingBottom = '90px'; // Make room for the sticky bar
+            } else {
+                orderBar.classList.add('hidden');
+                document.body.style.paddingBottom = '20px';
+            }
+        }
+
+        function populateClassFilter() {
+            const classSelect = document.getElementById('filterClass');
+            const currentVal = classSelect.value;
+            
+            const classes = [...new Set(students.map(s => normalizeClass(s.class)))].filter(Boolean).sort();
+            
+            let optionsHtml = '<option value="ALL">All Classes</option>';
+            classes.forEach(c => {
+                const count = students.filter(s => normalizeClass(s.class) === c).length;
+                optionsHtml += `<option value="${c}">${c} (${count})</option>`;
+            });
+            
+            classSelect.innerHTML = optionsHtml;
+            if (classes.includes(currentVal) || currentVal === 'ALL') {
+                classSelect.value = currentVal;
+            }
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const classFilter = document.getElementById('filterClass').value;
+
+            filteredStudents = students.filter(s => {
+                const matchesSearch = s.name.toLowerCase().includes(searchTerm) || 
+                                      (s.roll && s.roll.toLowerCase().includes(searchTerm));
+                const matchesClass = classFilter === 'ALL' || normalizeClass(s.class) === classFilter;
+                return matchesSearch && matchesClass;
+            });
+
+            visibleCount = 50; 
+            renderList();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('filterClass').addEventListener('change', applyFilters);
+
+        function renderList() {
+            const list = document.getElementById('studentList');
+            const msg = document.getElementById('noResultsMsg');
+            list.innerHTML = '';
+            
+            document.getElementById('listCounter').textContent = `Showing: ${filteredStudents.length} / ${students.length}`;
+            
+            if (filteredStudents.length === 0) {
+                msg.classList.remove('hidden');
+                return;
+            } else {
+                msg.classList.add('hidden');
+            }
+
+            const visibleStudents = filteredStudents.slice(0, visibleCount);
+
+            visibleStudents.forEach((s, index) => {
+                const div = document.createElement('div');
+                div.className = 'bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden';
+                
+                let photoHtml = s.photoBase64 
+                    ? `<img src="${s.photoBase64}" class="w-14 h-14 rounded-lg object-cover shadow-sm flex-shrink-0 border border-gray-200">` 
+                    : `<div class="w-14 h-14 rounded-lg bg-red-50 flex flex-col items-center justify-center text-red-400 border border-red-100 flex-shrink-0"><i class="fas fa-user-slash mb-1"></i><span class="text-[8px] font-bold">NO PHOTO</span></div>`;
+
+                let statusHtml = '';
+                if (!s.finalised) {
+                    statusHtml = `<span class="text-amber-600 font-bold text-[10px] bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fas fa-exclamation-circle"></i> Pending Review</span>`;
+                } else if (!s.synced) {
+                    statusHtml = `<span class="text-blue-500 font-bold text-[10px] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200"><i class="fas fa-cloud-upload-alt"></i> Syncing...</span>`;
+                } else {
+                    statusHtml = `<span class="text-green-600 font-bold text-[10px] bg-green-50 px-1.5 py-0.5 rounded border border-green-200"><i class="fas fa-check-circle"></i> Completed</span>`;
+                }
+                
+                if(s.syncError) statusHtml += `<div class="text-red-500 font-bold text-[10px] mt-1 line-clamp-1 truncate w-full" title="${s.syncError}"><i class="fas fa-exclamation-triangle"></i> ${s.syncError}</div>`;
+
+                const serialNumber = filteredStudents.length - index;
+
+                div.innerHTML = `
+                    <div class="p-3 flex items-center gap-2">
+                        <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0">#${serialNumber}</div>
+                        <div class="flex-shrink-0">
+                            ${photoHtml}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <div class="font-bold text-gray-900 text-sm truncate pr-2">${escapeHtml(s.name)}</div>
+                            </div>
+                            <div class="text-xs text-gray-600 font-medium mt-1">Class: <span class="text-gray-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-gray-300">|</span> Roll: <span class="text-gray-800">${escapeHtml(s.roll)}</span></div>
+                            <div class="mt-1">${statusHtml}</div>
+                        </div>
+                        <div class="flex-shrink-0 pl-1 flex items-center gap-3 border-l border-gray-100 ml-1 pl-3">
+                            <button onclick="editStudent('${s.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Edit Student"><i class="fas fa-pen"></i></button>
+                            <button onclick="deleteStudentForever('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Permanently Delete"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            if (filteredStudents.length > visibleCount) {
+                const btnWrapper = document.createElement('div');
+                btnWrapper.className = "text-center mt-2 pb-4";
+                btnWrapper.innerHTML = `<button onclick="window.loadMore()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2.5 px-6 rounded-full text-sm shadow-sm transition flex items-center mx-auto">Load More <i class="fas fa-chevron-down ml-2"></i></button>`;
+                list.appendChild(btnWrapper);
+            }
+        }
+        
+        window.loadMore = function() {
+            visibleCount += 50;
+            renderList();
+        }
+
+        window.cancelPendingImport = async function() {
+            if(!currentSchoolData) return;
+            
+            currentSchoolData.importStatus = 'manual';
+            
+            const tx = db.transaction(['schools'], 'readwrite');
+            tx.objectStore('schools').put(currentSchoolData);
+            
+            if(navigator.onLine) {
+                firestore.collection('schools').doc(currentSchoolData.udise).set({
+                    importStatus: 'manual',
+                    lastModified: Date.now()
+                }, {merge: true}).catch(err => console.error(err));
+            }
+            
+            showToast("Switched to manual entry mode.", "info");
+            enterSchool(currentSchoolData);
+        }
+
+        window.hardResetApp = async function() {
+            const checkTx = db.transaction(['students'], 'readonly');
+            checkTx.objectStore('students').getAll().onsuccess = async e => {
+                const unsynced = e.target.result.filter(s => !s.synced);
+                if (unsynced.length > 0) {
+                    alert(`WARNING: You have ${unsynced.length} unsynced students! Sync online before logging out.`);
+                    return;
+                }
+                
+                const confirmed = await showConfirm("Logging out will clear the current school and local data from this device. Are you sure?", "Logout?", "Yes, Logout");
+                if(!confirmed) return;
+                
+                if(unsubscribeRealtime) unsubscribeRealtime();
+                if(unsubscribeSchool) unsubscribeSchool();
+
+                const tx = db.transaction(['schools', 'students'], 'readwrite');
+                tx.objectStore('schools').clear();
+                tx.objectStore('students').clear();
+                tx.oncomplete = () => { location.reload(); };
+            };
+        }
+
+        document.getElementById('saveBtn').onclick = async () => {
+            const isVis = (id) => !document.getElementById('wrap-' + id).classList.contains('hidden');
+
+            const idStr = document.getElementById('editId').value;
+            const name = document.getElementById('sName').value.trim();
+            const cls = document.getElementById('sClass').value;
+            const roll = document.getElementById('sRoll').value.trim();
+            const phone = document.getElementById('sPhone').value.trim();
+            const dob = document.getElementById('sDob').value;
+            const blood = document.getElementById('sBlood').value;
+            const father = document.getElementById('sFather').value.trim();
+            const mother = document.getElementById('sMother').value.trim();
+            const address = document.getElementById('sAddress').value.trim();
+
+            if(isVis('name') && !name) return alert('Name is required.');
+            if(isVis('class') && !cls) return alert('Class is required.');
+            if(isVis('roll') && !roll) return alert('Roll is required.');
+            
+            const btn = document.getElementById('saveBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin mr-2'></i> Saving...";
+            btn.disabled = true;
+            
+            const id = idStr ? Number(idStr) : Date.now();
+
+            let existingData = {};
+            if(idStr) {
+                existingData = students.find(x => x.id === id) || {};
+            }
+
+            let base64 = null;
+            if(currentPhotoBlob) {
+                base64 = await blobToBase64(currentPhotoBlob);
+            } else if(idStr) {
+                base64 = existingData.photoBase64 || null;
+            }
+
+            const student = {
+                ...existingData,
+                id: id,
+                schoolName: currentSchoolData.realSchoolName || currentSchoolData.name,
+                hmSignature: currentSchoolData.hmSignature || '',
+                block: currentSchoolData.block || '',
+                district: currentSchoolData.district || '',
+                pin: currentSchoolData.pin || '',
+                udise: currentSchoolData.udise || '',
+                hmPhone: currentSchoolData.phone || '',
+                name, class: cls, roll, dob, bloodGroup: blood,
+                mobile: phone,
+                father: father,
+                mother: mother,
+                address: address,
+                photoBase64: base64,
+                photoName: existingData.photoName || `${Date.now()}.jpg`,
+                finalised: true, 
+                synced: false,   
+                lastModified: Date.now(),
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                source: currentSchoolData.source || 'manual' 
+            };
+
+            const tx = db.transaction(['students'], 'readwrite');
+            tx.objectStore('students').put(student);
+            tx.oncomplete = () => {
+                showToast(idStr ? "Student Updated!" : "Student Saved!");
+                resetForm(); 
+                
+                if (!idStr) {
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('filterClass').value = 'ALL';
+                }
+                
+                loadStudents();
+                
+                if (navigator.onLine) {
+                    syncToFirebase(student).then(() => loadStudents()).catch(console.error);
+                }
+                
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            };
+            tx.onerror = () => {
+                btn.innerHTML = origText;
+                btn.disabled = false;
+                showToast("Failed to save locally", "error");
+            }
+        };
+
+        window.editStudent = function(idStr) {
+            const id = Number(idStr);
+            const s = students.find(x => x.id === id);
+            if(!s) return;
+            document.getElementById('editId').value = s.id;
+            document.getElementById('sName').value = s.name || '';
+            
+            const mappedClass = normalizeClass(s.class);
+            const classSelect = document.getElementById('sClass');
+            let optionFound = false;
+            for (let opt of classSelect.options) {
+                if (opt.value === mappedClass) {
+                    optionFound = true; break;
+                }
+            }
+            classSelect.value = optionFound ? mappedClass : "";
+            
+            document.getElementById('sRoll').value = s.roll || '';
+            document.getElementById('sPhone').value = s.mobile || s.phone || '';
+            document.getElementById('sFather').value = s.father || '';
+            document.getElementById('sMother').value = s.mother || '';
+            document.getElementById('sAddress').value = s.address || '';
+            
+            const dobInput = document.getElementById('sDob');
+            const parsedDob = formatDateForInput(s.dob);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(parsedDob)) {
+                dobInput.type = 'date';
+                dobInput.value = parsedDob;
+            } else {
+                dobInput.type = 'text';
+                dobInput.value = s.dob || ''; 
+            }
+            
+            document.getElementById('sBlood').value = s.bloodGroup || '';
+            
+            if (s.photoBase64) {
+                setPreviewImage(s.photoBase64);
+            } else {
+                window.removePhoto();
+            }
+            
+            document.getElementById('formTitle').innerHTML = 'Edit Student <i class="fas fa-pen text-sm text-gray-400 ml-1"></i>';
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> Update Student';
+            saveBtn.classList.replace('bg-green-600', 'bg-blue-600');
+            saveBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+            
+            document.getElementById('addStudentModal').classList.remove('hidden');
+        }
+
+        window.resetForm = function(hideForm = true) {
+            document.getElementById('editId').value = '';
+            document.getElementById('sName').value = '';
+            document.getElementById('sClass').value = '';
+            document.getElementById('sRoll').value = '';
+            document.getElementById('sPhone').value = '';
+            document.getElementById('sFather').value = '';
+            document.getElementById('sMother').value = '';
+            document.getElementById('sAddress').value = '';
+            document.getElementById('sDob').value = '';
+            document.getElementById('sDob').type = 'text'; 
+            document.getElementById('sBlood').value = '';
+            window.removePhoto();
+            
+            document.getElementById('formTitle').innerHTML = 'Add Student';
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.innerHTML = 'Save Student';
+            saveBtn.classList.replace('bg-blue-600', 'bg-green-600');
+            saveBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+            
+            if (hideForm) {
+                document.getElementById('addStudentModal').classList.add('hidden');
+            }
+        }
+
+        window.deleteStudentForever = async function(idStr) {
+            const id = Number(idStr);
+            const confirmed = await showConfirm("Are you sure you want to permanently delete this student? This action CANNOT be undone.", "Delete Student?", "Yes, Delete");
+            if(!confirmed) return;
+            
+            const tx = db.transaction(['students'], 'readwrite');
+            tx.objectStore('students').delete(id);
+
+            tx.oncomplete = () => {
+                showToast("Student deleted permanently", "success");
+                loadStudents();
+                if(navigator.onLine) {
+                    firestore.collection('students').doc(String(id)).delete().catch(console.error);
+                }
+            };
+        }
     </script>
 </body>
 </html>
