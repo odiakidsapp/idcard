@@ -369,18 +369,26 @@
         
         <div class="le-grid">
             <div class="le-controls">
-                <div class="le-field-box">
-                    <strong>1. Upload Custom Background</strong>
-                    <input type="file" id="plBgInput" accept="image/png, image/jpeg" style="width: 100%; padding: 6px;">
+                
+                <div class="le-field-box" style="background: #f3f8ff; border-color: #cce5ff;">
+                    <strong>1. Custom Background Image</strong>
+                    <div id="le_current_bg_info" style="margin-bottom: 8px; font-size: 12px; color: #004085;"></div>
+                    <input type="file" id="plBgInput" accept="image/png, image/jpeg" style="width: 100%; padding: 6px; background: white; border: 1px solid #cce5ff; border-radius: 4px;">
                 </div>
                 
                 <div class="le-field-box">
                     <strong><i class="fas fa-camera"></i> Photo Placement Box</strong>
                     <div class="le-inputs">
-                        <label>X: <input type="number" id="le_photo_x" oninput="updateLivePreview()"></label>
-                        <label>Y: <input type="number" id="le_photo_y" oninput="updateLivePreview()"></label>
-                        <label>W: <input type="number" id="le_photo_w" oninput="updateLivePreview()"></label>
-                        <label>H: <input type="number" id="le_photo_h" oninput="updateLivePreview()"></label>
+                        <label>X: <input type="number" id="le_photo_x" oninput="debouncedUpdateLivePreview()"></label>
+                        <label>Y: <input type="number" id="le_photo_y" oninput="debouncedUpdateLivePreview()"></label>
+                        <label>W: <input type="number" id="le_photo_w" oninput="debouncedUpdateLivePreview()"></label>
+                        <label>H: <input type="number" id="le_photo_h" oninput="debouncedUpdateLivePreview()"></label>
+                        <label>Shape: 
+                            <select id="le_photo_shape" onchange="debouncedUpdateLivePreview()" style="padding:4px; font-size:11px; border:1px solid #ccc; border-radius:4px;">
+                                <option value="rect">Rectangle</option>
+                                <option value="circle">Circle</option>
+                            </select>
+                        </label>
                     </div>
                 </div>
 
@@ -390,7 +398,7 @@
             </div>
             
             <div class="le-preview">
-                <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; font-size: 11px; padding: 4px 8px; border-radius: 4px;">Live Preview</div>
+                <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; font-size: 11px; padding: 4px 8px; border-radius: 4px; z-index: 10;">Live Preview</div>
                 <canvas id="plCanvas" style="max-height: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.15);"></canvas>
             </div>
         </div>
@@ -399,6 +407,14 @@
             <button class="btn btn-secondary" onclick="document.getElementById('layoutEditorModal').style.display='none'">Cancel</button>
             <button class="btn btn-primary" id="saveLayoutBtn" style="background:#6b21a8;"><i class="fas fa-save"></i> Save Coordinates</button>
         </div>
+    </div>
+</div>
+
+<div id="adminPreviewModal" class="modal">
+    <div class="modal-content" style="text-align: center; background: #eef2f5; z-index: 2500;">
+        <h3 style="margin-top:0; color: #0b53a0;">Card Preview</h3>
+        <img id="adminPreviewImg" src="" style="width:100%; max-width: 320px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin: 0 auto; display: block;">
+        <button class="btn btn-secondary" onclick="document.getElementById('adminPreviewModal').style.display='none'" style="margin-top: 25px; width: 100%;">Close Preview</button>
     </div>
 </div>
 
@@ -511,6 +527,22 @@ let activeSource = null;
 let activeTab = 'govt'; 
 
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
+
+// IMAGE CACHE FOR ZERO-LAG PREVIEWS
+const globalImageCache = {};
+async function loadCachedImage(url) {
+    if (!url) return null;
+    if (url.startsWith('data:image/svg')) {
+        const img = new Image(); img.src = url;
+        await new Promise(r => { img.onload = r; img.onerror = r; });
+        return img;
+    }
+    if (globalImageCache[url]) return globalImageCache[url];
+    const img = new Image(); img.crossOrigin = "Anonymous"; img.src = url;
+    await new Promise(r => { img.onload = r; img.onerror = r; });
+    globalImageCache[url] = img;
+    return img;
+}
 
 function switchTab(tab) {
     activeTab = tab;
@@ -1114,23 +1146,41 @@ async function drawPrivateCard(s, sm) {
     if (bgUrl && layout) {
         // --- CUSTOM ADMIN LAYOUT MAPPING ---
         try {
-            const bgImg = new Image(); bgImg.crossOrigin = "Anonymous"; bgImg.src = bgUrl;
-            await new Promise(r => { bgImg.onload = r; bgImg.onerror = r; });
-            ctx.drawImage(bgImg, 0, 0, CARD_W, CARD_H);
+            const bgImg = await loadCachedImage(bgUrl);
+            if(bgImg && bgImg.width > 0) ctx.drawImage(bgImg, 0, 0, CARD_W, CARD_H);
         } catch(e) { console.log("Failed to load custom BG", e); }
 
         // AI Photo Crop & Draw using custom coordinates
         if (layout.photo && s.photoBase64) {
             const px = parseInt(layout.photo.x) || 200, py = parseInt(layout.photo.y) || 190, 
                   pw = parseInt(layout.photo.w) || 238, ph = parseInt(layout.photo.h) || 300, border = 4;
+            const shape = layout.photo.shape || 'rect';
             
-            ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
+            ctx.save();
             
-            const photo = new Image(); photo.crossOrigin = "Anonymous"; photo.src = s.photoBase64;
-            await new Promise(r => { photo.onload = r; photo.onerror = r; });
-            if (photo.width > 0) { 
+            // 1. Draw Border (Rect or Circle)
+            ctx.fillStyle = '#000';
+            if (shape === 'circle') {
+                ctx.beginPath();
+                ctx.arc(px + pw/2, py + ph/2, Math.min(pw, ph)/2 + border, 0, Math.PI*2);
+                ctx.fill();
+            } else {
+                ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
+            }
+            
+            // 2. Set Clipping Mask for the photo
+            ctx.beginPath();
+            if (shape === 'circle') {
+                ctx.arc(px + pw/2, py + ph/2, Math.min(pw, ph)/2, 0, Math.PI*2);
+            } else {
+                ctx.rect(px, py, pw, ph);
+            }
+            ctx.clip();
+
+            const photo = await loadCachedImage(s.photoBase64);
+            if (photo && photo.width > 0) { 
                 let sx=0, sy=0, sw=photo.width, sh=photo.height;
-                if(window.assets.aiModel === 'loaded' && faceDetector) {
+                if(window.assets.aiModel === 'loaded' && faceDetector && !s.photoBase64.startsWith('data:image/svg')) {
                     try {
                         const det = faceDetector.detect(photo);
                         if(det.detections.length > 0) {
@@ -1145,6 +1195,8 @@ async function drawPrivateCard(s, sm) {
             } else {
                  ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
             }
+            
+            ctx.restore(); // Remove clipping mask
         }
 
         // Custom Text Coordinates
@@ -1154,7 +1206,7 @@ async function drawPrivateCard(s, sm) {
                 const l = layout[field];
                 ctx.fillStyle = l.color || '#000000';
                 ctx.font = `bold ${l.size || 26}px Arial`;
-                ctx.textAlign = 'left';
+                ctx.textAlign = l.align || 'left';
                 
                 let val = s[field] || s[field === 'phone' ? 'mobile' : field] || '';
                 
@@ -1183,11 +1235,10 @@ async function drawPrivateCard(s, sm) {
         ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
         
         if(s.photoBase64) {
-            const photo = new Image(); photo.crossOrigin = "Anonymous"; photo.src = s.photoBase64;
-            await new Promise(r => { photo.onload = r; photo.onerror = r; });
-            if (photo.width > 0) { 
+            const photo = await loadCachedImage(s.photoBase64);
+            if (photo && photo.width > 0) { 
                 let sx=0, sy=0, sw=photo.width, sh=photo.height;
-                if(window.assets.aiModel === 'loaded' && faceDetector) {
+                if(window.assets.aiModel === 'loaded' && faceDetector && !s.photoBase64.startsWith('data:image/svg')) {
                     try {
                         const det = faceDetector.detect(photo);
                         if(det.detections.length > 0) {
@@ -1253,10 +1304,11 @@ async function drawGovtCard(s, sm) {
         if(sm && sm.udise) { ctx.font = '26px OdiaFont'; ctx.fillText('UDISE- ' + toOdiaDigits(sm.udise), centerHeadX, ADDR_POS.y + 36); }
 
         if(sm && sm.signature) {
-            const signImg = new Image(); signImg.crossOrigin = "Anonymous"; signImg.src = sm.signature;
-            await new Promise(r => signImg.onload=r);
-            const ratio = Math.min(SIGN_POS.maxW / signImg.width, SIGN_POS.maxH / signImg.height);
-            ctx.drawImage(signImg, SIGN_POS.x, SIGN_POS.y, signImg.width * ratio, signImg.height * ratio);
+            const signImg = await loadCachedImage(sm.signature);
+            if(signImg) {
+                const ratio = Math.min(SIGN_POS.maxW / signImg.width, SIGN_POS.maxH / signImg.height);
+                ctx.drawImage(signImg, SIGN_POS.x, SIGN_POS.y, signImg.width * ratio, signImg.height * ratio);
+            }
         }
     }
 
@@ -1267,9 +1319,8 @@ async function drawGovtCard(s, sm) {
     ctx.fillStyle = '#000'; ctx.fillRect(px - border, py - border, pw + border*2, ph + border*2);
 
     if(s.photoBase64) {
-        const photo = new Image(); photo.crossOrigin = "Anonymous"; photo.src = s.photoBase64;
-        await new Promise(r => { photo.onload = r; photo.onerror = () => { console.warn("Fail photo", s.name); r(); }});
-        if (photo.width > 0) { 
+        const photo = await loadCachedImage(s.photoBase64);
+        if (photo && photo.width > 0) { 
             let sx=0, sy=0, sw=photo.width, sh=photo.height;
             if(window.assets.aiModel === 'loaded' && faceDetector) {
                 try {
@@ -1326,8 +1377,7 @@ document.getElementById('verifyBtn').onclick = async () => {
             btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Drawing ${i+1}/${targets.length}...`;
             const blob = await drawCard(targets[i]);
             const imgUrl = URL.createObjectURL(blob);
-            const imgObj = new Image(); imgObj.src = imgUrl;
-            await new Promise(r => imgObj.onload=r);
+            const imgObj = await loadCachedImage(imgUrl);
 
             const tempCvs = document.createElement('canvas'); tempCvs.width = CARD_W; tempCvs.height = CARD_H;
             const tctx = tempCvs.getContext('2d');
@@ -1373,8 +1423,8 @@ document.getElementById('generateBtn').onclick = async () => {
         folder.file(`${targets[i].name}_${targets[i].roll}.png`, blob);
         
         const imgUrl = URL.createObjectURL(blob);
-        const imgObj = new Image(); imgObj.src = imgUrl;
-        await new Promise(r => imgObj.onload=r); imgs.push(imgObj);
+        const imgObj = await loadCachedImage(imgUrl);
+        imgs.push(imgObj);
 
         const tempCvs = document.createElement('canvas'); tempCvs.width = CARD_W; tempCvs.height = CARD_H;
         const tctx = tempCvs.getContext('2d');
@@ -1449,6 +1499,7 @@ async function openSchoolEdit(udise){
     document.getElementById('esUdisePass').value = s.udisePass || '';
 
     const pContainer = document.getElementById('esPrivateFieldsContainer');
+    const gPassBox = document.getElementById('govtPassBox');
     
     if (s.schoolType === 'private') {
         pContainer.classList.remove('hidden');
@@ -1640,6 +1691,7 @@ window.mergeExcelToManual = async function(udise) {
 function openEditModal(id){
     const s = currentSchoolStudents.find(x => x.id == id);
     if(!s) return;
+    
     document.getElementById('editId').value = s.id;
     document.getElementById('editName').value = s.name || '';
     document.getElementById('editClass').value = normalizeClass(s.class);
@@ -1648,12 +1700,10 @@ function openEditModal(id){
     document.getElementById('editBlood').value = s.bloodGroup || '';
     document.getElementById('editPhone').value = s.mobile || s.phone || '';
     
-    // NEW: Load Private School fields if they exist
     document.getElementById('editFather').value = s.father || '';
     document.getElementById('editMother').value = s.mother || '';
     document.getElementById('editAddress').value = s.address || '';
 
-    // Conditionally show Father, Mother, Address based on School's customFields
     const targetUdise = activeUdise || s.udise || ('NO_UDISE:' + s.schoolName);
     const sm = schoolsMap[targetUdise];
     const customFields = sm && sm.customFields ? sm.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
@@ -1753,12 +1803,25 @@ document.getElementById('previewEditBtn').onclick = async () => {
     document.getElementById('previewEditBtn').textContent = "👁 Preview Card";
 };
 
+// ==========================================
+// DYNAMIC LAYOUT DESIGNER (PRIVATE SCHOOLS)
+// ==========================================
+
 window.openLayoutEditor = function() {
     const s = schoolsMap[activeUdise];
     if(!s || s.schoolType !== 'private') return;
     
     window.currentLayoutSettings = s.layoutSettings ? JSON.parse(JSON.stringify(s.layoutSettings)) : {};
     window.currentPrivateTemplateUrl = s.privateTemplateUrl || null;
+    
+    // Setup Visual Background Indicator
+    const bgInfo = document.getElementById('le_current_bg_info');
+    document.getElementById('plBgInput').value = ''; // Clear file input
+    if (window.currentPrivateTemplateUrl) {
+        bgInfo.innerHTML = `✅ Background Active (<a href="${window.currentPrivateTemplateUrl}" target="_blank" style="color: #6b21a8; text-decoration: underline;">View Current</a>).<br>Upload a new file below to replace it.`;
+    } else {
+        bgInfo.innerHTML = `⚠️ No background uploaded yet.`;
+    }
     
     const container = document.getElementById('layoutFieldsContainer');
     container.innerHTML = '';
@@ -1769,28 +1832,39 @@ window.openLayoutEditor = function() {
     
     fields.forEach(f => {
         const defaultSize = f === 'name' ? 36 : 26;
-        const l = window.currentLayoutSettings[f] || { x: 40, y: defaultY, size: defaultSize, color: '#1e293b', showLabel: (f !== 'name') };
+        const l = window.currentLayoutSettings[f] || { x: 40, y: defaultY, size: defaultSize, color: '#1e293b', showLabel: (f !== 'name'), align: 'left' };
+        const defaultAlign = l.align || 'left';
         
         container.innerHTML += `
             <div class="le-field-box">
-                <strong>${f}</strong>
+                <strong>${f.toUpperCase()}</strong>
                 <div class="le-inputs">
-                    <label>X: <input type="number" id="le_${f}_x" value="${l.x}" oninput="updateLivePreview()"></label>
-                    <label>Y: <input type="number" id="le_${f}_y" value="${l.y}" oninput="updateLivePreview()"></label>
-                    <label>Size: <input type="number" id="le_${f}_size" value="${l.size}" style="width:50px" oninput="updateLivePreview()"></label>
-                    <input type="color" id="le_${f}_color" value="${l.color}" onchange="updateLivePreview()">
-                    <label><input type="checkbox" id="le_${f}_label" ${l.showLabel ? 'checked' : ''} onchange="updateLivePreview()"> Show Label</label>
+                    <label>X: <input type="number" id="le_${f}_x" value="${l.x}" oninput="debouncedUpdateLivePreview()"></label>
+                    <label>Y: <input type="number" id="le_${f}_y" value="${l.y}" oninput="debouncedUpdateLivePreview()"></label>
+                    <label>Size: <input type="number" id="le_${f}_size" value="${l.size}" style="width:50px" oninput="debouncedUpdateLivePreview()"></label>
+                    <input type="color" id="le_${f}_color" value="${l.color}" onchange="debouncedUpdateLivePreview()" title="Text Color">
+                    <label>Align: 
+                        <select id="le_${f}_align" onchange="debouncedUpdateLivePreview()" style="padding:2px; font-size:11px; border:1px solid #ccc;">
+                            <option value="left" ${defaultAlign === 'left' ? 'selected' : ''}>Left</option>
+                            <option value="center" ${defaultAlign === 'center' ? 'selected' : ''}>Center</option>
+                            <option value="right" ${defaultAlign === 'right' ? 'selected' : ''}>Right</option>
+                        </select>
+                    </label>
+                    <label><input type="checkbox" id="le_${f}_label" ${l.showLabel ? 'checked' : ''} onchange="debouncedUpdateLivePreview()"> Label</label>
                 </div>
             </div>
         `;
         defaultY += 45;
     });
 
-    const p = window.currentLayoutSettings.photo || { x: 200, y: 190, w: 238, h: 300 };
+    const p = window.currentLayoutSettings.photo || { x: 200, y: 190, w: 238, h: 300, shape: 'rect' };
     document.getElementById('le_photo_x').value = p.x;
     document.getElementById('le_photo_y').value = p.y;
     document.getElementById('le_photo_w').value = p.w;
     document.getElementById('le_photo_h').value = p.h;
+    
+    const shapeSelect = document.getElementById('le_photo_shape');
+    if(shapeSelect) shapeSelect.value = p.shape || 'rect';
 
     document.getElementById('layoutEditorModal').style.display = 'flex';
     updateLivePreview();
@@ -1806,6 +1880,9 @@ document.getElementById('plBgInput').onchange = async e => {
         const ref = window.storage.ref(`private_templates/${activeUdise}_bg.png`);
         await ref.put(f, { contentType: f.type });
         window.currentPrivateTemplateUrl = await ref.getDownloadURL();
+        
+        document.getElementById('le_current_bg_info').innerHTML = `✅ Background Active (<a href="${window.currentPrivateTemplateUrl}" target="_blank" style="color: #6b21a8; text-decoration: underline;">View Current</a>).<br>Upload a new file below to replace it.`;
+        
         updateLivePreview();
     } catch(err) {
         alert("Upload failed: " + err.message);
@@ -1814,6 +1891,14 @@ document.getElementById('plBgInput').onchange = async e => {
         document.getElementById('saveLayoutBtn').disabled = false;
     }
 };
+
+let previewTimeout;
+window.debouncedUpdateLivePreview = function() {
+    clearTimeout(previewTimeout);
+    previewTimeout = setTimeout(() => {
+        updateLivePreview();
+    }, 150); // 150ms debounce for lag-free performance
+}
 
 window.updateLivePreview = async function() {
     const s = schoolsMap[activeUdise];
@@ -1824,7 +1909,8 @@ window.updateLivePreview = async function() {
             x: document.getElementById('le_photo_x').value,
             y: document.getElementById('le_photo_y').value,
             w: document.getElementById('le_photo_w').value,
-            h: document.getElementById('le_photo_h').value
+            h: document.getElementById('le_photo_h').value,
+            shape: document.getElementById('le_photo_shape').value
         }
     };
     
@@ -1835,15 +1921,20 @@ window.updateLivePreview = async function() {
             y: document.getElementById(`le_${f}_y`).value,
             size: document.getElementById(`le_${f}_size`).value,
             color: document.getElementById(`le_${f}_color`).value,
+            align: document.getElementById(`le_${f}_align`).value,
             showLabel: document.getElementById(`le_${f}_label`).checked
         };
     });
 
     window.currentLayoutSettings = layout;
 
+    // Dummy SVG Avatar for the Live Preview (Skips AI Face processing overhead entirely!)
+    const dummyAvatarSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23e2e8f0"/><circle cx="100" cy="80" r="40" fill="%2394a3b8"/><path d="M40 180c0-40 30-70 60-70s60 30 60 70v20H40v-20z" fill="%2394a3b8"/></svg>`;
+
     const mockStudent = {
         schoolName: s.name,
-        name: "Abhishek Das", class: "10th", roll: "45", dob: "12/05/2010", bloodGroup: "O+", mobile: "9876543210", father: "Ramesh Das", mother: "Sita Das", address: "Bhubaneswar, Odisha"
+        name: "Abhishek Das", class: "10th", roll: "45", dob: "12/05/2010", bloodGroup: "O+", mobile: "9876543210", father: "Ramesh Das", mother: "Sita Das", address: "Bhubaneswar, Odisha",
+        photoBase64: dummyAvatarSvg
     };
 
     const tempSm = { ...s, layoutSettings: layout, privateTemplateUrl: window.currentPrivateTemplateUrl };
