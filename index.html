@@ -111,6 +111,10 @@
                 <i class="fas fa-book-open w-5 text-center text-blue-500"></i> View Catalog
             </a>
             
+            <a href="https://wa.me/917855800205?text=Hello,%20I%20need%20support%20or%20want%20to%20place%20an%20order%20for%20my%20ID%20cards." target="_blank" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium" onclick="toggleSidebar();">
+                <i class="fab fa-whatsapp w-5 text-center text-[#25D366] text-lg"></i> WhatsApp Support
+            </a>
+            
             <button onclick="shareApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fas fa-share-nodes w-5 text-center text-gray-500"></i> Share App
             </button>
@@ -296,19 +300,6 @@
                     <p>No students found matching your search.</p>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- WHATSAPP SUPPORT BOTTOM BAR -->
-    <div id="supportBottomBar" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] p-4 z-[80] transform transition-transform pb-safe">
-        <div class="max-w-lg mx-auto flex justify-between items-center">
-            <div>
-                <div class="text-xs text-gray-500 font-bold uppercase tracking-wider">Ready to Print</div>
-                <div class="text-xl font-black text-green-600 flex items-center gap-1"><span id="cartCount">0</span> <span class="text-sm text-gray-700 font-bold">Students</span></div>
-            </div>
-            <button onclick="window.open('https://wa.me/917855800205?text=Hello,%20I%20need%20support%20or%20want%20to%20place%20an%20order%20for%20my%20ID%20cards.', '_blank')" class="bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition flex items-center gap-2 transform hover:scale-105 active:scale-95">
-                <i class="fab fa-whatsapp text-lg"></i> WhatsApp Support
-            </button>
         </div>
     </div>
 
@@ -1815,19 +1806,6 @@
             document.getElementById('statTotal').textContent = total;
             document.getElementById('statCompleted').textContent = completed;
             document.getElementById('statPending').textContent = pending;
-            
-            const orderBar = document.getElementById('supportBottomBar');
-            const cartCountEls = document.querySelectorAll('#cartCount');
-            
-            cartCountEls.forEach(el => el.textContent = completed);
-            
-            if (completed > 0) {
-                orderBar.classList.remove('hidden');
-                document.body.style.paddingBottom = '90px'; 
-            } else {
-                orderBar.classList.add('hidden');
-                document.body.style.paddingBottom = '20px';
-            }
         }
 
         function populateClassFilter() {
