@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ID Cards Pro - Data Entry</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #f0f4f8; color: #1e293b; padding-bottom: 80px; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        
+        /* Persistent Top Toolbar */
+        #topToolbar { background: #2563eb; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #installBtn { background: white; color: #2563eb; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; display: none; }
+        .bell-icon { font-size: 20px; cursor: pointer; transition: 0.2s; }
+        .bell-icon:hover { opacity: 0.8; }
+
+        .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h1, h2 { color: #0f172a; margin-bottom: 15px; }
+        
+        .form-group { margin-bottom: 15px; position: relative; }
+        label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600; color: #475569; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; background: #f8fafc; }
+        input:focus { outline: none; border-color: #2563eb; background: white; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .eye-icon { position: absolute; right: 12px; top: 35px; color: #64748b; cursor: pointer; }
+
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; background: #2563eb; color: white; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .btn:disabled { opacity: 0.7; }
+        .btn-outline { background: transparent; border: 2px solid #2563eb; color: #2563eb; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; background: #e2e8f0; padding: 4px; border-radius: 10px; }
+        .tab { flex: 1; padding: 10px; text-align: center; font-weight: bold; cursor: pointer; border-radius: 8px; color: #64748b; transition: 0.3s; }
+        .tab.active { background: white; color: #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* Dynamic Fields Grid */
+        .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 10px; }
+        .field-cb { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .field-cb input { width: 18px; height: 18px; }
+
+        /* Floating WhatsApp Button */
+        #waSupportBtn { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: none; }
+        #waSupportBtn button { background: #25D366; color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 30px; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+        #waSupportBtn button:hover { transform: scale(1.05); }
+        
+        /* Modals */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 20px; padding: 24px; position: relative; max-height: 90vh; overflow-y: auto; }
+        
+        .hidden { display: none !important; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Permanent Top Toolbar -->
+    <div id="topToolbar">
+        <div style="font-weight: bold; font-size: 18px;"><i class="fas fa-id-badge"></i> ID Cards Pro</div>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <i class="fas fa-bell bell-icon" onclick="requestPushPermission()" title="Enable Notifications"></i>
+            <button id="installBtn">Install App</button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- MAIN AUTH SCREEN -->
+    <div id="authScreen" class="container">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 40px; color: #2563eb; margin-bottom: 10px;"><i class="fas fa-lock"></i></div>
+            <h1>Secure Portal</h1>
+            <p style="color: #64748b;">For Govt & Private Schools</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" id="tabLogin" onclick="switchTab('login')">Login</div>
+            <div class="tab" id="tabRegister" onclick="switchTab('register')">Register</div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="loginForm" class="card">
+            <h2>Welcome Back</h2>
+            <div class="form-group">
+                <label>School Code / UDISE</label>
+                <input type="text" id="loginUdise" placeholder="Enter your ID">
+            </div>
+            <div class="form-group">
+                <label>App Password</label>
+                <input type="password" id="loginPass" placeholder="Enter Password">
+                <i class="fas fa-eye eye-icon" onclick="togglePass('loginPass', this)"></i>
+            </div>
+            <button class="btn" id="loginBtn" onclick="loginSchool()">Login to Dashboard</button>
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="#" onclick="forgotPassword()" style="color: #2563eb; font-size: 14px; font-weight: bold; text-decoration: none;">Forgot Password?</a>
+            </div>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div id="registerForm" class="card hidden">
+            <h2>Register School</h2>
+            <div class="form-group">
+                <label>School Type</label>
+                <select id="regType" onchange="handleSchoolType()">
+                    <option value="govt">Government School (Default)</option>
+                    <option value="private">Private / Public School</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label id="lblRegUdise">11-Digit UDISE Code</label>
+                <input type="text" id="regUdise" placeholder="Enter ID">
+            </div>
+            <div class="form-group">
+                <label>School Name</label>
+                <input type="text" id="regName" placeholder="e.g. Delhi Public School">
+            </div>
+            
+            <!-- Dynamic Fields for Private Schools -->
+            <div id="privateFieldsBox" class="hidden" style="margin-bottom: 15px;">
+                <label style="color: #0f172a;">Select ID Card Fields (Max 7)</label>
+                <p style="font-size: 11px; color: #ef4444; margin-bottom: 5px;">Choose exactly what you want printed on the cards.</p>
+                <div class="fields-grid">
+                    <label class="field-cb"><input type="checkbox" class="pvt-cb" value="name" checked disabled> Name (Req)</label>
+                    <label class="field-cb"><input type="checkbox" class="pvt-cb" value="class" checked disabled> Class (Req)</label>
+                    <label class="field-cb"><input type="checkbox" class="pvt-cb" value="roll" checked> Roll No.</label>
+                    <label class="field-cb"><input type="checkbox" class="pvt-cb" value="dob" checked> DOB</label>
+                    <label class="field-cb"><input type="checkbox" class="pvt-cb" value="blood" checked> Blood Group</label>
+                    <label class="field-cb"><input type="checkbox" class="pvt-cb" value="phone" checked> Mobile No.</label>
+                    <label class="field-cb"><input type="checkbox" class="pvt-cb" value="father"> Father's Name</label>
+                    <label class="field-cb"><input type="checkbox" class="pvt-cb" value="mother"> Mother's Name</label>
+                    <label class="field-cb"><input type="checkbox" class="pvt-cb" value="address"> Address</label>
+                </div>
+            </div>
+
+            <div class="form-group" style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <label><i class="fas fa-lock"></i> Create App Password</label>
+                <input type="password" id="regPass" placeholder="Create a secure password">
+                <i class="fas fa-eye eye-icon" onclick="togglePass('regPass', this)" style="top: 50px; right: 25px;"></i>
+                <p style="font-size: 11px; color: #64748b; margin-top: 5px;">You will use this to log into the app tomorrow.</p>
+            </div>
+
+            <button class="btn" id="regBtn" onclick="registerSchool()">Register School</button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SCREEN -->
+    <div id="dashboardScreen" class="hidden">
+        <div style="background: white; border-bottom: 1px solid #e2e8f0; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 50px; z-index: 50;">
+            <div>
+                <h3 id="dashSchoolName" style="margin: 0; font-size: 16px; color: #0f172a;">Loading...</h3>
+                <small id="dashUdise" style="color: #64748b;">UDISE: ---</small>
+            </div>
+            <button onclick="logout()" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 6px 12px; border-radius: 6px; cursor: pointer;"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+
+        <div class="container">
+            <!-- Govt Auto-Load Button (Hidden for Private) -->
+            <div id="govtAutoLoadBox" class="card" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+                <h3 style="color: #1d4ed8; margin-top: 0; font-size: 16px;"><i class="fas fa-magic"></i> Govt Data Auto-Load</h3>
+                <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">Let the Admin fetch your students from the official Govt portal automatically.</p>
+                <button class="btn btn-outline" onclick="document.getElementById('autoLoadModal').style.display='flex'">Submit Govt Portal Password</button>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Student List</h2>
+                <button class="btn" style="width: auto; padding: 8px 16px; font-size: 14px;" onclick="openDataForm()">+ Add Student</button>
+            </div>
+            
+            <div id="studentList">
+                <p style="text-align: center; color: #64748b; padding: 30px;">Loading students...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Support Floating Button -->
+    <div id="waSupportBtn">
+        <button onclick="contactSupport()">
+            <i class="fab fa-whatsapp"></i>
+        </button>
+    </div>
+
+    <!-- DATA ENTRY FORM MODAL -->
+    <div id="dataFormModal" class="modal">
+        <div class="modal-content">
+            <h2 id="formTitle" style="margin-top: 0;">Add Student</h2>
+            
+            <div class="form-group" id="wrap-name"><label>Student Name</label><input type="text" id="stuName"></div>
+            
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex:1" id="wrap-class"><label>Class</label><input type="text" id="stuClass"></div>
+                <div class="form-group" style="flex:1" id="wrap-roll"><label>Roll Number</label><input type="text" id="stuRoll"></div>
+            </div>
+
+            <div class="form-group hidden" id="wrap-father"><label>Father's Name</label><input type="text" id="stuFather"></div>
+            <div class="form-group hidden" id="wrap-mother"><label>Mother's Name</label><input type="text" id="stuMother"></div>
+            <div class="form-group hidden" id="wrap-address"><label>Address</label><input type="text" id="stuAddress"></div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex:1" id="wrap-dob"><label>Date of Birth</label><input type="date" id="stuDob"></div>
+                <div class="form-group" style="flex:1" id="wrap-blood"><label>Blood Group</label>
+                    <select id="stuBlood">
+                        <option value="">Select</option>
+                        <option value="A+">A+</option><option value="A-">A-</option>
+                        <option value="B+">B+</option><option value="B-">B-</option>
+                        <option value="O+">O+</option><option value="O-">O-</option>
+                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group" id="wrap-phone"><label>Mobile Number</label><input type="tel" id="stuPhone" maxlength="10"></div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-outline" onclick="document.getElementById('dataFormModal').style.display='none'">Cancel</button>
+                <button class="btn" id="saveStudentBtn" onclick="saveStudent()">Save Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTO-LOAD CREDENTIALS MODAL -->
+    <div id="autoLoadModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-top: 0; color: #1d4ed8;"><i class="fas fa-lock"></i> Govt Credentials</h2>
+            <p style="font-size: 13px; color: #475569; margin-bottom: 20px;">Provide your official UDISE+ Portal password so Admin can securely download your student list.</p>
+            <div class="form-group">
+                <label>UDISE Portal Password</label>
+                <input type="password" id="udisePortalPass" placeholder="Official Govt Password">
+                <i class="fas fa-eye eye-icon" onclick="togglePass('udisePortalPass', this)"></i>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-outline" onclick="document.getElementById('autoLoadModal').style.display='none'">Cancel</button>
+                <button class="btn" onclick="submitGovtCredentials()">Submit to Admin</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RED ALERT MODAL (Invalid UDISE Pass) -->
+    <div id="fixPassModal" class="modal" style="z-index: 3000;">
+        <div class="modal-content" style="border: 2px solid #ef4444;">
+            <h2 style="margin-top: 0; color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Password Error</h2>
+            <p style="font-size: 14px; color: #475569; margin-bottom: 20px;">The UDISE Portal Password you provided is incorrect. Auto-load is paused.</p>
+            <div class="form-group">
+                <label>Enter Correct UDISE Password</label>
+                <input type="password" id="fixUdisePass" placeholder="Correct Govt Password">
+                <i class="fas fa-eye eye-icon" onclick="togglePass('fixUdisePass', this)"></i>
+            </div>
+            <button class="btn" onclick="submitFixedGovtCredentials()" style="background: #ef4444;">Submit Correction</button>
+        </div>
+    </div>
+
+<script>
+    firebase.initializeApp({
+        apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+        authDomain: "idcard-60586.firebaseapp.com",
+        projectId: "idcard-60586",
+        storageBucket: "idcard-60586.firebasestorage.app",
+        messagingSenderId: "331979663377",
+        appId: "1:331979663377:web:026e537a7fcaca813129b0"
+    });
+    const db = firebase.firestore();
+    const messaging = firebase.messaging();
+
+    const ADMIN_WHATSAPP = "919090623315";
+    let activeSchool = null;
+    let studentCount = 0;
+
+    // --- PWA INSTALL BANNER ---
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        if(localStorage.getItem('pwaInstalled') !== 'true') {
+            deferredPrompt = e;
+            document.getElementById('installBtn').style.display = 'block';
+        }
+    });
+    document.getElementById('installBtn').addEventListener('click', async () => {
+        if(!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if(outcome === 'accepted') {
+            localStorage.setItem('pwaInstalled', 'true');
+            document.getElementById('installBtn').style.display = 'none';
+        }
+        deferredPrompt = null;
+    });
+
+    // --- PUSH NOTIFICATION SETUP ---
+    window.requestPushPermission = async function() {
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                const token = await messaging.getToken();
+                if(token && activeSchool) {
+                    await db.collection('schools').doc(activeSchool.udise).update({ msgToken: token });
+                }
+                showToast("Notifications enabled!");
+            }
+        } catch (error) { console.log("Push error:", error); }
+    };
+    
+    // Foreground Notification Handler (Show toast even if app is open)
+    messaging.onMessage((payload) => {
+        showToast(payload.notification?.body || payload.data?.body || "New Message from Admin");
+    });
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 5000);
+    }
+
+    // --- UI HELPERS ---
+    function switchTab(tab) {
+        document.getElementById('tabLogin').classList.remove('active');
+        document.getElementById('tabRegister').classList.remove('active');
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.add('hidden');
+        
+        if(tab === 'login') {
+            document.getElementById('tabLogin').classList.add('active');
+            document.getElementById('loginForm').classList.remove('hidden');
+        } else {
+            document.getElementById('tabRegister').classList.add('active');
+            document.getElementById('registerForm').classList.remove('hidden');
+        }
+    }
+
+    function togglePass(inputId, icon) {
+        const input = document.getElementById(inputId);
+        if(input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    window.forgotPassword = function() {
+        const udise = document.getElementById('loginUdise').value.trim();
+        let msg = udise ? `Hi Admin, I forgot my App Password for ID: *${udise}*. Can you please help me recover it?` : `Hi Admin, I forgot my App Password for ID Cards Pro. Can you help?`;
+        window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+
+    window.contactSupport = function() {
+        let msg = "Hi Admin, I need help with the ID Cards Pro app.";
+        if(activeSchool) {
+            msg = `Hi Admin! 📄\nI am from *${activeSchool.name}* (ID: ${activeSchool.udise}).\nWe have completed data entry for *${studentCount}* students.\n\nPlease generate our PDF Proof or assist with our order!`;
+        }
+        window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+
+    // --- REGISTRATION LOGIC ---
+    function handleSchoolType() {
+        const type = document.getElementById('regType').value;
+        if(type === 'private') {
+            document.getElementById('lblRegUdise').innerText = 'School Code / UDISE';
+            document.getElementById('privateFieldsBox').classList.remove('hidden');
+        } else {
+            document.getElementById('lblRegUdise').innerText = '11-Digit UDISE Code';
+            document.getElementById('privateFieldsBox').classList.add('hidden');
+        }
+    }
+
+    document.querySelectorAll('.pvt-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+            if(!cb.checked) return;
+            const count = document.querySelectorAll('.pvt-cb:checked').length;
+            if(count > 7) {
+                alert("Maximum 7 fields allowed to fit on the ID Card!");
+                cb.checked = false;
+            }
+        });
+    });
+
+    window.registerSchool = async function() {
+        const type = document.getElementById('regType').value;
+        const udise = document.getElementById('regUdise').value.trim();
+        const pass = document.getElementById('regPass').value.trim();
+        const name = document.getElementById('regName').value.trim();
+        const btn = document.getElementById('regBtn');
+
+        if(!udise || !pass || !name) { alert("Please fill all fields."); return; }
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
+        btn.disabled = true;
+
+        try {
+            const existingDoc = await db.collection('schools').doc(udise).get();
+            if (existingDoc.exists) {
+                alert("SECURITY ALERT: This ID is already registered! Please log in.");
+                btn.innerHTML = 'Register School';
+                btn.disabled = false;
+                return;
+            }
+
+            let customFields = ['name', 'class', 'roll', 'dob', 'blood', 'phone']; 
+            if(type === 'private') {
+                customFields = Array.from(document.querySelectorAll('.pvt-cb:checked')).map(cb => cb.value);
+            }
+
+            await db.collection('schools').doc(udise).set({
+                schoolType: type,
+                name: name,
+                udise: udise,
+                appPassword: pass,
+                customFields: customFields,
+                createdAt: Date.now()
+            });
+
+            alert("Registration Successful! Please log in now.");
+            switchTab('login');
+            
+        } catch(e) {
+            alert("Error: " + e.message);
+        } finally {
+            btn.innerHTML = 'Register School';
+            btn.disabled = false;
+        }
+    };
+
+    // --- LOGIN LOGIC ---
+    window.loginSchool = async function() {
+        const udise = document.getElementById('loginUdise').value.trim();
+        const pass = document.getElementById('loginPass').value.trim();
+        const btn = document.getElementById('loginBtn');
+
+        if(!udise || !pass) { alert("Enter both ID and Password."); return; }
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+        btn.disabled = true;
+
+        try {
+            const doc = await db.collection('schools').doc(udise).get();
+            if (!doc.exists) {
+                alert("School not found! Please register first.");
+            } else {
+                const data = doc.data();
+                if (!data.appPassword) {
+                    alert("Security Update: Account missing App Password. Click 'Forgot Password' to contact Admin!");
+                } else if (data.appPassword !== pass) {
+                    alert("Incorrect Password!");
+                } else {
+                    activeSchool = data;
+                    localStorage.setItem('activeUdise', udise);
+                    showDashboard();
+                }
+            }
+        } catch(e) { alert("Network error."); } 
+        finally { btn.innerHTML = 'Login to Dashboard'; btn.disabled = false; }
+    };
+
+    // --- DASHBOARD LOGIC ---
+    function showDashboard() {
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('dashboardScreen').style.display = 'block';
+        document.getElementById('waSupportBtn').style.display = 'block';
+        
+        document.getElementById('dashSchoolName').innerText = activeSchool.name;
+        document.getElementById('dashUdise').innerText = "ID: " + activeSchool.udise;
+        
+        if(activeSchool.schoolType === 'private') {
+            document.getElementById('govtAutoLoadBox').style.display = 'none';
+        }
+
+        const fields = activeSchool.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+        const allWraps = ['wrap-name', 'wrap-class', 'wrap-roll', 'wrap-dob', 'wrap-blood', 'wrap-phone', 'wrap-father', 'wrap-mother', 'wrap-address'];
+        
+        allWraps.forEach(id => document.getElementById(id).classList.add('hidden'));
+        fields.forEach(f => {
+            const wrap = document.getElementById('wrap-' + f);
+            if(wrap) wrap.classList.remove('hidden');
+        });
+
+        // Request Push automatically if not already prompted
+        setTimeout(() => {
+            if(Notification.permission === 'default') requestPushPermission();
+        }, 1500);
+
+        // Realtime listener for Admin Reject
+        db.collection('schools').doc(activeSchool.udise).onSnapshot(doc => {
+            if(doc.exists && doc.data().udisePassInvalid) {
+                document.getElementById('fixPassModal').style.display = 'flex';
+            }
+        });
+
+        loadStudents();
+    }
+
+    window.logout = function() {
+        localStorage.removeItem('activeUdise');
+        window.location.reload();
+    };
+
+    window.onload = async function() {
+        const savedUdise = localStorage.getItem('activeUdise');
+        if(savedUdise) {
+            try {
+                const doc = await db.collection('schools').doc(savedUdise).get();
+                if(doc.exists) {
+                    activeSchool = doc.data();
+                    showDashboard();
+                }
+            } catch(e) { console.log("Auto-login failed"); }
+        }
+    };
+
+    // --- DATA ENTRY LOGIC ---
+    window.openDataForm = function() {
+        document.getElementById('stuName').value = '';
+        document.getElementById('stuClass').value = '';
+        document.getElementById('stuRoll').value = '';
+        document.getElementById('stuDob').value = '';
+        document.getElementById('stuBlood').value = '';
+        document.getElementById('stuPhone').value = '';
+        document.getElementById('stuFather').value = '';
+        document.getElementById('stuMother').value = '';
+        document.getElementById('stuAddress').value = '';
+        document.getElementById('dataFormModal').style.display = 'flex';
+    };
+
+    window.saveStudent = async function() {
+        if(!activeSchool) return;
+        
+        const isVis = (id) => !document.getElementById('wrap-' + id).classList.contains('hidden');
+        if(isVis('name') && !document.getElementById('stuName').value) return alert("Name is required");
+        if(isVis('class') && !document.getElementById('stuClass').value) return alert("Class is required");
+        
+        const btn = document.getElementById('saveStudentBtn');
+        btn.innerHTML = 'Saving...'; btn.disabled = true;
+
+        const data = {
+            udise: activeSchool.udise,
+            source: 'manual',
+            status: 'pending',
+            addedAt: Date.now(),
+            name: document.getElementById('stuName').value,
+            class: document.getElementById('stuClass').value,
+            roll: document.getElementById('stuRoll').value,
+            dob: document.getElementById('stuDob').value,
+            blood: document.getElementById('stuBlood').value,
+            phone: document.getElementById('stuPhone').value,
+            father: document.getElementById('stuFather').value,
+            mother: document.getElementById('stuMother').value,
+            address: document.getElementById('stuAddress').value
+        };
+
+        try {
+            await db.collection('students').add(data);
+            document.getElementById('dataFormModal').style.display = 'none';
+            loadStudents();
+        } catch(e) { alert("Error saving."); }
+        finally { btn.innerHTML = 'Save Entry'; btn.disabled = false; }
+    };
+
+    function loadStudents() {
+        if(!activeSchool) return;
+        db.collection('students').where('udise', '==', activeSchool.udise).get().then(snap => {
+            const list = document.getElementById('studentList');
+            list.innerHTML = '';
+            studentCount = snap.size;
+            
+            if(studentCount === 0) {
+                list.innerHTML = '<p style="text-align:center; color:#64748b;">No students added yet.</p>';
+                return;
+            }
+
+            snap.forEach(doc => {
+                const s = doc.data();
+                list.innerHTML += `
+                <div style="background:white; padding:15px; border-radius:10px; margin-bottom:10px; border:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:bold; color:#0f172a;">${s.name}</div>
+                        <div style="font-size:12px; color:#64748b;">Class: ${s.class || '-'} | Roll: ${s.roll || '-'}</div>
+                    </div>
+                    <div style="background:#dcfce7; color:#166534; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold;">Ready</div>
+                </div>`;
+            });
+        });
+    }
+
+    // --- GOVT CREDENTIALS LOGIC ---
+    window.submitGovtCredentials = async function() {
+        const p = document.getElementById('udisePortalPass').value.trim();
+        if(!p) return alert("Please enter the password");
+        try {
+            await db.collection('schools').doc(activeSchool.udise).update({
+                credentials: p,
+                credUpdatedAt: Date.now()
+            });
+            alert("Credentials securely sent to Admin for auto-loading!");
+            document.getElementById('autoLoadModal').style.display='none';
+        } catch(e) { alert("Error sending."); }
+    };
+
+    window.submitFixedGovtCredentials = async function() {
+        const p = document.getElementById('fixUdisePass').value.trim();
+        if(!p) return alert("Please enter the correct password");
+        try {
+            await db.collection('schools').doc(activeSchool.udise).update({
+                credentials: p,
+                credUpdatedAt: Date.now(),
+                udisePassInvalid: false
+            });
+            alert("Updated password sent to Admin!");
+            document.getElementById('fixPassModal').style.display='none';
+        } catch(e) { alert("Error updating."); }
+    };
+</script>
+</body>
+</html>
