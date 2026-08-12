@@ -20,7 +20,7 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
 
@@ -52,7 +52,6 @@
             100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); }
         }
         .fab-pulse { animation: gentle-pulse 2s infinite; }
-        .hidden { display: none !important; }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
@@ -71,7 +70,16 @@
         <button onclick="window.location.reload()" class="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow hover:bg-gray-100 transition">Refresh Now</button>
     </div>
 
-    <!-- App Navigation Header (With Install Button) -->
+    <!-- PWA Install Toolbar (Hidden initially) -->
+    <div id="installToolbar" class="hidden bg-indigo-600 text-white px-4 py-2 shadow flex justify-between items-center z-[55] relative">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-download"></i>
+            <span class="text-sm font-bold">Install App for Offline Use</span>
+        </div>
+        <button id="installAppBtn" class="bg-white text-indigo-600 px-3 py-1 rounded-full text-xs font-bold shadow hover:bg-gray-100 transition">Install</button>
+    </div>
+
+    <!-- App Navigation Header -->
     <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white sticky top-0 z-50 shadow-md transition-all duration-300" id="mainHeader">
         <div class="w-full max-w-lg mx-auto px-4 py-3 flex justify-between items-center">
             <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
@@ -89,16 +97,14 @@
             </div>
 
             <div class="flex gap-2">
-                <button onclick="requestNotificationPermission(true)" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Enable Notifications">
+                <button onclick="requestNotificationPermission(true)" id="headerBellBtn" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Enable Notifications">
                     <i class="fas fa-bell text-xs"></i>
-                </button>
-                <button id="installAppBtn" class="hidden bg-white text-blue-600 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm hover:bg-gray-100 transition whitespace-nowrap">
-                    Install
                 </button>
                 <button id="editSchoolBtn" onclick="openEditSchoolModal()" class="hidden bg-white/10 hover:bg-white/20 border border-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition flex-shrink-0 backdrop-blur-sm shadow-sm" title="Edit School">
                     <i class="fas fa-pen text-xs"></i>
                 </button>
             </div>
+            <div id="headerSpacer" class="w-9 h-9 flex-shrink-0"></div>
         </div>
     </header>
 
@@ -106,13 +112,21 @@
     <div id="sidebarOverlay" class="fixed inset-0 z-[100] hidden opacity-0" onclick="toggleSidebar()"></div>
     <div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-[110] transform -translate-x-full flex flex-col">
         <div class="p-5 bg-blue-600 text-white flex justify-between items-center">
-            <h2 class="font-bold text-lg"><i class="fas fa-id-badge mr-2"></i> ID CARDS PRO</h2>
+            <h2 class="font-bold text-lg"><i class="fas fa-id-badge mr-2"></i> AN ID CARDS</h2>
             <button onclick="toggleSidebar()" class="text-white hover:text-gray-200"><i class="fas fa-times text-xl"></i></button>
         </div>
         <div class="flex-1 p-4 flex flex-col gap-2">
+            <a href="catalogue.html" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
+                <i class="fas fa-book-open w-5 text-center text-blue-500"></i> View Catalog
+            </a>
             <a href="https://wa.me/917855800205" target="_blank" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fab fa-whatsapp w-5 text-center text-[#25D366] text-lg"></i> WhatsApp Support
             </a>
+            
+            <button onclick="requestNotificationPermission(true); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-purple-50 transition text-left text-purple-700 font-bold">
+                <i class="fas fa-bell w-5 text-center text-purple-600"></i> Enable Notifications
+            </button>
+
             <button onclick="shareApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
                 <i class="fas fa-share-nodes w-5 text-center text-gray-500"></i> Share App
             </button>
@@ -127,8 +141,8 @@
     <!-- Main Container -->
     <div class="max-w-lg mx-auto p-4 pt-4">
         
-        <!-- ================= SAAS AUTH SECTION ================= -->
-        <div id="authSection" class="animate-fade-in">
+        <!-- ================= SAAS AUTHENTICATION SECTION ================= -->
+        <div id="authSection" class="hidden animate-fade-in">
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-500 text-2xl">
                     <i class="fas fa-lock"></i>
@@ -146,10 +160,12 @@
             <!-- LOGIN FORM -->
             <div id="loginForm" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-800 mb-4 text-lg">Welcome Back</h3>
-                <input type="text" id="loginUdise" placeholder="School Code / UDISE" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <input type="text" id="loginUdise" placeholder="School Code / UDISE" maxlength="11" inputmode="numeric" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 <input type="password" id="loginPass" placeholder="App Password" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 
-                <button id="loginBtn" onclick="loginSchool()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition">Login to Dashboard</button>
+                <button id="loginBtn" onclick="loginSchool()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <i class="fas fa-sign-in-alt"></i> Login & Load Data
+                </button>
                 
                 <div class="text-center mt-4">
                     <a href="#" onclick="forgotPassword()" class="text-blue-500 text-sm font-bold hover:underline">Forgot Password?</a>
@@ -162,20 +178,29 @@
                 
                 <label class="block text-sm font-bold text-gray-700 mb-1">School Type</label>
                 <select id="regType" onchange="handleSchoolType()" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
-                    <option value="govt">Government School (Default)</option>
+                    <option value="govt">Government School</option>
                     <option value="private">Private / Public School</option>
                 </select>
 
                 <label id="lblRegUdise" class="block text-sm font-bold text-gray-700 mb-1">11-Digit UDISE Code</label>
-                <input type="text" id="regUdise" placeholder="Enter ID" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <input type="text" id="newUdise" placeholder="Enter UDISE / ID *" maxlength="11" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 
                 <label class="block text-sm font-bold text-gray-700 mb-1">School Name</label>
-                <input type="text" id="regName" placeholder="e.g. Delhi Public School" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <input type="text" id="newSchoolName" placeholder="e.g. Delhi Public School *" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+
+                <div class="flex gap-3 mb-3">
+                    <input type="text" id="newBlock" placeholder="Block" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <input type="text" id="newDistrict" placeholder="District" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+                <div class="flex gap-3 mb-3">
+                    <input type="number" id="newPin" placeholder="Pin Code" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <input type="tel" id="newSchoolPhone" placeholder="Mobile No. (10 digits) *" maxlength="10" inputmode="numeric" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
 
                 <!-- Dynamic Fields for Private Schools -->
-                <div id="privateFieldsBox" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-100 mb-4">
+                <div id="privateFieldsBox" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-100 mb-4 mt-2">
                     <label class="block text-sm font-bold text-purple-900 mb-1">Select ID Card Fields (Max 7)</label>
-                    <p class="text-xs text-purple-600 mb-3">Choose what data you want to collect.</p>
+                    <p class="text-xs text-purple-600 mb-3">Choose what data you want to collect and print.</p>
                     
                     <div class="grid grid-cols-2 gap-2 text-sm">
                         <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb" value="name" checked disabled> Name (Req)</label>
@@ -190,26 +215,46 @@
                     </div>
                 </div>
 
-                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-5">
-                    <label class="block text-sm font-bold text-gray-700 mb-1"><i class="fas fa-key text-blue-500 mr-1"></i> Create App Password</label>
-                    <input type="password" id="regPass" placeholder="Create a secure password" class="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 transition">
-                    <p class="text-[11px] text-gray-500 mt-2">You will use this to log in tomorrow. Keep it safe!</p>
+                <div class="mb-5 pt-4 border-t border-gray-100">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">HM Signature <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+                    <input type="file" id="newHmSign" accept="image/*" class="w-full p-2 border border-gray-300 rounded-xl bg-gray-50 text-sm focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
                 </div>
 
-                <button id="regBtn" onclick="registerSchool()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition">Register School</button>
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-5">
+                    <label class="block text-sm font-bold text-gray-700 mb-1"><i class="fas fa-key text-blue-500 mr-1"></i> Create App Password *</label>
+                    <input type="password" id="regPass" placeholder="Create a secure password" class="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 transition">
+                    <p class="text-[11px] text-gray-500 mt-2 leading-tight">You will use this to log in securely tomorrow. Keep it safe!</p>
+                </div>
+
+                <button id="addSchoolBtn" onclick="registerSchool()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition">Register School</button>
             </div>
         </div>
 
-        <!-- ================= ENTRY SECTION (DASHBOARD) ================= -->
+        <!-- ================= ENTRY SECTION ================= -->
         <div id="entrySection" class="hidden">
+
+            <div id="pendingImportCard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center mb-6 relative overflow-hidden">
+                <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 text-2xl animate-pulse">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Data Extraction in Progress</h3>
+                <p class="text-sm text-gray-600 mb-6">Your students will be automatically loaded here within 24 hours. You can view, edit, or add photos then.</p>
+                
+                <div class="flex justify-center mt-2">
+                    <button onclick="cancelPendingImport()" class="text-xs text-gray-500 hover:text-gray-800 underline font-medium">
+                        Cancel auto enter
+                    </button>
+                </div>
+            </div>
+
             <div id="standardDashboardControls">
-                <!-- Auto-Load Banner (Hidden for Private by JS) -->
+                
                 <div id="upgradeToAutoBanner" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-4 flex items-center justify-between">
                     <div>
-                        <h4 class="font-bold text-blue-900 text-sm"><i class="fas fa-magic text-blue-500 mr-1"></i> Govt Data Auto-Load</h4>
-                        <p class="text-[11px] text-blue-700 mt-0.5 leading-tight">Securely fetch students from UDISE.</p>
+                        <h4 class="font-bold text-blue-900 text-sm"><i class="fas fa-magic text-blue-500 mr-1"></i> Want your students list here automatically?</h4>
+                        <p class="text-[11px] text-blue-700 mt-0.5 leading-tight">We'll fetch them from UDISE within 24 hours.</p>
                     </div>
-                    <button onclick="document.getElementById('upgradeAutoModal').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition whitespace-nowrap ml-3">
+                    <button onclick="requestAutoLoad()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition whitespace-nowrap ml-3">
                         Auto-Load
                     </button>
                 </div>
@@ -245,7 +290,7 @@
                     </div>
                 </div>
 
-                <button onclick="openAddForm()" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
+                <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
                     <i class="fas fa-user-plus"></i> <span>Add Student</span>
                 </button>
 
@@ -276,28 +321,42 @@
 
     <!-- ================= MODALS ================= -->
 
-    <!-- Auto-Load Modal -->
+    <div id="udiseSelectorModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <h3 class="text-xl font-bold text-blue-800 mb-2">Select Data Source</h3>
+            <p class="text-sm text-gray-600 mb-5">This UDISE contains entries from different sources. Which batch would you like to manage?</p>
+            
+            <div id="udiseSelectorList" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1 pb-4">
+                <!-- Dynamically populated -->
+            </div>
+            
+            <button onclick="document.getElementById('udiseSelectorModal').classList.add('hidden')" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
+        </div>
+    </div>
+
     <div id="upgradeAutoModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
-            <h3 class="text-xl font-bold text-blue-800 mb-2">Govt Credentials</h3>
-            <p class="text-sm text-gray-600 mb-5">Provide your official UDISE Portal password so Admin can securely download your student list.</p>
+            <h3 class="text-xl font-bold text-blue-800 mb-2">Request Auto-Load</h3>
+            <p class="text-sm text-gray-600 mb-5">Provide your official UDISE password. We will extract and load your students within 24 hours.</p>
             
-            <input type="password" id="upgradeUdisePass" placeholder="Official Govt Password" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            <input type="password" id="upgradeUdisePass" placeholder="UDISE Password" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
             
             <div class="flex gap-3">
                 <button onclick="document.getElementById('upgradeAutoModal').classList.add('hidden')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
-                <button id="submitUpgradeBtn" onclick="submitGovtCredentials()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition">Submit Request</button>
+                <button id="submitUpgradeBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition">Submit Request</button>
             </div>
         </div>
     </div>
 
-    <!-- Add/Edit Student Modal (Dynamic) -->
+    <!-- Add/Edit Student Modal (Dynamic Fields) -->
     <div id="addStudentModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl p-5 relative">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl p-5 relative" id="addStudentFormContainer">
             
             <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
                 <h4 id="formTitle" class="font-bold text-lg text-gray-800">Add Student</h4>
-                <button onclick="resetForm()" class="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center transition" title="Close"><i class="fas fa-times"></i></button>
+                <div class="flex gap-2">
+                    <button onclick="resetForm()" class="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center transition" title="Close"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             
             <input type="hidden" id="editId">
@@ -321,7 +380,9 @@
                         <option value="10">Class 10</option>
                     </select>
                 </div>
-                <div id="wrap-roll" class="w-1/2"><input type="text" id="sRoll" placeholder="Roll No" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
+                <div id="wrap-roll" class="w-1/2">
+                    <input type="text" id="sRoll" placeholder="Roll No" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
             </div>
             
             <div id="wrap-father" class="mb-3 hidden"><input type="text" id="sFather" placeholder="Father's Name" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
@@ -330,8 +391,10 @@
             <div id="wrap-phone" class="mb-3"><input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
 
             <div class="flex gap-3 mb-4">
-               <div id="wrap-dob" class="w-1/2"><input type="text" id="sDob" placeholder="Date of Birth" onpointerdown="(this.type='date')" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
-               <div id="wrap-blood" class="w-1/2">
+               <div id="wrap-dob" class="w-1/2">
+                   <input type="text" id="sDob" placeholder="Date of Birth" onpointerdown="(this.type='date')" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+               </div>
+                <div id="wrap-blood" class="w-1/2">
                     <select id="sBlood" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                         <option value="">Blood Group</option>
                         <option value="A+">A+</option><option value="A-">A-</option>
@@ -358,31 +421,68 @@
                 </div>
             </div>
 
-            <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
+            <div class="flex flex-col gap-2">
+                <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
+            </div>
         </div>
     </div>
 
     <!-- Edit School Modal -->
     <div id="editSchoolModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl p-6">
             <div class="flex justify-between items-center mb-5">
-                <h3 class="text-xl font-bold text-gray-900">Edit Info</h3>
+                <h3 class="text-xl font-bold text-gray-900">Edit School Info</h3>
                 <button onclick="document.getElementById('editSchoolModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
             </div>
+            
             <label class="block text-sm font-bold text-gray-700 mb-1">School Name</label>
-            <input type="text" id="editSchoolNameInput" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 outline-none">
-            <button id="saveSchoolEditBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow transition">Save Changes</button>
+            <input type="text" id="editSchoolNameInput" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+
+            <label class="block text-sm font-bold text-gray-700 mb-1">Contact Number</label>
+            <input type="tel" id="editSchoolPhoneInput" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+            
+            <div class="flex gap-3 mb-4">
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Block</label>
+                    <input type="text" id="editSchoolBlock" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">District</label>
+                    <input type="text" id="editSchoolDistrict" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="flex gap-3 mb-6">
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Pin Code</label>
+                    <input type="number" id="editSchoolPin" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="w-1/2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">UDISE *</label>
+                    <input type="text" id="editSchoolUdise" maxlength="11" inputmode="numeric" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" disabled>
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-3">
+                <button id="saveSchoolEditBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow transition">Save Changes</button>
+            </div>
         </div>
     </div>
 
-    <!-- Camera / Cropper Modals (Kept Exact) -->
+    <!-- Fullscreen Camera Modal -->
     <div id="cameraModal" class="hidden fixed inset-0 bg-black z-[150] flex flex-col">
         <div class="relative flex-1 w-full h-full overflow-hidden flex items-center justify-center bg-black">
             <video id="cameraVideo" class="absolute inset-0 w-full h-full object-cover" autoplay playsinline></video>
+            
             <div id="cameraOverlay" class="pointer-events-none absolute z-10 w-[70vw] max-w-[280px] aspect-[3/4] border-2 border-dashed border-white/80 rounded-xl flex flex-col items-center justify-end pb-8 mb-16 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]">
+                 <svg class="w-[85%] h-[85%] text-white/60 mb-2" viewBox="0 0 100 120" fill="none" stroke="currentColor" stroke-width="2.5">
+                     <ellipse cx="50" cy="45" rx="28" ry="34" />
+                     <path d="M 10 120 C 10 90, 20 80, 50 80 C 80 80, 90 90, 90 120" />
+                 </svg>
                  <div class="absolute top-4 text-white font-bold tracking-widest text-center w-full uppercase text-xs drop-shadow-md">Align Face Here</div>
             </div>
         </div>
+        
         <div class="bg-black/90 pb-8 pt-4 px-6 flex justify-between items-center absolute bottom-0 w-full z-[160]">
             <button onclick="closeCam()" class="text-white text-lg px-4 py-2 hover:bg-white/20 rounded-lg transition">Cancel</button>
             <button id="snap" class="w-16 h-16 rounded-full bg-white border-4 border-gray-300 flex-shrink-0 active:scale-90 transition transform"></button>
@@ -390,151 +490,66 @@
         </div>
     </div>
 
+    <!-- Cropper Modal -->
     <div id="cropperModal" class="hidden fixed inset-0 bg-black/90 z-[200] flex flex-col items-center justify-center p-4">
         <div class="w-full max-w-md bg-white rounded-xl overflow-hidden shadow-2xl flex flex-col">
             <div class="p-3 border-b flex justify-between items-center bg-gray-50">
                 <h3 class="font-bold text-gray-800">Crop Photo</h3>
-                <button onclick="closeCropper()" class="text-gray-500"><i class="fas fa-times text-xl"></i></button>
+                <button onclick="closeCropper()" class="text-gray-500 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <div id="cropperContainer" class="w-full bg-black flex items-center justify-center overflow-hidden" style="max-height: 60vh;"><img id="imageToCrop" src="" class="max-w-full"></div>
+            <div id="cropperContainer" class="w-full bg-black flex items-center justify-center overflow-hidden" style="max-height: 60vh;">
+                <img id="imageToCrop" src="" class="max-w-full">
+            </div>
             <div class="p-4 bg-gray-50 flex gap-3">
-                <button onclick="closeCropper()" class="flex-1 bg-gray-200 py-2 rounded-lg font-bold">Cancel</button>
-                <button id="cropSaveBtn" class="flex-1 bg-blue-500 text-white py-2 rounded-lg font-bold">Save Crop</button>
+                <button onclick="closeCropper()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-bold">Cancel</button>
+                <button id="cropSaveBtn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-bold">Save Crop</button>
             </div>
         </div>
     </div>
 
-    <!-- Custom Confirm / Toast Modals -->
+    <!-- Custom Confirm Modal -->
     <div id="customConfirmModal" class="hidden fixed inset-0 bg-black/60 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl scale-95 transform transition-transform duration-200" id="confirmBox">
-            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
             <h3 class="text-xl font-bold text-gray-900 mb-2" id="confirmTitle">Are you sure?</h3>
             <p id="confirmMsg" class="text-gray-600 mb-6 text-sm"></p>
             <div class="flex gap-3">
-                <button id="confirmCancelBtn" class="flex-1 bg-gray-100 py-3 rounded-xl font-bold transition">Cancel</button>
-                <button id="confirmOkBtn" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold transition">Yes</button>
+                <button id="confirmCancelBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-xl font-bold transition">Cancel</button>
+                <button id="confirmOkBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition">Yes, Continue</button>
             </div>
         </div>
     </div>
-    
+
+    <!-- Fixed Toast Container -->
     <div id="toast-container" class="fixed bottom-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
 
     <script>
-        const WA_NUMBER = "917855800205";
-
+        const WA_NUMBER = "917855800205"; // Your Admin WhatsApp Number
+        
         // ==========================================
-        // UI & UTILITIES
+        // PWA INSTALL LOGIC
         // ==========================================
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            if (sidebar.classList.contains('-translate-x-full')) {
-                overlay.classList.remove('hidden');
-                setTimeout(() => { overlay.classList.remove('opacity-0'); sidebar.classList.remove('-translate-x-full'); }, 10);
-            } else {
-                overlay.classList.add('opacity-0'); sidebar.classList.add('-translate-x-full');
-                setTimeout(() => { overlay.classList.add('hidden'); }, 300);
-            }
-        }
-
-        function showToast(msg, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            let bgClass = type === 'error' ? 'bg-red-600' : (type === 'info' ? 'bg-blue-600' : 'bg-gray-900');
-            let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-white"></i>' : (type === 'info' ? '<i class="fas fa-info-circle text-white"></i>' : '<i class="fas fa-check-circle text-green-400"></i>');
-            toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
-            toast.innerHTML = `${icon} <span class="text-sm font-medium leading-snug">${msg}</span>`;
-            container.appendChild(toast);
-            requestAnimationFrame(() => { toast.classList.remove('toast-enter'); toast.classList.add('toast-enter-active'); });
-            setTimeout(() => { toast.classList.remove('toast-enter-active'); toast.classList.add('toast-exit-active'); setTimeout(() => toast.remove(), 300); }, 4000);
-        }
-
-        function showConfirm(msg, title = "Are you sure?", confirmBtnText = "Yes, Continue", btnClass = "bg-red-600 hover:bg-red-700") {
-            return new Promise(resolve => {
-                const modal = document.getElementById('customConfirmModal');
-                const box = document.getElementById('confirmBox');
-                const okBtn = document.getElementById('confirmOkBtn');
-                document.getElementById('confirmTitle').textContent = title;
-                document.getElementById('confirmMsg').textContent = msg;
-                okBtn.textContent = confirmBtnText;
-                okBtn.className = `flex-1 text-white py-3 rounded-xl font-bold transition ${btnClass}`;
-                modal.classList.remove('hidden');
-                setTimeout(() => box.classList.remove('scale-95'), 10);
-                const cleanup = () => { box.classList.add('scale-95'); setTimeout(() => modal.classList.add('hidden'), 200); };
-                okBtn.onclick = () => { cleanup(); resolve(true); };
-                document.getElementById('confirmCancelBtn').onclick = () => { cleanup(); resolve(false); };
-            });
-        }
-
-        // PWA Install Logic
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            document.getElementById('installAppBtn').classList.remove('hidden');
+            document.getElementById('installToolbar').classList.remove('hidden');
         });
+
         document.getElementById('installAppBtn').addEventListener('click', async () => {
-            if(!deferredPrompt) return;
+            if (!deferredPrompt) return;
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            if(outcome === 'accepted') document.getElementById('installAppBtn').classList.add('hidden');
+            if (outcome === 'accepted') {
+                document.getElementById('installToolbar').classList.add('hidden');
+            }
             deferredPrompt = null;
         });
 
         // ==========================================
-        // FIREBASE SETUP
-        // ==========================================
-        const firebaseConfig = {
-              apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
-              authDomain: "idcard-60586.firebaseapp.com",
-              projectId: "idcard-60586",
-              storageBucket: "idcard-60586.firebasestorage.app",
-              messagingSenderId: "331979663377",
-              appId: "1:331979663377:web:026e537a7fcaca813129b0",
-              measurementId: "G-PXVV87C78S"
-        };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const firestore = firebase.firestore();
-        const firebaseStorage = firebase.storage();
-        
-        let messaging;
-        try { 
-            messaging = firebase.messaging(); 
-            messaging.onMessage((payload) => { showToast(`🔔 ${payload.notification.title}: ${payload.notification.body}`, 'info'); });
-        } catch(e) { console.warn("Messaging not supported", e); }
-        
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW Success')).catch(e => console.error('SW Fail', e));
-        }
-
-        // ==========================================
-        // INDEXEDDB SETUP
-        // ==========================================
-        let db, currentSchool = null, currentSchoolData = null, students = [], filteredStudents = [], visibleCount = 50;
-        let cropper = null, currentPhotoBlob = null;
-        let unsubscribeRealtime = null, unsubscribeSchool = null;
-
-        const req = indexedDB.open('SchoolDataApp', 6); 
-        req.onupgradeneeded = e => {
-            db = e.target.result;
-            if(!db.objectStoreNames.contains('schools')) db.createObjectStore('schools', {keyPath:'name'});
-            if(!db.objectStoreNames.contains('students')) {
-                const st = db.createObjectStore('students', {keyPath:'id'});
-                st.createIndex('schoolName', 'schoolName', {unique:false});
-            }
-        };
-        req.onsuccess = e => { db = e.target.result; loadSchools(); updateOnlineStatus(); };
-
-        function updateOnlineStatus() {
-            const banner = document.getElementById('offlineBanner');
-            if (navigator.onLine) { banner.classList.add('-translate-y-full'); syncAllPending(); } 
-            else { banner.classList.remove('hidden'); setTimeout(() => banner.classList.remove('-translate-y-full'), 10); }
-        }
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
-
-        // ==========================================
-        // SAAS AUTHENTICATION & SECURITY
+        // SAAS AUTH LOGIC (Login & Register)
         // ==========================================
         function switchAuthTab(tab) {
             document.getElementById('tabLogin').className = 'flex-1 py-2.5 font-bold rounded-lg text-gray-500 transition';
@@ -554,10 +569,10 @@
         function handleSchoolType() {
             const type = document.getElementById('regType').value;
             if(type === 'private') {
-                document.getElementById('lblRegUdise').innerText = 'School Code / UDISE';
+                document.getElementById('lblRegUdise').innerText = 'School Code / UDISE *';
                 document.getElementById('privateFieldsBox').classList.remove('hidden');
             } else {
-                document.getElementById('lblRegUdise').innerText = '11-Digit UDISE Code';
+                document.getElementById('lblRegUdise').innerText = '11-Digit UDISE Code *';
                 document.getElementById('privateFieldsBox').classList.add('hidden');
             }
         }
@@ -575,8 +590,10 @@
 
         window.forgotPassword = function() {
             const udise = document.getElementById('loginUdise').value.trim();
-            let msg = "Hi Admin, I forgot my App Password for ID Cards Pro. Can you please help me reset it?";
-            if (udise) msg = `Hi Admin, I forgot my App Password for UDISE: *${udise}*. Can you please help me recover it?`;
+            let msg = "Hi Admin, I forgot my App Password for ID Cards Pro. Can you please help me reset or recover it?";
+            if (udise) {
+                msg = `Hi Admin, I forgot my App Password for UDISE: *${udise}*. Can you please help me recover it?`;
+            }
             window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
         };
 
@@ -585,148 +602,783 @@
             const pass = document.getElementById('loginPass').value.trim();
             const btn = document.getElementById('loginBtn');
 
-            if(!udise || !pass) return showToast("Enter both ID and Password.", "error"); 
-            if(!navigator.onLine) return showToast("Internet required to verify login.", "error");
+            if (!udise || !pass) return showToast("Enter both UDISE and Password.", "error");
+            if (!navigator.onLine) return showToast("Internet required to verify login.", "error");
 
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
             btn.disabled = true;
 
             try {
-                const doc = await firestore.collection('schools').doc(udise).get();
-                if (!doc.exists) {
-                    showToast("School not found! Please register first.", "error");
-                } else {
-                    const data = doc.data();
-                    if (!data.appPassword) {
-                        showConfirm("Security Update: Your account does not have an App Password yet. Please contact Admin.", "Security Lock", "Contact Admin").then(res => {
-                            if(res) forgotPassword();
-                        });
-                    } else if (data.appPassword !== pass) {
-                        showToast("Incorrect Password!", "error");
-                    } else {
-                        // Success! Save to IndexedDB
-                        const localId = `[Saas] ${data.name}_${udise}`;
-                        const schoolObj = {
-                            name: localId, realSchoolName: data.name, source: 'manual', udise: udise,
-                            schoolType: data.schoolType || 'govt', customFields: data.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'],
-                            createdAt: data.createdAt, importStatus: data.importStatus || 'manual', udisePass: data.udisePass || ''
-                        };
-                        const tx = db.transaction(['schools'], 'readwrite');
-                        tx.objectStore('schools').put(schoolObj);
-                        tx.oncomplete = () => { showToast("Login Successful!"); enterSchool(schoolObj); };
-                    }
+                const schoolDoc = await firestore.collection('schools').doc(udise).get();
+                
+                if (!schoolDoc.exists) {
+                    showToast("School not found! Please register.", "error");
+                    return;
                 }
-            } catch(e) { showToast("Network error.", "error"); } 
-            finally { btn.innerHTML = 'Login to Dashboard'; btn.disabled = false; }
+                
+                const sData = schoolDoc.data();
+                
+                // Legacy check
+                if (!sData.appPassword) {
+                    await showConfirm("Security Update: Your account needs a security update. Please contact the Admin to get an App Password.", "Account Locked", "Contact Admin").then(res => {
+                        if(res) forgotPassword();
+                    });
+                    return;
+                }
+                
+                if (sData.appPassword !== pass) {
+                    showToast("Incorrect Password!", "error");
+                    return;
+                }
+
+                // Auth Success! Now run the Restore logic to grab all their data locally
+                showToast("Login Success! Loading your data...", "success");
+                
+                const snapshot = await firestore.collection('students').where('udise', '==', udise).get();
+                if (!snapshot.empty) {
+                    const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+                    const groups = {};
+                    docs.forEach(d => {
+                        const src = getStudentSource(d.data);
+                        const rName = d.data.schoolName || sData.name || '(Unnamed School)';
+                        const key = src + '|' + rName;
+                        if(!groups[key]) groups[key] = { source: src, name: rName, docs: [] };
+                        groups[key].docs.push(d);
+                    });
+                    
+                    const keys = Object.keys(groups);
+                    if (keys.length === 1) {
+                        const g = groups[keys[0]];
+                        // Add custom properties to the group name object
+                        g.schoolType = sData.schoolType || 'govt';
+                        g.customFields = sData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+                        performRestore(g.docs, g.name, udise, g.source, sData);
+                    } else {
+                        // Show selector modal if multiple batches exist
+                        document.getElementById('authSection').classList.add('hidden');
+                        const list = document.getElementById('udiseSelectorList');
+                        list.innerHTML = '';
+                        keys.forEach(key => {
+                            const g = groups[key];
+                            const btnHtml = document.createElement('button');
+                            btnHtml.className = g.source === 'excel' 
+                                ? 'w-full text-left bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 p-4 rounded-xl transition'
+                                : 'w-full text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 p-4 rounded-xl transition';
+                            
+                            const icon = g.source === 'excel' ? 'fa-file-excel text-purple-600' : 'fa-mobile-alt text-blue-600';
+                            const title = g.source === 'excel' ? 'Excel Upload Data' : 'App Manual Data';
+                            
+                            btnHtml.innerHTML = `<div class="font-bold mb-1"><i class="fas ${icon} mr-2"></i>${title}</div>
+                                                 <div class="text-xs opacity-80 flex justify-between"><span>${escapeHtml(g.name)}</span> <b>${g.docs.length} Students</b></div>`;
+                            
+                            btnHtml.onclick = () => {
+                                document.getElementById('udiseSelectorModal').classList.add('hidden');
+                                performRestore(g.docs, g.name, udise, g.source, sData);
+                            };
+                            list.appendChild(btnHtml);
+                        });
+                        document.getElementById('udiseSelectorModal').classList.remove('hidden');
+                    }
+                } else {
+                    // No students yet, just enter school freshly
+                    const localId = `[Manual] ${sData.name}_${udise}`;
+                    const schoolObj = {
+                        name: localId,
+                        realSchoolName: sData.name,
+                        source: 'manual',
+                        phone: sData.phone || '', block: sData.block || '', district: sData.district || '',
+                        pin: sData.pin || '', udise: udise, hmSignature: sData.hmSignature || '',
+                        createdAt: sData.createdAt || Date.now(),
+                        importStatus: sData.importStatus || 'manual',
+                        udiseUser: sData.udiseUser || udise,
+                        udisePass: sData.udisePass || '',
+                        schoolType: sData.schoolType || 'govt',
+                        customFields: sData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone']
+                    };
+                    
+                    const tx = db.transaction(['schools'], 'readwrite');
+                    tx.objectStore('schools').put(schoolObj);
+                    tx.oncomplete = () => { enterSchool(schoolObj); };
+                }
+            } catch (err) {
+                showToast("Server error. Check connection.", "error");
+            } finally {
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Load Data';
+                btn.disabled = false;
+            }
         };
 
         window.registerSchool = async function() {
             const type = document.getElementById('regType').value;
-            const udise = document.getElementById('regUdise').value.trim();
-            const name = document.getElementById('regName').value.trim();
+            const udise = document.getElementById('newUdise').value.trim();
+            const name = document.getElementById('newSchoolName').value.trim();
             const pass = document.getElementById('regPass').value.trim();
-            const btn = document.getElementById('regBtn');
+            const phone = document.getElementById('newSchoolPhone').value.trim();
+            const block = document.getElementById('newBlock').value.trim();
+            const district = document.getElementById('newDistrict').value.trim();
+            const pin = document.getElementById('newPin').value.trim();
+            const signFile = document.getElementById('newHmSign').files[0];
+            const btn = document.getElementById('addSchoolBtn');
 
-            if(!udise || !pass || !name) return showToast("Please fill all fields.", "error"); 
+            if(!udise || !pass || !name || !phone) return showToast("Please fill all required fields.", "error"); 
             if(!navigator.onLine) return showToast("Internet required to register.", "error");
 
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
             btn.disabled = true;
 
             try {
+                // Hijack Blocker
                 const existingDoc = await firestore.collection('schools').doc(udise).get();
                 if (existingDoc.exists) {
                     showToast("SECURITY ALERT: This ID is already registered! Please Login.", "error");
                     switchAuthTab('login');
+                    btn.innerHTML = 'Register School'; btn.disabled = false;
                     return;
                 }
 
+                // Determine custom fields
                 let customFields = ['name', 'class', 'roll', 'dob', 'blood', 'phone']; 
-                if(type === 'private') customFields = Array.from(document.querySelectorAll('.pvt-cb:checked')).map(cb => cb.value);
+                if(type === 'private') {
+                    customFields = Array.from(document.querySelectorAll('.pvt-cb:checked')).map(cb => cb.value);
+                }
 
-                const data = { schoolType: type, name: name, udise: udise, appPassword: pass, customFields: customFields, createdAt: Date.now(), importStatus: 'manual' };
-                await firestore.collection('schools').doc(udise).set(data);
+                // Handle Signature Upload
+                let finalSignUrl = '';
+                if (signFile) {
+                    btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Uploading Sign...";
+                    const img = new Image();
+                    img.src = URL.createObjectURL(signFile);
+                    await new Promise(r => { img.onload = r; });
+                    const cvs = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if(w > 400) { h = Math.round((h * 400) / w); w = 400; }
+                    cvs.width = w; cvs.height = h;
+                    cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+                    
+                    const blob = await new Promise(r => cvs.toBlob(r, 'image/png'));
+                    const ref = firebaseStorage.ref(`school_signatures/${udise}_signature.png`);
+                    await ref.put(blob);
+                    finalSignUrl = await ref.getDownloadURL();
+                }
+
+                const schoolObj = { 
+                    schoolType: type, name: name, udise: udise, appPassword: pass, phone: phone, 
+                    block: block, district: district, pin: pin, customFields: customFields, 
+                    hmSignature: finalSignUrl, createdAt: Date.now(), importStatus: 'manual' 
+                };
+                
+                await firestore.collection('schools').doc(udise).set(schoolObj);
 
                 showToast("Registration Successful! Please log in.");
                 switchAuthTab('login');
                 document.getElementById('loginUdise').value = udise;
-            } catch(e) { showToast("Error: " + e.message, "error"); } 
-            finally { btn.innerHTML = 'Register School'; btn.disabled = false; }
+            } catch(e) { 
+                showToast("Registration error.", "error"); 
+            } finally { 
+                btn.innerHTML = 'Register School'; btn.disabled = false; 
+            }
         };
+
+        // Modify performRestore to use the master object
+        function performRestore(docs, schoolName, udise, source, sData) {
+            const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
+            const schoolObj = {
+                name: localId, realSchoolName: schoolName, source: source,
+                phone: sData.phone || '', block: sData.block || '', district: sData.district || '', pin: sData.pin || '', 
+                udise: udise, hmSignature: sData.hmSignature || '', createdAt: sData.createdAt || Date.now(),
+                importStatus: sData.importStatus || 'manual', udiseUser: sData.udiseUser || udise, udisePass: sData.udisePass || '',
+                schoolType: sData.schoolType || 'govt', customFields: sData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone']
+            };
+
+            const tx = db.transaction(['schools', 'students'], 'readwrite');
+            tx.objectStore('schools').delete(localId);
+            tx.objectStore('schools').put(schoolObj);
+
+            const studentStore = tx.objectStore('students');
+            docs.forEach(({ id, data }) => {
+                const student = { ...data, id: Number(id), synced: true, source: source };
+                delete student.submittedAt;
+                if(student.finalised === undefined) student.finalised = true;
+                studentStore.put(student);
+            });
+
+            tx.oncomplete = () => {
+                document.getElementById('loginUdise').value = '';
+                document.getElementById('loginPass').value = '';
+                enterSchool(schoolObj);
+            };
+        }
+
+
+        // ==========================================
+        // UI INTERACTION (Sidebar, Modals)
+        // ==========================================
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => { overlay.classList.remove('opacity-0'); sidebar.classList.remove('-translate-x-full'); }, 10);
+            } else {
+                overlay.classList.add('opacity-0'); sidebar.classList.add('-translate-x-full');
+                setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+            }
+        }
+
+        window.requestAutoLoad = async function() {
+            if (!navigator.onLine) return alert("Internet required to check/request Auto-Load.");
+            const btn = document.querySelector('#upgradeToAutoBanner button');
+            const origTxt = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>"; btn.disabled = true;
+
+            try {
+                const snap = await firestore.collection('students').where('udise', '==', currentSchoolData.udise).limit(100).get();
+                let hasExcel = false;
+                snap.forEach(doc => { if (getStudentSource(doc.data()) === 'excel') hasExcel = true; });
+
+                if (hasExcel) {
+                    currentSchoolData.source = 'excel'; currentSchoolData.importStatus = 'manual';
+                    const tx = db.transaction(['schools'], 'readwrite');
+                    tx.objectStore('schools').put(currentSchoolData);
+                    showToast("Switched to Auto-Loaded students!", "success");
+                    enterSchool(currentSchoolData);
+                    return;
+                }
+
+                if (currentSchoolData.udisePass) {
+                    await startAutoLoadProcess(currentSchoolData.udisePass);
+                } else {
+                    document.getElementById('upgradeUdisePass').value = '';
+                    document.getElementById('upgradeAutoModal').classList.remove('hidden');
+                }
+            } catch (err) { alert("Error checking data: " + err.message); } 
+            finally { btn.innerHTML = origTxt; btn.disabled = false; }
+        };
+
+        async function startAutoLoadProcess(uPass) {
+            showToast("Requesting Auto-Load...", "info");
+            try {
+                currentSchoolData.importStatus = 'pending'; currentSchoolData.udisePass = uPass;
+                const tx = db.transaction(['schools'], 'readwrite');
+                tx.objectStore('schools').put(currentSchoolData);
+
+                await firestore.collection('schools').doc(currentSchoolData.udise).set({
+                    importStatus: 'pending', udiseUser: currentSchoolData.udise, udisePass: uPass, lastModified: Date.now()
+                }, {merge: true});
+
+                showToast("Auto-Load requested successfully!");
+                document.getElementById('upgradeAutoModal').classList.add('hidden');
+                enterSchool(currentSchoolData); 
+            } catch (err) { alert("Error submitting request: " + err.message); }
+        }
+
+        document.getElementById('submitUpgradeBtn').onclick = async () => {
+            const uPass = document.getElementById('upgradeUdisePass').value.trim();
+            if (!uPass) return alert("Please provide the Password.");
+            const btn = document.getElementById('submitUpgradeBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Submitting..."; btn.disabled = true;
+            await startAutoLoadProcess(uPass);
+            btn.innerHTML = origText; btn.disabled = false;
+        };
+
+        // ==========================================
+        // DATA NORMALIZATION
+        // ==========================================
+        function normalizeClass(cls) {
+            if (!cls) return "";
+            const c = String(cls).toLowerCase().replace(/[\s\-\.]/g, '');
+            if (['1', 'i', '01', '1st', 'class1', 'classi', 'std1'].includes(c)) return "1";
+            if (['2', 'ii', '02', '2nd', 'class2', 'classii', 'std2'].includes(c)) return "2";
+            if (['3', 'iii', '03', '3rd', 'class3', 'classiii', 'std3'].includes(c)) return "3";
+            if (['4', 'iv', '04', '4th', 'class4', 'classiv', 'std4'].includes(c)) return "4";
+            if (['5', 'v', '05', '5th', 'class5', 'classv', 'std5'].includes(c)) return "5";
+            if (['6', 'vi', '06', '6th', 'class6', 'classvi', 'std6'].includes(c)) return "6";
+            if (['7', 'vii', '07', '7th', 'class7', 'classvii', 'std7'].includes(c)) return "7";
+            if (['8', 'viii', '08', '8th', 'class8', 'classviii', 'std8'].includes(c)) return "8";
+            if (['9', 'ix', '09', '9th', 'class9', 'classix', 'std9'].includes(c)) return "9";
+            if (['10', 'x', '10th', 'class10', 'classx', 'std10'].includes(c)) return "10";
+            if (['shishuvatika', 'shishu', 'nursery', 'nursary', 'lkg', 'ukg', 'ukh', 'kg', 'kg1', 'kg2', 'pp1', 'pp2', 'preprimary'].includes(c)) return "Shishuvatika";
+            return cls; 
+        }
+
+        function formatDateForInput(dateStr) {
+            if (!dateStr) return '';
+            dateStr = String(dateStr).trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+            if (/^\d{5}$/.test(dateStr)) {
+                const excelEpoch = new Date(1899, 11, 30);
+                const dateObj = new Date(excelEpoch.getTime() + (parseInt(dateStr) * 86400000));
+                return dateObj.toISOString().split('T')[0];
+            }
+            const parts = dateStr.split(/[\/\-\.]/);
+            if (parts.length === 3) {
+                let p0 = parts[0], p1 = parts[1], p2 = parts[2];
+                if (p0.length === 4) return `${p0}-${p1.padStart(2, '0')}-${p2.padStart(2, '0')}`;
+                if (p2.length === 2 || p2.length === 4) {
+                    let y = p2.length === 2 ? "20" + p2 : p2;
+                    return `${y}-${p1.padStart(2, '0')}-${p0.padStart(2, '0')}`;
+                }
+            }
+            return dateStr;
+        }
+
+        function escapeHtml(s){ 
+            if(!s) return '';
+            return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); 
+        }
+
+        function getStudentSource(d) {
+            if (d.source) return d.source;
+            if (d.batchId || d.isExcel) return 'excel';
+            if (d.synced === undefined && d.photoName === undefined && d.source !== 'manual') return 'excel';
+            return 'manual';
+        }
+
+        // ==========================================
+        // UI UTILITIES
+        // ==========================================
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let bgClass = type === 'error' ? 'bg-red-600' : (type === 'info' ? 'bg-blue-600' : 'bg-gray-900');
+            let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-white"></i>' : (type === 'info' ? '<i class="fas fa-info-circle text-white"></i>' : '<i class="fas fa-check-circle text-green-400"></i>');
+            toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
+            toast.innerHTML = `${icon} <span class="text-sm font-medium leading-snug">${msg}</span>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => { toast.classList.remove('toast-enter'); toast.classList.add('toast-enter-active'); });
+            setTimeout(() => { toast.classList.remove('toast-enter-active'); toast.classList.add('toast-exit-active'); setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+
+        function showConfirm(msg, title = "Are you sure?", confirmBtnText = "Yes, Continue", btnClass = "bg-red-600 hover:bg-red-700") {
+            return new Promise(resolve => {
+                const modal = document.getElementById('customConfirmModal');
+                const box = document.getElementById('confirmBox');
+                const okBtn = document.getElementById('confirmOkBtn');
+                document.getElementById('confirmTitle').textContent = title; document.getElementById('confirmMsg').textContent = msg;
+                okBtn.textContent = confirmBtnText; okBtn.className = `flex-1 text-white py-3 rounded-xl font-bold transition ${btnClass}`;
+                modal.classList.remove('hidden'); setTimeout(() => box.classList.remove('scale-95'), 10);
+                const cleanup = () => { box.classList.add('scale-95'); setTimeout(() => modal.classList.add('hidden'), 200); };
+                okBtn.onclick = () => { cleanup(); resolve(true); }; document.getElementById('confirmCancelBtn').onclick = () => { cleanup(); resolve(false); };
+            });
+        }
+        window.alert = function(msg) { showToast(msg, 'error'); };
+
+        async function shareApp() {
+            if (navigator.share) {
+                try { await navigator.share({ title: 'ID CARDS PRO', text: 'Install this app to collect student data completely offline!', url: window.location.href }); } 
+                catch (err) {}
+            } else {
+                navigator.clipboard.writeText(window.location.href); showToast("Link copied to clipboard!", "success");
+            }
+        }
+
+        let unsubscribeRealtime = null; let unsubscribeSchool = null;
+        function updateOnlineStatus() {
+            const banner = document.getElementById('offlineBanner');
+            if (navigator.onLine) { banner.classList.add('-translate-y-full'); } 
+            else { banner.classList.remove('hidden'); setTimeout(() => { banner.classList.remove('-translate-y-full'); }, 10); }
+        }
+        window.addEventListener('online', () => { updateOnlineStatus(); syncAllPending(); setupRealtimeListener(); });
+        window.addEventListener('offline', () => {
+            updateOnlineStatus();
+            if(unsubscribeRealtime) { unsubscribeRealtime(); unsubscribeRealtime = null; }
+            if(unsubscribeSchool) { unsubscribeSchool(); unsubscribeSchool = null; }
+            const liveIndicator = document.getElementById('liveIndicator'); if(liveIndicator) liveIndicator.classList.add('hidden');
+        });
+
+        // ==========================================
+        // FIREBASE SETUP & NOTIFICATIONS
+        // ==========================================
+        const firestore = firebase.firestore();
+        const firebaseStorage = firebase.storage();
+        
+        let messaging;
+        try { 
+            messaging = firebase.messaging(); 
+            messaging.onMessage((payload) => { showToast(`🔔 ${payload.notification.title}: ${payload.notification.body}`, 'info'); });
+        } catch(e) {}
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => {}).catch(err => {});
+            navigator.serviceWorker.addEventListener('controllerchange', () => { document.getElementById('updateBanner').classList.remove('hidden'); });
+        }
+
+        function checkNotificationStatus() {
+            if (!('Notification' in window) || !messaging) return;
+            const bellBtn = document.getElementById('headerBellBtn');
+            if (Notification.permission === 'default') { if(bellBtn) bellBtn.classList.remove('hidden'); } 
+            else if (Notification.permission === 'granted' && currentSchoolData && currentSchoolData.udise) { if(bellBtn) bellBtn.classList.add('hidden'); } 
+            else { if(bellBtn) bellBtn.classList.add('hidden'); }
+        }
+
+        window.requestNotificationPermission = async function(showFeedback = true) {
+            try {
+                const bellBtn = document.getElementById('headerBellBtn'); if (bellBtn) bellBtn.classList.add('hidden');
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') { generateAndSaveToken(showFeedback); } 
+                else { if (showFeedback) showToast("Notification permission denied by browser.", "error"); }
+            } catch(e) {}
+        };
+
+        async function generateAndSaveToken(showFeedback = true) {
+            if(!navigator.onLine) { if (showFeedback) showToast("You are offline. Cannot enable notifications.", "error"); return; }
+            if(!currentSchoolData || !currentSchoolData.udise) return;
+            try {
+                let registration = await navigator.serviceWorker.register('./sw.js');
+                let attempts = 0;
+                while (attempts < 15) {
+                    if (registration && registration.active) break; 
+                    await new Promise(r => setTimeout(r, 500)); 
+                    registration = await navigator.serviceWorker.getRegistration();
+                    attempts++;
+                }
+                if (!registration || !registration.active) return;
+                const token = await messaging.getToken({ vapidKey: "BCwYlUJ-TGYSj-Fy9PiO8qK-USWzQTz3Fin0InwQqhgm0qHlOsTWSTY5L0dxtnmW7FJDfZv4NO2oMHaAGNthPIw", serviceWorkerRegistration: registration });
+                if(token) {
+                    await firestore.collection('schools').doc(currentSchoolData.udise).set({ fcmToken: token, lastModified: Date.now() }, { merge: true });
+                    if(showFeedback) showToast("Notifications enabled successfully!", "success");
+                }
+            } catch(e) {}
+        }
+
+        // ==========================================
+        // INDEXEDDB SETUP
+        // ==========================================
+        let db, currentSchool = null, currentSchoolData = null, students = [];
+        let filteredStudents = [];
+        let currentPhotoBlob = null; let visibleCount = 50; let cropper = null;
+
+        const req = indexedDB.open('SchoolDataApp', 6); 
+        req.onupgradeneeded = e => {
+            db = e.target.result;
+            if(!db.objectStoreNames.contains('schools')) db.createObjectStore('schools', {keyPath:'name'});
+            if(!db.objectStoreNames.contains('students')) {
+                const st = db.createObjectStore('students', {keyPath:'id'});
+                st.createIndex('schoolName', 'schoolName', {unique:false});
+            }
+        };
+        req.onsuccess = e => { db = e.target.result; loadSchools(); updateOnlineStatus(); if (navigator.onLine) syncAllPending(); };
 
         function loadSchools() {
             const tx = db.transaction(['schools'], 'readonly');
             tx.objectStore('schools').getAll().onsuccess = e => {
                 const schools = e.target.result;
-                if(schools.length > 0) enterSchool(schools[0]);
+                if(schools.length > 0) { enterSchool(schools[0]); } 
                 else {
                     document.getElementById('authSection').classList.remove('hidden');
                     document.getElementById('entrySection').classList.add('hidden');
+                    document.getElementById('editSchoolBtn').classList.add('hidden');
                 }
             };
         }
 
-        window.hardResetApp = async function() {
-            const confirmed = await showConfirm("Logging out will clear local data from this device. Are you sure?", "Logout?", "Yes, Logout");
-            if(!confirmed) return;
-            const tx = db.transaction(['schools', 'students'], 'readwrite');
-            tx.objectStore('schools').clear(); tx.objectStore('students').clear();
-            tx.oncomplete = () => { location.reload(); };
-        }
-
-        // ==========================================
-        // DASHBOARD & DATA ENTRY
-        // ==========================================
         function enterSchool(schoolObj) {
-            currentSchoolData = schoolObj;
+            currentSchool = schoolObj.name; currentSchoolData = schoolObj;
+            if (!currentSchoolData.realSchoolName) currentSchoolData.realSchoolName = currentSchoolData.name;
+            if (!currentSchoolData.source) currentSchoolData.source = 'manual';
+            if (!currentSchoolData.importStatus) currentSchoolData.importStatus = 'manual';
+
             document.getElementById('authSection').classList.add('hidden');
             document.getElementById('entrySection').classList.remove('hidden');
             document.getElementById('editSchoolBtn').classList.remove('hidden');
+            document.getElementById('headerSpacer').classList.add('hidden');
             
-            document.getElementById('currentSchoolHeader').innerHTML = `${escapeHtml(schoolObj.realSchoolName)}`;
-            document.getElementById('currentSchoolSubHeader').textContent = `ID: ${schoolObj.udise || 'N/A'}`;
-            document.getElementById('floatingWhatsappBtn').classList.remove('hidden');
-
-            // Handle Govt vs Private UI
-            if(schoolObj.schoolType === 'private') {
-                document.getElementById('upgradeToAutoBanner').classList.add('hidden');
-            } else {
-                document.getElementById('upgradeToAutoBanner').classList.remove('hidden');
-            }
-
-            // Configure Add Student Form Fields dynamically
-            const fields = schoolObj.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+            // Dynamic Form Toggle Logic
+            const fields = currentSchoolData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
             const allWraps = ['wrap-name', 'wrap-class', 'wrap-roll', 'wrap-dob', 'wrap-blood', 'wrap-phone', 'wrap-father', 'wrap-mother', 'wrap-address'];
-            allWraps.forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.classList.add('hidden');
-            });
-            fields.forEach(f => {
-                const wrap = document.getElementById('wrap-' + f);
-                if(wrap) wrap.classList.remove('hidden');
-            });
+            allWraps.forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('hidden'); });
+            fields.forEach(f => { const wrap = document.getElementById('wrap-' + f); if(wrap) wrap.classList.remove('hidden'); });
 
-            loadStudents();
+            updateSchoolHeader();
+            const fab = document.getElementById('floatingWhatsappBtn');
+
+            if (currentSchoolData.importStatus === 'pending') {
+                document.getElementById('standardDashboardControls').classList.add('hidden');
+                document.getElementById('pendingImportCard').classList.remove('hidden');
+                if(fab) fab.classList.remove('hidden');
+            } else {
+                document.getElementById('standardDashboardControls').classList.remove('hidden');
+                document.getElementById('pendingImportCard').classList.add('hidden');
+                if(fab) fab.classList.remove('hidden'); // Ensure visible on dashboard
+                
+                const upgradeBanner = document.getElementById('upgradeToAutoBanner');
+                if (upgradeBanner) {
+                    if (currentSchoolData.source === 'manual' && currentSchoolData.importStatus === 'manual' && currentSchoolData.schoolType !== 'private') {
+                        upgradeBanner.classList.remove('hidden');
+                    } else { upgradeBanner.classList.add('hidden'); }
+                }
+                visibleCount = 50; loadStudents();
+            }
+            setupRealtimeListener(); checkNotificationStatus(); 
         }
 
+        window.cancelPendingImport = async function() {
+            if(!currentSchoolData) return;
+            currentSchoolData.importStatus = 'manual';
+            const tx = db.transaction(['schools'], 'readwrite');
+            tx.objectStore('schools').put(currentSchoolData);
+            if(navigator.onLine) {
+                firestore.collection('schools').doc(currentSchoolData.udise).set({ importStatus: 'manual', lastModified: Date.now() }, {merge: true});
+            }
+            showToast("Switched to manual entry mode.", "info"); enterSchool(currentSchoolData);
+        }
+
+        window.hardResetApp = async function() {
+            const checkTx = db.transaction(['students'], 'readonly');
+            checkTx.objectStore('students').getAll().onsuccess = async e => {
+                const unsynced = e.target.result.filter(s => !s.synced);
+                if (unsynced.length > 0) return alert(`WARNING: You have ${unsynced.length} unsynced students! Sync online before logging out.`);
+                const confirmed = await showConfirm("Logging out will clear the current school and local data from this device. Are you sure?", "Logout?", "Yes, Logout");
+                if(!confirmed) return;
+                if(unsubscribeRealtime) unsubscribeRealtime(); if(unsubscribeSchool) unsubscribeSchool();
+                const tx = db.transaction(['schools', 'students'], 'readwrite');
+                tx.objectStore('schools').clear(); tx.objectStore('students').clear();
+                tx.oncomplete = () => { location.reload(); };
+            };
+        }
+
+        function updateSchoolHeader() {
+            let display = currentSchoolData.realSchoolName;
+            const srcBadge = currentSchoolData.source === 'excel' 
+                ? `<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2 py-0.5 rounded text-[9px] ml-2 tracking-wide font-black">EXCEL BATCH</span>` 
+                : `<span class="bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded text-[9px] ml-2 tracking-wide font-black">MANUAL</span>`;
+            document.getElementById('currentSchoolHeader').innerHTML = `${escapeHtml(display)} ${srcBadge}`;
+            document.getElementById('currentSchoolSubHeader').textContent = `${currentSchoolData.district || 'Data Portal'} | UDISE: ${currentSchoolData.udise || 'N/A'}`;
+        }
+
+        // ==========================================
+        // REALTIME LISTENER
+        // ==========================================
+        function setupRealtimeListener() {
+            if(!currentSchoolData || !currentSchoolData.udise || !navigator.onLine) return;
+            if(unsubscribeRealtime) unsubscribeRealtime(); if(unsubscribeSchool) unsubscribeSchool();
+
+            const liveIndicator = document.getElementById('liveIndicator'); if(liveIndicator) liveIndicator.classList.remove('hidden');
+
+            unsubscribeRealtime = firestore.collection('students').where('udise', '==', currentSchoolData.udise).onSnapshot(snapshot => {
+                const tx = db.transaction(['students'], 'readwrite');
+                const studentStore = tx.objectStore('students');
+                let hasUpdates = false; let foundExcel = false; 
+
+                snapshot.docChanges().forEach(change => {
+                    const data = change.doc.data();
+                    const actualSource = getStudentSource(data);
+                    if (actualSource === 'excel') foundExcel = true;
+                    const student = { ...data, id: Number(change.doc.id), synced: true, source: actualSource };
+                    delete student.submittedAt; if(student.finalised === undefined) student.finalised = true;
+
+                    if (change.type === 'added' || change.type === 'modified') { studentStore.put(student); hasUpdates = true; }
+                    if (change.type === 'removed') { studentStore.delete(student.id); hasUpdates = true; }
+                });
+
+                tx.oncomplete = () => {
+                    if (currentSchoolData.importStatus === 'pending' && foundExcel) {
+                        currentSchoolData.source = 'excel'; currentSchoolData.importStatus = 'manual';
+                        const sTx = db.transaction(['schools'], 'readwrite'); sTx.objectStore('schools').put(currentSchoolData);
+                        showToast("Excel data automatically loaded!", "success"); enterSchool(currentSchoolData); 
+                    } else if (hasUpdates && currentSchoolData.importStatus !== 'pending') { loadStudents(); }
+                };
+            }, error => { if(liveIndicator) liveIndicator.classList.add('hidden'); });
+                
+            unsubscribeSchool = firestore.collection('schools').doc(currentSchoolData.udise).onSnapshot(doc => {
+                if (doc.exists) {
+                    const adminData = doc.data(); let needsUpdate = false;
+                    if (adminData.name && adminData.name !== currentSchoolData.realSchoolName) { currentSchoolData.realSchoolName = adminData.name; needsUpdate = true; }
+                    if (adminData.district !== undefined && adminData.district !== currentSchoolData.district) { currentSchoolData.district = adminData.district; needsUpdate = true; }
+                    if (needsUpdate) {
+                        const tx = db.transaction(['schools'], 'readwrite'); tx.objectStore('schools').put(currentSchoolData); updateSchoolHeader();
+                    }
+                }
+            }, err => {});
+        }
+
+        // ==========================================
+        // CROPPER & CAMERA
+        // ==========================================
+        function openCropper(imageSrc) {
+            const modal = document.getElementById('cropperModal'); const imgElement = document.getElementById('imageToCrop');
+            imgElement.src = imageSrc; modal.classList.remove('hidden');
+            setTimeout(() => {
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(imgElement, { aspectRatio: 3 / 4, viewMode: 1, autoCropArea: 0.9, dragMode: 'move', background: false });
+            }, 50);
+        }
+        function closeCropper() { if (cropper) { cropper.destroy(); cropper = null; } document.getElementById('cropperModal').classList.add('hidden'); document.getElementById('fileInput').value = ''; }
+
+        document.getElementById('cropSaveBtn').onclick = () => {
+            if (!cropper) return;
+            const canvas = cropper.getCroppedCanvas({ width: 300, height: 400, fillColor: '#fff' });
+            const croppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            setPreviewImage(croppedBase64);
+            fetch(croppedBase64).then(res => res.blob()).then(blob => { currentPhotoBlob = blob; closeCropper(); });
+        };
+
+        document.getElementById('openCam').onclick = async () => {
+            document.getElementById('cameraModal').classList.remove('hidden');
+            try { document.getElementById('cameraVideo').srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); } 
+            catch(e) { showToast("Camera access denied", "error"); closeCam(); }
+        };
+
+        document.getElementById('snap').onclick = async () => {
+            const video = document.getElementById('cameraVideo'); if(!video.videoWidth) return;
+            const overlay = document.getElementById('cameraOverlay');
+            const scale = Math.max(video.clientWidth / video.videoWidth, video.clientHeight / video.videoHeight);
+            const renderW = video.videoWidth * scale; const renderH = video.videoHeight * scale;
+            const offsetX = (video.clientWidth - renderW) / 2; const offsetY = (video.clientHeight - renderH) / 2;
+            const overlayRect = overlay.getBoundingClientRect(); const videoRect = video.getBoundingClientRect();
+            const cropX = ((overlayRect.left - videoRect.left) - offsetX) / scale;
+            const cropY = ((overlayRect.top - videoRect.top) - offsetY) / scale;
+            
+            const tempCanvas = document.createElement('canvas'); tempCanvas.width = 300; tempCanvas.height = 400;
+            tempCanvas.getContext('2d').drawImage(video, cropX, cropY, overlayRect.width / scale, overlayRect.height / scale, 0, 0, 300, 400);
+            const imgData = tempCanvas.toDataURL('image/jpeg', 0.75);
+            setPreviewImage(imgData); currentPhotoBlob = await (await fetch(imgData)).blob(); closeCam();
+        };
+
+        function closeCam() { const s = document.getElementById('cameraVideo').srcObject; if(s) s.getTracks().forEach(t=>t.stop()); document.getElementById('cameraModal').classList.add('hidden'); }
+        document.getElementById('fileInput').onchange = e => { const file = e.target.files[0]; if (file) { const r = new FileReader(); r.onload = (event) => openCropper(event.target.result); r.readAsDataURL(file); } };
+
+        function setPreviewImage(src) {
+            const preview = document.getElementById('preview'); const removeBtn = document.getElementById('removePhotoBtn');
+            preview.src = src; preview.classList.remove('hidden'); removeBtn.classList.remove('hidden');
+        }
+        window.removePhoto = function() { document.getElementById('preview').src = ''; document.getElementById('preview').classList.add('hidden'); document.getElementById('removePhotoBtn').classList.add('hidden'); currentPhotoBlob = null; document.getElementById('fileInput').value = ''; }
+
+        // ==========================================
+        // SYNC LOGIC
+        // ==========================================
+        let isSyncing = false;
+        async function syncAllPending() {
+            if(!db || !navigator.onLine || isSyncing) return;
+            isSyncing = true; const btn = document.getElementById('manualSyncBtn');
+            const unsyncedIds = [];
+            await new Promise((res) => {
+                const tx = db.transaction(['students'], 'readonly'); const cur = tx.objectStore('students').openCursor();
+                cur.onsuccess = e => { if(e.target.result) { if(!e.target.result.value.synced) unsyncedIds.push(e.target.result.value.id); e.target.result.continue(); } else res(); };
+            });
+
+            if (unsyncedIds.length === 0) {
+                if (btn) { btn.innerHTML = "<i class='fas fa-check'></i> All Synced"; setTimeout(() => { btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync"; }, 2000); }
+                isSyncing = false; return;
+            }
+
+            try {
+                let fails = 0;
+                for (let i = 0; i < unsyncedIds.length; i++) {
+                    if (btn) btn.innerHTML = `<i class='fas fa-spinner fa-spin'></i> ${i + 1}/${unsyncedIds.length}`;
+                    try {
+                        const student = await new Promise((res) => {
+                            const tx = db.transaction(['students'], 'readonly'); const req = tx.objectStore('students').get(unsyncedIds[i]);
+                            req.onsuccess = () => res(req.result);
+                        });
+                        if (!student || student.synced) continue; 
+                        
+                        if (student.photoBase64 && !student.photoBase64.startsWith('http')) {
+                            const ref = firebaseStorage.ref(`student_photos/${student.udise}_${student.id}.jpg`);
+                            await ref.putString(student.photoBase64, 'data_url', {contentType: 'image/jpeg'});
+                            student.photoBase64 = await ref.getDownloadURL();
+                        }
+                        await firestore.collection('students').doc(String(student.id)).set(student);
+                        student.synced = true;
+                        await new Promise((res) => { const tx = db.transaction(['students'], 'readwrite'); tx.objectStore('students').put(student); tx.oncomplete = res; });
+                    } catch (err) { fails++; }
+                }
+                if (btn) {
+                    btn.innerHTML = fails === 0 ? "<i class='fas fa-check'></i> Synced" : `<i class='fas fa-exclamation-triangle'></i> ${fails} failed`;
+                    setTimeout(() => { btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync"; }, 3000);
+                }
+            } finally { isSyncing = false; loadStudents(); }
+        }
+
+        // ==========================================
+        // STUDENT LIST & FORM LOGIC
+        // ==========================================
         window.openAddForm = function() {
             resetForm(false); 
             document.getElementById('formTitle').innerHTML = 'Add New Student';
+            document.getElementById('saveBtn').innerHTML = 'Save Student';
             document.getElementById('addStudentModal').classList.remove('hidden');
         }
 
-        window.resetForm = function(hideForm = true) {
-            document.getElementById('editId').value = '';
-            document.getElementById('sName').value = ''; document.getElementById('sClass').value = ''; document.getElementById('sRoll').value = '';
-            document.getElementById('sPhone').value = ''; document.getElementById('sDob').value = ''; document.getElementById('sBlood').value = '';
-            document.getElementById('sFather').value = ''; document.getElementById('sMother').value = ''; document.getElementById('sAddress').value = '';
-            window.removePhoto();
-            if (hideForm) document.getElementById('addStudentModal').classList.add('hidden');
+        function loadStudents() {
+            const tx = db.transaction(['students'], 'readonly');
+            tx.objectStore('students').getAll().onsuccess = e => {
+                const targetUdise = currentSchoolData.udise; const targetSource = currentSchoolData.source || 'manual';
+                students = e.target.result.filter(s => {
+                    if (!targetUdise || !s.udise) return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
+                    return s.udise === targetUdise && getStudentSource(s) === targetSource;
+                }).sort((a,b) => (b.lastModified || b.id) - (a.lastModified || a.id));
+                students.forEach(s => { if (s.finalised === undefined) s.finalised = true; });
+                updateStats(); populateClassFilter(); applyFilters(); 
+            };
         }
+
+        function updateStats() {
+            const completed = students.filter(s => s.finalised).length;
+            document.getElementById('statTotal').textContent = students.length;
+            document.getElementById('statCompleted').textContent = completed;
+            document.getElementById('statPending').textContent = students.length - completed;
+            
+            // ORDER CART
+            document.querySelectorAll('#cartCount, #modalCartCount').forEach(el => el.textContent = completed);
+        }
+
+        function populateClassFilter() {
+            const classSelect = document.getElementById('filterClass'); const currentVal = classSelect.value;
+            const classes = [...new Set(students.map(s => normalizeClass(s.class)))].filter(Boolean).sort();
+            let opts = '<option value="ALL">All Classes</option>';
+            classes.forEach(c => { opts += `<option value="${c}">${c} (${students.filter(s => normalizeClass(s.class) === c).length})</option>`; });
+            classSelect.innerHTML = opts; if (classes.includes(currentVal) || currentVal === 'ALL') classSelect.value = currentVal;
+        }
+
+        function applyFilters() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const cls = document.getElementById('filterClass').value;
+            filteredStudents = students.filter(s => (s.name.toLowerCase().includes(term) || (s.roll && s.roll.toLowerCase().includes(term))) && (cls === 'ALL' || normalizeClass(s.class) === cls));
+            visibleCount = 50; renderList();
+        }
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('filterClass').addEventListener('change', applyFilters);
+
+        function renderList() {
+            const list = document.getElementById('studentList'); const msg = document.getElementById('noResultsMsg');
+            list.innerHTML = ''; document.getElementById('listCounter').textContent = `Showing: ${filteredStudents.length} / ${students.length}`;
+            if (filteredStudents.length === 0) { msg.classList.remove('hidden'); return; } else { msg.classList.add('hidden'); }
+
+            filteredStudents.slice(0, visibleCount).forEach((s, index) => {
+                const div = document.createElement('div'); div.className = 'bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden';
+                let photoHtml = s.photoBase64 ? `<img src="${s.photoBase64}" class="w-14 h-14 rounded-lg object-cover shadow-sm flex-shrink-0 border border-gray-200">` : `<div class="w-14 h-14 rounded-lg bg-red-50 flex flex-col items-center justify-center text-red-400 border border-red-100 flex-shrink-0"><i class="fas fa-user-slash mb-1"></i><span class="text-[8px] font-bold">NO PHOTO</span></div>`;
+                let statusHtml = !s.finalised ? `<span class="text-amber-600 font-bold text-[10px] bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fas fa-exclamation-circle"></i> Pending Review</span>` : (!s.synced ? `<span class="text-blue-500 font-bold text-[10px] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200"><i class="fas fa-cloud-upload-alt"></i> Syncing...</span>` : `<span class="text-green-600 font-bold text-[10px] bg-green-50 px-1.5 py-0.5 rounded border border-green-200"><i class="fas fa-check-circle"></i> Completed</span>`);
+                
+                div.innerHTML = `
+                    <div class="p-3 flex items-center gap-2">
+                        <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0">#${filteredStudents.length - index}</div>
+                        <div class="flex-shrink-0">${photoHtml}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-gray-900 text-sm truncate pr-2">${escapeHtml(s.name)}</div>
+                            <div class="text-xs text-gray-600 font-medium mt-1">Class: <span class="text-gray-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-gray-300">|</span> Roll: <span class="text-gray-800">${escapeHtml(s.roll)}</span></div>
+                            <div class="mt-1">${statusHtml}</div>
+                        </div>
+                        <div class="flex-shrink-0 pl-1 flex items-center gap-3 border-l border-gray-100 ml-1 pl-3">
+                            <button onclick="editStudent('${s.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-11 h-11 rounded-full transition shadow-sm"><i class="fas fa-pen"></i></button>
+                            <button onclick="deleteStudentForever('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+            if (filteredStudents.length > visibleCount) {
+                const btn = document.createElement('div'); btn.className = "text-center mt-2 pb-4";
+                btn.innerHTML = `<button onclick="window.loadMore()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2.5 px-6 rounded-full text-sm shadow-sm transition mx-auto flex items-center">Load More <i class="fas fa-chevron-down ml-2"></i></button>`;
+                list.appendChild(btn);
+            }
+        }
+        window.loadMore = function() { visibleCount += 50; renderList(); }
 
         document.getElementById('saveBtn').onclick = async () => {
             const isVis = (id) => !document.getElementById('wrap-' + id).classList.contains('hidden');
-            
+
             const idStr = document.getElementById('editId').value;
             const name = document.getElementById('sName').value.trim();
             const cls = document.getElementById('sClass').value;
@@ -734,151 +1386,91 @@
             
             if(isVis('name') && !name) return showToast('Name is required.', 'error');
             if(isVis('class') && !cls) return showToast('Class is required.', 'error');
-
-            const btn = document.getElementById('saveBtn');
-            const orig = btn.innerHTML; btn.innerHTML = "Saving..."; btn.disabled = true;
+            
+            const btn = document.getElementById('saveBtn'); const orig = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin mr-2'></i> Saving..."; btn.disabled = true;
             
             const id = idStr ? Number(idStr) : Date.now();
-            let base64 = currentPhotoBlob ? await blobToBase64(currentPhotoBlob) : (idStr ? (students.find(x => x.id === id)?.photoBase64 || null) : null);
+            let existingData = idStr ? (students.find(x => x.id === id) || {}) : {};
+            let base64 = currentPhotoBlob ? await blobToBase64(currentPhotoBlob) : (idStr ? existingData.photoBase64 : null);
 
             const student = {
-                id: id,
-                schoolName: currentSchoolData.realSchoolName, udise: currentSchoolData.udise,
+                ...existingData, id: id, schoolName: currentSchoolData.realSchoolName || currentSchoolData.name,
+                hmSignature: currentSchoolData.hmSignature || '', block: currentSchoolData.block || '', district: currentSchoolData.district || '',
+                pin: currentSchoolData.pin || '', udise: currentSchoolData.udise || '', hmPhone: currentSchoolData.phone || '',
                 name: name, class: cls, roll: roll,
-                dob: document.getElementById('sDob').value, bloodGroup: document.getElementById('sBlood').value, mobile: document.getElementById('sPhone').value,
                 father: document.getElementById('sFather').value, mother: document.getElementById('sMother').value, address: document.getElementById('sAddress').value,
-                photoBase64: base64, photoName: `${Date.now()}.jpg`,
-                finalised: true, synced: false, lastModified: Date.now()
+                dob: document.getElementById('sDob').value, bloodGroup: document.getElementById('sBlood').value, mobile: document.getElementById('sPhone').value,
+                photoBase64: base64, photoName: existingData.photoName || `${Date.now()}.jpg`, finalised: true, synced: false, lastModified: Date.now(),
+                source: currentSchoolData.source || 'manual' 
             };
 
-            const tx = db.transaction(['students'], 'readwrite');
-            tx.objectStore('students').put(student);
+            const tx = db.transaction(['students'], 'readwrite'); tx.objectStore('students').put(student);
             tx.oncomplete = () => {
-                showToast("Student Saved!"); resetForm(); loadStudents();
-                if (navigator.onLine) syncToFirebase(student).then(()=>loadStudents()).catch(e=>console.log(e));
+                showToast(idStr ? "Student Updated!" : "Student Saved!"); resetForm(); 
+                if (!idStr) { document.getElementById('searchInput').value = ''; document.getElementById('filterClass').value = 'ALL'; }
+                loadStudents(); if (navigator.onLine) syncToFirebase(student).then(() => loadStudents()).catch(console.error);
                 btn.innerHTML = orig; btn.disabled = false;
             };
         };
 
-        function loadStudents() {
-            const tx = db.transaction(['students'], 'readonly');
-            tx.objectStore('students').getAll().onsuccess = e => {
-                students = e.target.result.filter(s => s.udise === currentSchoolData.udise).sort((a,b) => (b.lastModified||b.id) - (a.lastModified||a.id));
-                updateStats(); applyFilters(); 
-            };
-        }
-
-        function updateStats() {
-            const total = students.length; const completed = students.filter(s => s.finalised).length;
-            document.getElementById('statTotal').textContent = total;
-            document.getElementById('statCompleted').textContent = completed;
-            document.getElementById('statPending').textContent = total - completed;
-        }
-
-        function applyFilters() {
-            const term = document.getElementById('searchInput').value.toLowerCase();
-            filteredStudents = students.filter(s => s.name.toLowerCase().includes(term) || (s.roll && s.roll.toLowerCase().includes(term)));
-            renderList();
-        }
-        document.getElementById('searchInput').addEventListener('input', applyFilters);
-
-        function renderList() {
-            const list = document.getElementById('studentList');
-            list.innerHTML = '';
-            document.getElementById('listCounter').textContent = `Showing: ${filteredStudents.length}`;
-            if(filteredStudents.length === 0) return document.getElementById('noResultsMsg').classList.remove('hidden');
-            document.getElementById('noResultsMsg').classList.add('hidden');
-
-            filteredStudents.slice(0, visibleCount).forEach((s, i) => {
-                const div = document.createElement('div');
-                div.className = 'bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-2 mb-2';
-                let photo = s.photoBase64 ? `<img src="${s.photoBase64}" class="w-12 h-12 rounded object-cover">` : `<div class="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">No Pic</div>`;
-                let syncState = s.synced ? `<span class="text-green-500 text-[10px]"><i class="fas fa-check"></i> Synced</span>` : `<span class="text-amber-500 text-[10px]">Pending Sync</span>`;
-                
-                div.innerHTML = `
-                    ${photo}
-                    <div class="flex-1 min-w-0">
-                        <div class="font-bold text-sm truncate">${escapeHtml(s.name)}</div>
-                        <div class="text-xs text-gray-500">Class: ${s.class||'-'} | Roll: ${s.roll||'-'}</div>
-                        ${syncState}
-                    </div>
-                    <button onclick="editStudent('${s.id}')" class="text-blue-500 p-2"><i class="fas fa-pen"></i></button>
-                    <button onclick="deleteStudent('${s.id}')" class="text-red-500 p-2"><i class="fas fa-trash"></i></button>
-                `;
-                list.appendChild(div);
-            });
-        }
-
         window.editStudent = function(idStr) {
-            const s = students.find(x => x.id === Number(idStr));
-            if(!s) return;
-            document.getElementById('editId').value = s.id;
-            document.getElementById('sName').value = s.name; document.getElementById('sClass').value = s.class||''; document.getElementById('sRoll').value = s.roll||'';
-            document.getElementById('sPhone').value = s.mobile||''; document.getElementById('sDob').value = s.dob||''; document.getElementById('sBlood').value = s.bloodGroup||'';
-            document.getElementById('sFather').value = s.father||''; document.getElementById('sMother').value = s.mother||''; document.getElementById('sAddress').value = s.address||'';
-            if (s.photoBase64) { document.getElementById('preview').src = s.photoBase64; document.getElementById('preview').classList.remove('hidden'); }
-            document.getElementById('formTitle').innerHTML = 'Edit Student';
+            const id = Number(idStr); const s = students.find(x => x.id === id); if(!s) return;
+            document.getElementById('editId').value = s.id; document.getElementById('sName').value = s.name;
+            const mCls = normalizeClass(s.class); const cSel = document.getElementById('sClass');
+            cSel.value = Array.from(cSel.options).some(o=>o.value === mCls) ? mCls : "";
+            document.getElementById('sRoll').value = s.roll || ''; document.getElementById('sPhone').value = s.mobile || s.phone || '';
+            document.getElementById('sFather').value = s.father || ''; document.getElementById('sMother').value = s.mother || ''; document.getElementById('sAddress').value = s.address || '';
+            const dob = document.getElementById('sDob'); const pDob = formatDateForInput(s.dob);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(pDob)) { dob.type = 'date'; dob.value = pDob; } else { dob.type = 'text'; dob.value = s.dob || ''; }
+            document.getElementById('sBlood').value = s.bloodGroup || '';
+            if (s.photoBase64) setPreviewImage(s.photoBase64); else window.removePhoto();
+            
+            document.getElementById('formTitle').innerHTML = 'Edit Student <i class="fas fa-pen text-sm text-gray-400 ml-1"></i>';
             document.getElementById('addStudentModal').classList.remove('hidden');
         }
 
-        window.deleteStudent = async function(idStr) {
-            if(!await showConfirm("Permanently delete this student?", "Delete?")) return;
-            const tx = db.transaction(['students'], 'readwrite'); tx.objectStore('students').delete(Number(idStr));
-            tx.oncomplete = () => { loadStudents(); if(navigator.onLine) firestore.collection('students').doc(idStr).delete(); };
+        window.resetForm = function(hideForm = true) {
+            document.getElementById('editId').value = ''; document.getElementById('sName').value = ''; document.getElementById('sClass').value = '';
+            document.getElementById('sRoll').value = ''; document.getElementById('sPhone').value = ''; document.getElementById('sDob').value = '';
+            document.getElementById('sFather').value = ''; document.getElementById('sMother').value = ''; document.getElementById('sAddress').value = '';
+            document.getElementById('sDob').type = 'text'; document.getElementById('sBlood').value = ''; window.removePhoto();
+            document.getElementById('formTitle').innerHTML = 'Add Student';
+            if (hideForm) document.getElementById('addStudentModal').classList.add('hidden');
         }
 
-        // ==========================================
-        // CAMERA & CROPPER UTILS
-        // ==========================================
-        const blobToBase64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.readAsDataURL(blob); r.onload=()=>res(r.result); });
-        
-        document.getElementById('openCam').onclick = async () => {
-            document.getElementById('cameraModal').classList.remove('hidden');
-            try { document.getElementById('cameraVideo').srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); } 
-            catch(e) { showToast("Camera denied", "error"); closeCam(); }
+        window.deleteStudentForever = async function(idStr) {
+            const id = Number(idStr); const confirmed = await showConfirm("Are you sure you want to permanently delete this student?", "Delete Student?", "Yes, Delete");
+            if(!confirmed) return;
+            const tx = db.transaction(['students'], 'readwrite'); tx.objectStore('students').delete(id);
+            tx.oncomplete = () => { showToast("Student deleted permanently", "success"); loadStudents(); if(navigator.onLine) firestore.collection('students').doc(String(id)).delete(); };
+        }
+
+        window.openEditSchoolModal = function() {
+            document.getElementById('editSchoolNameInput').value = currentSchoolData.realSchoolName;
+            document.getElementById('editSchoolPhoneInput').value = currentSchoolData.phone || '';
+            document.getElementById('editSchoolBlock').value = currentSchoolData.block || '';
+            document.getElementById('editSchoolDistrict').value = currentSchoolData.district || '';
+            document.getElementById('editSchoolPin').value = currentSchoolData.pin || '';
+            document.getElementById('editSchoolUdise').value = currentSchoolData.udise || '';
+            document.getElementById('editSchoolModal').classList.remove('hidden');
+        }
+
+        document.getElementById('saveSchoolEditBtn').onclick = async () => {
+            const newName = document.getElementById('editSchoolNameInput').value.trim();
+            const newUdise = document.getElementById('editSchoolUdise').value.trim();
+            if(!newName) return alert("Name cannot be empty");
+            if(!newUdise) return alert("UDISE is mandatory.");
+
+            const updatedSchool = { ...currentSchoolData, realSchoolName: newName, phone: document.getElementById('editSchoolPhoneInput').value, block: document.getElementById('editSchoolBlock').value, district: document.getElementById('editSchoolDistrict').value, pin: document.getElementById('editSchoolPin').value, udise: newUdise };
+            const firestoreUpdates = { name: newName, phone: updatedSchool.phone, block: updatedSchool.block, district: updatedSchool.district, pin: updatedSchool.pin, udise: newUdise, lastModified: Date.now() };
+            
+            if(navigator.onLine) firestore.collection('schools').doc(newUdise).set(firestoreUpdates, {merge:true});
+
+            const tx = db.transaction(['schools'], 'readwrite'); tx.objectStore('schools').put(updatedSchool);
+            tx.oncomplete = () => { showToast("School Details Updated!"); currentSchoolData = updatedSchool; updateSchoolHeader(); document.getElementById('editSchoolModal').classList.add('hidden'); setupRealtimeListener(); loadStudents(); };
         };
-        document.getElementById('snap').onclick = async () => {
-            const v = document.getElementById('cameraVideo'); const cvs = document.createElement('canvas');
-            cvs.width = 300; cvs.height = 400; cvs.getContext('2d').drawImage(v, 0, 0, 300, 400); // simplified crop logic for text brevity
-            const imgData = cvs.toDataURL('image/jpeg', 0.8);
-            document.getElementById('preview').src = imgData; document.getElementById('preview').classList.remove('hidden');
-            currentPhotoBlob = await (await fetch(imgData)).blob();
-            closeCam();
-        };
-        function closeCam() { const s = document.getElementById('cameraVideo').srcObject; if(s) s.getTracks().forEach(t=>t.stop()); document.getElementById('cameraModal').classList.add('hidden'); }
-        window.removePhoto = function() { document.getElementById('preview').src = ''; document.getElementById('preview').classList.add('hidden'); currentPhotoBlob = null; }
 
-        // Sync & Escapes
-        function escapeHtml(s){ return (s+'').replace(/[&<>"'`]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); }
-        
-        let isSyncing = false;
-        async function syncAllPending() {
-            if(!db || !navigator.onLine || isSyncing) return;
-            isSyncing = true;
-            document.getElementById('manualSyncBtn').innerHTML = "<i class='fas fa-spinner fa-spin'></i>";
-            try {
-                const unsynced = students.filter(s => !s.synced);
-                for(let s of unsynced) await syncToFirebase(s);
-            } finally { isSyncing = false; document.getElementById('manualSyncBtn').innerHTML = "<i class='fas fa-sync-alt'></i> Sync"; loadStudents(); }
-        }
-        
-        async function syncToFirebase(student) {
-            if (student.photoBase64 && !student.photoBase64.startsWith('http')) {
-                const ref = firebaseStorage.ref(`student_photos/${student.udise}_${student.id}.jpg`);
-                await ref.putString(student.photoBase64, 'data_url', {contentType:'image/jpeg'});
-                student.photoBase64 = await ref.getDownloadURL();
-            }
-            await firestore.collection('students').doc(String(student.id)).set(student);
-            student.synced = true;
-            const tx = db.transaction(['students'], 'readwrite'); tx.objectStore('students').put(student);
-        }
-
-        window.submitGovtCredentials = async function() {
-            const p = document.getElementById('upgradeUdisePass').value;
-            if(!p) return showToast("Enter Password", "error");
-            await firestore.collection('schools').doc(currentSchoolData.udise).set({ udisePass: p, importStatus: 'pending' }, {merge:true});
-            showToast("Auto-Load requested!"); document.getElementById('upgradeAutoModal').classList.add('hidden');
-        }
     </script>
 </body>
 </html>
