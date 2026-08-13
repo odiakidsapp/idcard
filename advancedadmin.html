@@ -208,6 +208,16 @@
                 <option value="printed">Already Printed</option>
             </select>
         </div>
+
+        <!-- NEW: Re-added Review Filter -->
+        <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
+            <label style="font-size:13px; font-weight:bold; color: #444;">Review (Excel):</label>
+            <select id="reviewFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 130px; border-color: #ddd;">
+                <option value="all">Show All</option>
+                <option value="reviewed">Reviewed</option>
+                <option value="not_reviewed">Not Reviewed</option>
+            </select>
+        </div>
     </div>
 
     <div class="table-container">
@@ -927,6 +937,8 @@ function openSchoolDetail(udise){
     classFilterSelect.innerHTML = '<option value="all">All Classes</option>';
     document.getElementById('printFilterSelect').value = 'all';
     document.getElementById('sourceFilterSelect').value = 'all';
+    document.getElementById('reviewFilterSelect').value = 'all';
+    document.getElementById('reviewFilterSelect').disabled = false;
 
     document.getElementById('studentTable').querySelector('tbody').innerHTML = '<tr><td colspan="12" style="text-align:center; padding: 40px;"><i class="fas fa-spinner fa-spin fa-2x" style="color: #007bff; margin-bottom: 10px;"></i><br>Loading students from Firebase...</td></tr>';
     
@@ -958,7 +970,17 @@ function openSchoolDetail(udise){
     updateSelection();
 }
 
-function onSourceFilterChange(){ renderTable(); }
+function onSourceFilterChange(){
+    const sourceFilter = document.getElementById('sourceFilterSelect').value;
+    const reviewSelect = document.getElementById('reviewFilterSelect');
+    if(sourceFilter === 'manual') {
+        reviewSelect.value = 'all';
+        reviewSelect.disabled = true;
+    } else {
+        reviewSelect.disabled = false;
+    }
+    renderTable();
+}
 
 function downloadHmSignature() {
     if(!activeUdise || !schoolsMap[activeUdise] || !schoolsMap[activeUdise].signature) { showMsg("No signature available to download."); return; }
@@ -974,12 +996,20 @@ function renderTable(){
     const classFilter = document.getElementById('classFilterSelect').value;
     const printFilter = document.getElementById('printFilterSelect').value;
     const sourceFilter = document.getElementById('sourceFilterSelect').value;
+    const reviewFilter = document.getElementById('reviewFilterSelect').value;
     
     let filteredStudents = currentSchoolStudents;
+    
     if (sourceFilter !== 'all') filteredStudents = filteredStudents.filter(s => s._source === sourceFilter);
     if (classFilter !== 'all') filteredStudents = filteredStudents.filter(s => normalizeClass(s.class) === classFilter);
     if (printFilter === 'printed') filteredStudents = filteredStudents.filter(s => s.isPrinted);
     else if (printFilter === 'unprinted') filteredStudents = filteredStudents.filter(s => !s.isPrinted);
+
+    if (reviewFilter === 'not_reviewed') {
+        filteredStudents = filteredStudents.filter(s => s._source === 'excel' && s.finalised === false);
+    } else if (reviewFilter === 'reviewed') {
+        filteredStudents = filteredStudents.filter(s => s._source === 'excel' && s.finalised !== false);
+    }
 
     tbody.innerHTML = '';
     document.getElementById('selectAll').checked = false;
