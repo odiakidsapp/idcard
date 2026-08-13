@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Magic Links - ID Cards Pro</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #eef2f6; }
+    </style>
+</head>
+<body class="text-gray-800 pb-20 p-4 sm:p-8">
+
+    <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg text-4xl">
+                <i class="fas fa-magic"></i>
+            </div>
+            <h1 class="text-3xl font-black text-gray-900 tracking-tight">Magic Link Generator</h1>
+            <p class="text-gray-500 mt-2">Register a school and generate their 1-click login link.</p>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="formSection" class="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-gray-100">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">School Type</label>
+                    <select id="regType" onchange="handleSchoolType()" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="govt">Government School</option>
+                        <option value="private">Private / Public School</option>
+                    </select>
+                </div>
+                <div>
+                    <label id="lblRegUdise" class="block text-sm font-bold text-gray-700 mb-1">11-Digit UDISE Code *</label>
+                    <input type="text" id="newUdise" placeholder="Enter UDISE / ID *" maxlength="11" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <label class="block text-sm font-bold text-gray-700 mb-1">School Name *</label>
+                <input type="text" id="newSchoolName" placeholder="e.g. Delhi Public School *" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+                <div class="col-span-2"><input type="text" id="newBlock" placeholder="Block" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <div class="col-span-2"><input type="text" id="newDistrict" placeholder="District" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <div class="col-span-2"><input type="number" id="newPin" placeholder="Pin Code" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <div class="col-span-2"><input type="tel" id="newSchoolPhone" placeholder="Mobile No. *" maxlength="10" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"></div>
+            </div>
+
+            <!-- Dynamic Fields for Private Schools -->
+            <div id="privateFieldsBox" class="hidden bg-purple-50 p-5 rounded-2xl border border-purple-100 mb-5">
+                <label class="block text-sm font-bold text-purple-900 mb-1"><i class="fas fa-list-check"></i> Private ID Card Fields (Max 7)</label>
+                <p class="text-xs text-purple-600 mb-4">Choose what data you want this specific school to collect.</p>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                    <label class="flex items-center gap-2 font-semibold"><input type="checkbox" class="pvt-cb w-4 h-4 text-purple-600 rounded" value="name" checked disabled> Name (Req)</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb w-4 h-4 text-purple-600 rounded" value="class" checked> Class</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb w-4 h-4 text-purple-600 rounded" value="roll" checked> Roll No.</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb w-4 h-4 text-purple-600 rounded" value="dob" checked> DOB</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb w-4 h-4 text-purple-600 rounded" value="blood" checked> Blood Group</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb w-4 h-4 text-purple-600 rounded" value="phone" checked> Mobile No.</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb w-4 h-4 text-purple-600 rounded" value="father"> Father's Name</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb w-4 h-4 text-purple-600 rounded" value="mother"> Mother's Name</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb w-4 h-4 text-purple-600 rounded" value="address"> Address</label>
+                </div>
+            </div>
+
+            <div class="mb-5 pt-5 border-t border-gray-100">
+                <label class="block text-sm font-bold text-gray-700 mb-2">HM Signature Upload <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+                <div class="flex items-center justify-center w-full">
+                    <label for="newHmSign" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-2"></i>
+                            <p class="text-sm text-gray-500"><span class="font-semibold">Click to upload</span> signature</p>
+                        </div>
+                        <input id="newHmSign" type="file" accept="image/*" class="hidden" />
+                    </label>
+                </div>
+                <p id="fileNameDisplay" class="text-xs text-center text-blue-600 mt-2 font-bold hidden"></p>
+            </div>
+
+            <div class="bg-blue-50 p-5 rounded-2xl border border-blue-100 mb-6">
+                <label class="block text-sm font-bold text-blue-900 mb-1"><i class="fas fa-key mr-1"></i> Create App Password *</label>
+                <input type="text" id="regPass" placeholder="e.g. School@123" class="w-full p-3 border border-blue-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                <p class="text-xs text-blue-600 mt-2 leading-tight">This password will be baked into their Magic Link.</p>
+            </div>
+
+            <button id="generateBtn" onclick="registerAndGenerate()" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg transition text-lg flex items-center justify-center gap-2">
+                <i class="fas fa-wand-magic-sparkles"></i> Create School & Generate Link
+            </button>
+            <p id="errorMsg" class="text-red-500 text-center text-sm font-bold mt-3 hidden"></p>
+        </div>
+
+        <!-- Success Result Section -->
+        <div id="resultSection" class="hidden bg-white p-6 sm:p-8 rounded-3xl shadow-2xl border-2 border-green-400 mt-6 text-center transform transition-all">
+            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                <i class="fas fa-check"></i>
+            </div>
+            <h2 class="text-2xl font-black text-gray-900 mb-2">Magic Link Ready!</h2>
+            <p class="text-gray-500 mb-6 text-sm">Send this link to the school. They will be logged in instantly without typing a password.</p>
+
+            <div class="bg-gray-100 p-4 rounded-xl mb-6 relative group">
+                <p id="magicLinkText" class="text-sm font-mono text-gray-800 break-all select-all">https://...</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="copyLink()" id="copyBtn" class="flex-1 bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-800 font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2">
+                    <i class="fas fa-copy"></i> Copy Link
+                </button>
+                <button onclick="shareWhatsApp()" class="flex-1 bg-[#25D366] hover:bg-[#1ebd59] text-white font-bold py-3.5 rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <i class="fab fa-whatsapp text-lg"></i> Send via WhatsApp
+                </button>
+            </div>
+
+            <button onclick="resetGenerator()" class="mt-6 text-blue-600 font-bold text-sm hover:underline">Register Another School</button>
+        </div>
+
+    </div>
+
+    <script>
+        // FIREBASE SETUP
+        const firebaseConfig = {
+              apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+              authDomain: "idcard-60586.firebaseapp.com",
+              projectId: "idcard-60586",
+              storageBucket: "idcard-60586.firebasestorage.app",
+              appId: "1:331979663377:web:026e537a7fcaca813129b0"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const firestore = firebase.firestore();
+        const firebaseStorage = firebase.storage();
+
+        // --------------------------------------------------------
+        // MAGIC LINK DOMAIN CONFIGURATION
+        // --------------------------------------------------------
+        const BASE_APP_URL = "https://abapps.in/index.html"; 
+
+        // UI Interactions
+        document.getElementById('newHmSign').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const display = document.getElementById('fileNameDisplay');
+            if (file) {
+                display.textContent = `Selected: ${file.name}`;
+                display.classList.remove('hidden');
+            } else {
+                display.classList.add('hidden');
+            }
+        });
+
+        function handleSchoolType() {
+            const type = document.getElementById('regType').value;
+            if(type === 'private') {
+                document.getElementById('lblRegUdise').innerText = 'School Code / UDISE *';
+                document.getElementById('privateFieldsBox').classList.remove('hidden');
+            } else {
+                document.getElementById('lblRegUdise').innerText = '11-Digit UDISE Code *';
+                document.getElementById('privateFieldsBox').classList.add('hidden');
+            }
+        }
+
+        // Limit Private checkboxes to 7 max
+        document.querySelectorAll('.pvt-cb').forEach(cb => {
+            cb.addEventListener('change', () => {
+                if(!cb.checked) return;
+                if(document.querySelectorAll('.pvt-cb:checked').length > 7) {
+                    alert("Maximum 7 fields allowed!");
+                    cb.checked = false;
+                }
+            });
+        });
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 4000);
+        }
+
+        async function registerAndGenerate() {
+            const type = document.getElementById('regType').value;
+            const udise = document.getElementById('newUdise').value.trim();
+            const name = document.getElementById('newSchoolName').value.trim();
+            const pass = document.getElementById('regPass').value.trim();
+            const phone = document.getElementById('newSchoolPhone').value.trim();
+            const block = document.getElementById('newBlock').value.trim();
+            const district = document.getElementById('newDistrict').value.trim();
+            const pin = document.getElementById('newPin').value.trim();
+            const signFile = document.getElementById('newHmSign').files[0];
+            const btn = document.getElementById('generateBtn');
+
+            if(!udise || !pass || !name || !phone) return showError("Please fill all required fields."); 
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+
+            try {
+                // Check if already exists
+                const existingDoc = await firestore.collection('schools').doc(udise).get();
+                if (existingDoc.exists) {
+                    btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Create School & Generate Link';
+                    btn.disabled = false;
+                    return showError("This UDISE / ID is already registered in the database!");
+                }
+
+                // Custom fields
+                let customFields = ['name', 'class', 'roll', 'dob', 'blood', 'phone']; 
+                if(type === 'private') {
+                    customFields = Array.from(document.querySelectorAll('.pvt-cb:checked')).map(cb => cb.value);
+                }
+
+                // Handle Signature Upload
+                let finalSignUrl = '';
+                if (signFile) {
+                    btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Uploading Signature...";
+                    const img = new Image();
+                    img.src = URL.createObjectURL(signFile);
+                    await new Promise(r => { img.onload = r; });
+                    const cvs = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if(w > 400) { h = Math.round((h * 400) / w); w = 400; }
+                    cvs.width = w; cvs.height = h;
+                    cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+                    
+                    const blob = await new Promise(r => cvs.toBlob(r, 'image/png'));
+                    const ref = firebaseStorage.ref(`school_signatures/${udise}_signature.png`);
+                    await ref.put(blob);
+                    finalSignUrl = await ref.getDownloadURL();
+                }
+
+                btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Saving to Database...";
+
+                const schoolObj = { 
+                    schoolType: type, name: name, udise: udise, appPassword: pass, phone: phone, 
+                    block: block, district: district, pin: pin, customFields: customFields, 
+                    hmSignature: finalSignUrl, createdAt: Date.now(), lastModified: Date.now(), importStatus: 'manual' 
+                };
+                
+                await firestore.collection('schools').doc(udise).set(schoolObj);
+
+                // Generation Complete! Show the Magic Link
+                const magicUrl = `${BASE_APP_URL}?u=${encodeURIComponent(udise)}&p=${encodeURIComponent(pass)}`;
+                
+                document.getElementById('formSection').classList.add('hidden');
+                document.getElementById('resultSection').classList.remove('hidden');
+                document.getElementById('magicLinkText').textContent = magicUrl;
+                
+            } catch(e) { 
+                showError("Database Error: " + e.message); 
+            } finally { 
+                btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Create School & Generate Link'; 
+                btn.disabled = false; 
+            }
+        }
+
+        function copyLink() {
+            const link = document.getElementById('magicLinkText').textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.innerHTML = '<i class="fas fa-check text-green-500"></i> Copied!';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-copy"></i> Copy Link';
+                }, 2000);
+            });
+        }
+
+        function shareWhatsApp() {
+            const link = document.getElementById('magicLinkText').textContent;
+            const schoolName = document.getElementById('newSchoolName').value.trim();
+            const msg = `Hello ${schoolName},\n\nHere is your secure access link for the ID Cards App. Just click the link below to enter your dashboard automatically without typing a password:\n\n${link}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        function resetGenerator() {
+            document.getElementById('newUdise').value = '';
+            document.getElementById('newSchoolName').value = '';
+            document.getElementById('regPass').value = '';
+            document.getElementById('newSchoolPhone').value = '';
+            document.getElementById('newBlock').value = '';
+            document.getElementById('newDistrict').value = '';
+            document.getElementById('newPin').value = '';
+            document.getElementById('newHmSign').value = '';
+            document.getElementById('fileNameDisplay').classList.add('hidden');
+            
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('formSection').classList.remove('hidden');
+            window.scrollTo(0,0);
+        }
+    </script>
+</body>
+</html>
