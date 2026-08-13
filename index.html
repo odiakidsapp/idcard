@@ -1502,6 +1502,25 @@
                     document.getElementById('entrySection').classList.add('hidden');
                     document.getElementById('sidebarEditProfileBtn').classList.add('hidden');
                     document.getElementById('schoolNameSubHeader').classList.add('hidden');
+
+                    // --- NEW: MAGIC LINK AUTO-LOGIN LOGIC ---
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const magicU = urlParams.get('u');
+                    const magicP = urlParams.get('p');
+                    if(magicU && magicP) {
+                        // 1. Auto-fill the hidden login form
+                        document.getElementById('loginUdise').value = magicU;
+                        document.getElementById('loginPass').value = magicP;
+                        
+                        // 2. Hide the password from the URL bar immediately for security
+                        window.history.replaceState(null, '', window.location.pathname);
+                        
+                        // 3. Automatically click the login button after a short delay
+                        setTimeout(() => {
+                            window.loginSchool();
+                        }, 500);
+                    }
+                    // ----------------------------------------
                 }
             };
         }
