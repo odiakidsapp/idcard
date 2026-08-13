@@ -13,7 +13,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-const CACHE_NAME = 'student-data-v39-auto-load-update'; // Bumped to v35
+const CACHE_NAME = 'student-data-v42-auto-load-update'; // Bumped to v35
 
 const urlsToCache = [
   './',
