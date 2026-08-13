@@ -788,7 +788,7 @@
                 const schoolObj = { 
                     schoolType: type, name: name, udise: udise, appPassword: pass, phone: phone, 
                     block: block, district: district, pin: pin, customFields: customFields, 
-                    hmSignature: finalSignUrl, createdAt: Date.now(), importStatus: 'manual' 
+                    hmSignature: finalSignUrl, createdAt: Date.now(), lastModified: Date.now(), importStatus: 'manual' 
                 };
                 
                 await firestore.collection('schools').doc(udise).set(schoolObj);
