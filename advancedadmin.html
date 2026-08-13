@@ -725,7 +725,11 @@ async function rebuildSchoolsMap() {
                 newMap[udise].customFields = d.customFields || []; 
                 newMap[udise].layoutSettings = d.layoutSettings || null;
                 newMap[udise].privateTemplateUrl = d.privateTemplateUrl || null;
+                newMap[udise].fcmToken = d.fcmToken || ''; 
             }
+            
+            let docTime = d.lastModified || d.createdAt || 0;
+            if (docTime > maxId) maxId = docTime;
         });
 
         Object.keys(newMap).forEach(k => {
