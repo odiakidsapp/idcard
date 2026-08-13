@@ -12,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+    <!-- Removed Messaging Script to disable notifications completely -->
 
     <!-- Cropper.js for Gallery Image Cropping -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
@@ -37,14 +38,6 @@
         
         #sidebarOverlay { background-color: rgba(0, 0, 0, 0.5); transition: opacity 0.3s ease; }
         #sidebar { transition: transform 0.3s ease; }
-        
-        /* Floating WhatsApp Button Animation */
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-5px); }
-            100% { transform: translateY(0px); }
-        }
-        .fab-hover { animation: float 3s ease-in-out infinite; }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
@@ -74,7 +67,8 @@
                 <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
                     <i class="fas fa-bars text-[18px]"></i>
                 </button>
-                <span class="font-bold text-[15px] tracking-wide ml-1 mr-1 hidden sm:block">ID Cards Pro</span>
+                <!-- Title is now always visible on mobile -->
+                <span class="font-bold text-[15px] tracking-wide ml-1 mr-1 truncate">ID Cards Pro</span>
                 <span id="liveIndicator" class="hidden bg-green-500/20 border border-green-400 text-green-100 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1 flex-shrink-0" title="Live Sync Active">
                     <i class="fas fa-circle text-[6px] text-green-400 animate-pulse"></i>LIVE
                 </span>
@@ -85,6 +79,7 @@
                 <button onclick="window.location.reload()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition" title="Refresh App">
                     <i class="fas fa-sync-alt text-sm"></i>
                 </button>
+                <!-- Removed Bell Icon completely -->
                 <!-- Install Button (Text + Icon) -->
                 <button id="headerInstallBtn" onclick="triggerInstall()" class="hidden bg-white/20 hover:bg-white/30 border border-white/40 text-white px-2.5 py-1.5 rounded-md text-[11px] font-bold flex items-center gap-1.5 transition" title="Install App">
                     <i class="fas fa-download"></i> INSTALL
@@ -309,11 +304,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Floating WhatsApp Support Button -->
-    <a href="https://wa.me/917855800205" target="_blank" id="floatingWhatsappBtn" class="hidden fixed bottom-6 right-6 z-[90] w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center text-3xl shadow-[0_4px_12px_rgba(37,211,102,0.4)] hover:bg-[#1ebd5a] hover:scale-105 transition-all duration-300 fab-hover" title="WhatsApp Support">
-        <i class="fab fa-whatsapp"></i>
-    </a>
 
     <!-- ================= MODALS ================= -->
 
@@ -548,60 +538,6 @@
             <div class="flex gap-3">
                 <button id="confirmCancelBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-xl font-bold transition">Cancel</button>
                 <button id="confirmOkBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition">Yes, Continue</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ORDER CHECKOUT BOTTOM BAR -->
-    <div id="orderBottomBar" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] p-4 z-[80] transform transition-transform pb-safe">
-        <div class="max-w-lg mx-auto flex justify-between items-center">
-            <div>
-                <div class="text-xs text-gray-500 font-bold uppercase tracking-wider">Ready to Print</div>
-                <div class="text-xl font-black text-green-600 flex items-center gap-1"><span id="cartCount">0</span> <span class="text-sm text-gray-700 font-bold">Students</span></div>
-            </div>
-            <button onclick="document.getElementById('orderModal').classList.remove('hidden')" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition flex items-center gap-2 transform hover:scale-105 active:scale-95">
-                <i class="fas fa-shopping-bag"></i> Place Order
-            </button>
-        </div>
-    </div>
-
-    <!-- ORDER MODAL -->
-    <div id="orderModal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md shadow-2xl p-6 relative animate-slide-up">
-            <div class="flex justify-between items-center mb-2">
-                <div>
-                    <h3 class="text-2xl font-black text-gray-900 leading-tight">Finalize Order</h3>
-                    <h4 class="text-sm font-bold text-blue-600">ଅର୍ଡର ନିଶ୍ଚିତ କରନ୍ତୁ</h4>
-                </div>
-                <button onclick="document.getElementById('orderModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 bg-gray-50 w-8 h-8 rounded-full flex items-center justify-center transition"><i class="fas fa-times"></i></button>
-            </div>
-            <p class="text-sm text-gray-600 mb-2 font-medium">You have <b class="text-green-600 text-lg" id="modalCartCount">0</b> completed ID cards ready for processing.</p>
-            <p class="text-xs text-gray-500 mb-5 font-medium border-b border-gray-100 pb-4">ଆପଣଙ୍କର ପ୍ରସ୍ତୁତ ଥିବା କାର୍ଡଗୁଡ଼ିକ ପାଇଁ ଆପଣ କଣ କରିବାକୁ ଚାହୁଁଛନ୍ତି?</p>
-            
-            <div class="flex flex-col gap-4">
-                <!-- Option 1: Verification -->
-                <button onclick="sendWaVerification()" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 p-4 rounded-2xl transition flex items-start gap-4 text-left group">
-                    <div class="bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 group-hover:scale-110 transition"><i class="fas fa-file-pdf"></i></div>
-                    <div>
-                        <div class="font-bold text-base mb-0.5">Request Verification Proof</div>
-                        <div class="text-xs font-bold text-blue-700 mb-1">ଯାଞ୍ଚ ପାଇଁ PDF ମାଗନ୍ତୁ</div>
-                        <div class="text-[11px] text-blue-600/80 leading-tight">Send a WhatsApp request to get a soft copy (PDF) to check for spelling mistakes before printing. <br><span class="opacity-80 mt-1 block font-medium">ପ୍ରିଣ୍ଟ କରିବା ପୂର୍ବରୁ ବନାନ (spelling) ଯାଞ୍ଚ କରିବା ପାଇଁ WhatsApp ରେ PDF କପି ମାଗନ୍ତୁ।</span></div>
-                    </div>
-                </button>
-
-                <!-- Option 2: Final Print -->
-                <button onclick="sendWaOrder()" class="w-full bg-green-50 hover:bg-green-100 border border-green-200 text-green-900 p-4 rounded-2xl transition flex items-start gap-4 text-left group">
-                    <div class="bg-green-500 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 group-hover:scale-110 transition"><i class="fas fa-print"></i></div>
-                    <div>
-                        <div class="font-bold text-base mb-0.5">Confirm & Order Prints</div>
-                        <div class="text-xs font-bold text-green-700 mb-1">ପ୍ରିଣ୍ଟ ପାଇଁ ଅର୍ଡର କରନ୍ତୁ</div>
-                        <div class="text-[11px] text-green-700/80 leading-tight">Send a WhatsApp message to officially place the print order for these ID cards.<br><span class="opacity-80 mt-1 block font-medium">ଏହି ସମସ୍ତ ID କାର୍ଡ ପ୍ରିଣ୍ଟ କରିବା ପାଇଁ WhatsApp ରେ ଫାଇନାଲ ଅର୍ଡର ଦିଅନ୍ତୁ।</span></div>
-                    </div>
-                </button>
-            </div>
-            
-            <div class="mt-6 text-center">
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Secure WhatsApp Checkout</p>
             </div>
         </div>
     </div>
@@ -1148,6 +1084,7 @@
               authDomain: "idcard-60586.firebaseapp.com",
               projectId: "idcard-60586",
               storageBucket: "idcard-60586.firebasestorage.app",
+              messagingSenderId: "331979663377",
               appId: "1:331979663377:web:026e537a7fcaca813129b0",
               measurementId: "G-PXVV87C78S"
         };
@@ -1169,9 +1106,10 @@
             });
         }
 
+        // Restored openAddForm logic safely to the global scope
         window.openAddForm = function() {
             if(typeof applyCustomFields === 'function') applyCustomFields();
-            resetForm(false); 
+            if(typeof resetForm === 'function') resetForm(false); 
             document.getElementById('formTitle').innerHTML = 'Add New Student';
             document.getElementById('saveBtn').innerHTML = 'Save Student';
             document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
@@ -1867,20 +1805,6 @@
             document.getElementById('statTotal').textContent = total;
             document.getElementById('statCompleted').textContent = completed;
             document.getElementById('statPending').textContent = pending;
-            
-            // ORDER CART LOGIC
-            const orderBar = document.getElementById('orderBottomBar');
-            const cartCountEls = document.querySelectorAll('#cartCount, #modalCartCount');
-            
-            cartCountEls.forEach(el => el.textContent = completed);
-            
-            if (completed > 0) {
-                orderBar.classList.remove('hidden');
-                document.body.style.paddingBottom = '90px'; // Make room for the sticky bar
-            } else {
-                orderBar.classList.add('hidden');
-                document.body.style.paddingBottom = '20px';
-            }
         }
 
         function populateClassFilter() {
@@ -2171,68 +2095,6 @@
                 }
             };
         }
-
-        // WHATSAPP CHECKOUT FUNCTIONS
-        const WA_NUMBER = "917855800205"; // Admin WhatsApp Number
-
-        window.sendWaVerification = async function() {
-            const completed = students.filter(s => s.finalised).length;
-            
-            const sName = currentSchoolData.realSchoolName || "Unknown School";
-            const udise = currentSchoolData.udise || "No UDISE";
-            
-            const msg = `Hello! 👋\n\nI am from *${sName}* (UDISE: *${udise}*).\n\nWe have completed data entry for *${completed} students*. Please send us the ID Cards in soft copy (PDF) so we can verify the spelling and details.`;
-            
-            window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
-            document.getElementById('orderModal').classList.add('hidden');
-        }
-
-        window.sendWaOrder = async function() {
-            const completed = students.filter(s => s.finalised).length;
-
-            const sName = currentSchoolData.realSchoolName || "Unknown School";
-            const udise = currentSchoolData.udise || "No UDISE";
-            const phone = currentSchoolData.phone || "Not Provided";
-            
-            const msg = `*NEW PRINT ORDER* 🖨️✅\n\nHello! We have verified our data and want to place the final print order.\n\n🏫 *School:* ${sName}\n🔢 *UDISE:* ${udise}\n📞 *Contact:* ${phone}\n\n💳 *Total ID Cards to Print:* ${completed}\n\nPlease let us know the next steps!`;
-            
-            window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
-            document.getElementById('orderModal').classList.add('hidden');
-        }
-
-        document.getElementById('submitFixPassBtn').onclick = async () => {
-            const newPass = document.getElementById('fixUdisePass').value.trim();
-            if (!newPass) return alert("Please enter the new password.");
-            
-            const btn = document.getElementById('submitFixPassBtn');
-            const orig = btn.innerHTML;
-            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Updating...";
-            btn.disabled = true;
-
-            try {
-                await firestore.collection('schools').doc(currentSchoolData.udise).update({
-                    udisePass: newPass,
-                    passwordInvalid: firebase.firestore.FieldValue.delete(),
-                    importStatus: 'pending',
-                    lastModified: Date.now()
-                });
-                
-                currentSchoolData.udisePass = newPass;
-                currentSchoolData.passwordInvalid = false;
-                currentSchoolData.importStatus = 'pending';
-                const tx = db.transaction(['schools'], 'readwrite');
-                tx.objectStore('schools').put(currentSchoolData);
-                
-                showToast("Password updated successfully!");
-                document.getElementById('invalidPasswordModal').classList.add('hidden');
-                document.getElementById('fixUdisePass').value = '';
-            } catch(e) {
-                alert("Error connecting to server: " + e.message);
-            } finally {
-                btn.innerHTML = orig;
-                btn.disabled = false;
-            }
-        };
     </script>
 </body>
 </html>
