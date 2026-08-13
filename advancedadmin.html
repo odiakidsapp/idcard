@@ -613,7 +613,6 @@ function startApp() {
         authDomain: "idcard-60586.firebaseapp.com",
         projectId: "idcard-60586",
         storageBucket: "idcard-60586.firebasestorage.app",
-        messagingSenderId: "331979663377",
         appId: "1:331979663377:web:026e537a7fcaca813129b0"
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -726,7 +725,6 @@ async function rebuildSchoolsMap() {
                 newMap[udise].customFields = d.customFields || []; 
                 newMap[udise].layoutSettings = d.layoutSettings || null;
                 newMap[udise].privateTemplateUrl = d.privateTemplateUrl || null;
-                newMap[udise].fcmToken = d.fcmToken || ''; 
             }
         });
 
@@ -769,7 +767,6 @@ async function quickSync() {
                 customFields: d.customFields || [],
                 layoutSettings: d.layoutSettings || null,
                 privateTemplateUrl: d.privateTemplateUrl || null,
-                fcmToken: d.fcmToken || '',
                 latestActivity: Math.max(schoolsMap[udise].latestActivity || 0, d.lastModified || 0)
             });
             hasChanges = true;
@@ -859,12 +856,11 @@ function renderDashboard(){
         let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(udise)}`;
 
         let credsHtml = '';
-        if (s.appPassword || s.udisePass || s.fcmToken) {
+        if (s.appPassword || s.udisePass) {
             credsHtml = `<div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">`;
             if (s.appPassword) credsHtml += `<div style="padding: 6px 10px; background: #e6f2ff; border: 1px solid #b8daff; border-radius: 6px; font-size: 12px; color: #004085;"><i class="fas fa-lock"></i> App Pass: <b>${escapeHtml(s.appPassword)}</b></div>`;
             if (s.udisePass && activeTab === 'govt') credsHtml += `<div style="padding: 6px 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; font-size: 12px; color: #856404;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
             if (s.udisePass && activeTab === 'private') credsHtml += `<div style="padding: 6px 10px; background: #f3e8ff; border: 1px solid #d8b4fe; border-radius: 6px; font-size: 12px; color: #6b21a8;"><i class="fas fa-magic"></i> Auto Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
-            if (s.fcmToken) credsHtml += `<div style="padding: 6px 10px; background: #e8f5e9; border: 1px solid #c3e6cb; border-radius: 6px; font-size: 11px; color: #155724; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.fcmToken}"><i class="fas fa-bell"></i> Token: <b>${s.fcmToken}</b></div>`;
             credsHtml += `</div>`;
         }
 
@@ -904,7 +900,6 @@ function openSchoolDetail(udise){
     if (s.appPassword) credHtml += `<div style="background:#e6f2ff; color:#004085; padding:8px 15px; border-radius:8px; border:1px solid #b8daff; font-size:14px;"><i class="fas fa-lock"></i> App Pass: <b>${escapeHtml(s.appPassword)}</b></div>`;
     if (s.udisePass && s.schoolType !== 'private') credHtml += `<div style="background:#fff3cd; color:#856404; padding:8px 15px; border-radius:8px; border:1px solid #ffeeba; font-size:14px;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
     if (s.udisePass && s.schoolType === 'private') credHtml += `<div style="background:#f3e8ff; color:#6b21a8; padding:8px 15px; border-radius:8px; border:1px solid #d8b4fe; font-size:14px;"><i class="fas fa-magic"></i> Auto Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
-    if (s.fcmToken) credHtml += `<div style="background:#e8f5e9; color:#155724; padding:8px 15px; border-radius:8px; border:1px solid #c3e6cb; font-size:12px; word-break: break-all;"><i class="fas fa-bell"></i> Token: <b>${s.fcmToken}</b></div>`;
     
     credEl.innerHTML = credHtml;
     credEl.style.display = credHtml ? 'flex' : 'none';
@@ -1927,7 +1922,7 @@ window.debouncedUpdateLivePreview = function() {
     clearTimeout(previewTimeout);
     previewTimeout = setTimeout(() => {
         updateLivePreview();
-    }, 150); // 150ms debounce for lag-free performance
+    }, 150); 
 }
 
 window.updateLivePreview = async function() {
@@ -1958,7 +1953,6 @@ window.updateLivePreview = async function() {
 
     window.currentLayoutSettings = layout;
 
-    // Dummy SVG Avatar for the Live Preview (Skips AI Face processing overhead entirely!)
     const dummyAvatarSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23e2e8f0"/><circle cx="100" cy="80" r="40" fill="%2394a3b8"/><path d="M40 180c0-40 30-70 60-70s60 30 60 70v20H40v-20z" fill="%2394a3b8"/></svg>`;
 
     const mockStudent = {
