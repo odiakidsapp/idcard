@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ID Cards Pro</title>
+    <title>Data Entry App</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -38,14 +38,6 @@
         
         #sidebarOverlay { background-color: rgba(0, 0, 0, 0.5); transition: opacity 0.3s ease; }
         #sidebar { transition: transform 0.3s ease; }
-        
-        /* Floating Notification Bell Animation */
-        @keyframes gentle-pulse {
-            0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(147, 51, 234, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); }
-        }
-        .header-bell-pulse { animation: gentle-pulse 2s infinite; border-radius: 50%; }
     </style>
 </head>
 <body class="text-gray-800 pb-20">
@@ -66,32 +58,43 @@
 
     <!-- App Navigation Header -->
     <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white sticky top-0 z-50 shadow-md transition-all duration-300" id="mainHeader">
-        <div class="flex items-center justify-between w-full max-w-lg mx-auto px-4 py-3 min-h-[60px] gap-3">
+        
+        <!-- Top Toolbar Row -->
+        <div class="w-full max-w-lg mx-auto px-3 py-2 flex items-center justify-between">
             
-            <!-- Left: Hamburger Menu -->
-            <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
-                <i class="fas fa-bars text-xl"></i>
-            </button>
-
-            <!-- Center: Title and Live Indicator -->
-            <div class="flex-1 flex items-center justify-center gap-2 min-w-0">
-                <h3 id="currentSchoolHeader" class="m-0 font-bold text-lg truncate">ID Cards Pro</h3>
-                <span id="liveIndicator" class="hidden bg-green-500/20 border border-green-400 text-green-100 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1 flex-shrink-0" title="Live Sync Active">
+            <!-- Left: Hamburger, Title & Live Indicator -->
+            <div class="flex items-center gap-1.5">
+                <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
+                    <i class="fas fa-bars text-[18px]"></i>
+                </button>
+                <span class="font-bold text-[15px] tracking-wide ml-1 mr-1 hidden sm:block">ID Cards Pro</span>
+                <span id="liveIndicator" class="hidden bg-green-500/20 border border-green-400 text-green-100 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1 flex-shrink-0" title="Live Sync Active">
                     <i class="fas fa-circle text-[6px] text-green-400 animate-pulse"></i>LIVE
                 </span>
             </div>
 
-            <!-- Right: Dynamic Action Icons -->
-            <div class="flex items-center gap-1 flex-shrink-0">
-                <button id="headerBellBtn" onclick="requestNotificationPermission(true)" class="hidden text-white hover:bg-white/20 w-9 h-9 flex items-center justify-center transition header-bell-pulse" title="Enable Notifications">
-                    <i class="fas fa-bell text-lg"></i>
+            <!-- Right: Dynamic Tool Icons -->
+            <div class="flex items-center gap-1.5">
+                <button onclick="window.location.reload()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition" title="Refresh App">
+                    <i class="fas fa-sync-alt text-sm"></i>
                 </button>
-                <button id="headerInstallBtn" class="hidden text-white hover:bg-white/20 w-9 h-9 rounded-full flex items-center justify-center transition" title="Install App">
-                    <i class="fas fa-download text-lg"></i>
+                <button id="headerBellBtn" onclick="requestNotificationPermission(true)" class="hidden text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition" title="Enable Notifications">
+                    <i class="fas fa-bell animate-pulse text-sm"></i>
+                </button>
+                <!-- Install Button (Text + Icon) -->
+                <button id="headerInstallBtn" onclick="triggerInstall()" class="hidden bg-white/20 hover:bg-white/30 border border-white/40 text-white px-2.5 py-1.5 rounded-md text-[11px] font-bold flex items-center gap-1.5 transition" title="Install App">
+                    <i class="fas fa-download"></i> INSTALL
                 </button>
             </div>
             
         </div>
+        
+        <!-- Sub-Header Row: School Name & District (Hidden until logged in) -->
+        <div id="schoolNameSubHeader" class="hidden bg-blue-800/40 border-t border-blue-600/50 px-4 py-2.5 text-center flex flex-col items-center justify-center">
+            <h3 id="currentSchoolHeader" class="m-0 font-bold text-sm text-white truncate w-full flex items-center justify-center flex-wrap gap-2 leading-tight">School Name</h3>
+            <p id="currentSchoolSubHeader" class="text-blue-200 text-[10.5px] font-medium truncate w-full mt-0.5">District | UDISE: 12345</p>
+        </div>
+        
     </header>
 
     <!-- Sidebar Menu -->
@@ -304,6 +307,26 @@
     </div>
 
     <!-- ================= MODALS ================= -->
+
+    <!-- App Install Prompt Modal -->
+    <div id="installPromptModal" class="hidden fixed inset-0 bg-black/70 z-[300] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center transform scale-100 transition-transform">
+            <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner">
+                <i class="fas fa-mobile-screen-button"></i>
+            </div>
+            <h3 class="text-2xl font-black text-gray-900 mb-2 leading-tight">Install App for Offline Use</h3>
+            <p class="text-sm text-gray-500 mb-6 font-medium px-2">Get faster access, work without internet, and save storage space.</p>
+            
+            <div class="flex flex-col gap-3">
+                <button onclick="triggerInstall()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md transition text-lg flex items-center justify-center gap-2 active:scale-95">
+                    <i class="fas fa-download"></i> Install Now
+                </button>
+                <button onclick="document.getElementById('installPromptModal').classList.add('hidden')" class="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold py-3.5 rounded-xl transition border border-gray-200 active:scale-95">
+                    Continue in Browser
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div id="udiseSelectorModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
@@ -771,9 +794,28 @@
                 
                 await firestore.collection('schools').doc(udise).set(schoolObj);
 
-                showToast("Registration Successful! Please log in.");
-                switchAuthTab('login');
-                document.getElementById('loginUdise').value = udise;
+                showToast("Registration Successful! Loading App...", "success");
+                
+                // Immediately enter the app after registration
+                const localId = `[Manual] ${schoolObj.name}_${udise}`;
+                const dbSchoolObj = {
+                    name: localId,
+                    realSchoolName: schoolObj.name,
+                    source: 'manual',
+                    phone: schoolObj.phone || '', block: schoolObj.block || '', district: schoolObj.district || '',
+                    pin: schoolObj.pin || '', udise: udise, hmSignature: schoolObj.hmSignature || '',
+                    createdAt: schoolObj.createdAt || Date.now(),
+                    importStatus: schoolObj.importStatus || 'manual',
+                    udiseUser: udise,
+                    udisePass: '',
+                    schoolType: schoolObj.schoolType || 'govt',
+                    customFields: schoolObj.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone']
+                };
+                
+                const tx = db.transaction(['schools'], 'readwrite');
+                tx.objectStore('schools').put(dbSchoolObj);
+                tx.oncomplete = () => { enterSchool(dbSchoolObj); };
+                
             } catch(e) { 
                 showToast("Registration error.", "error"); 
             } finally { 
@@ -982,6 +1024,9 @@
             }
         }
 
+        // ==========================================
+        // PWA INSTALL LOGIC
+        // ==========================================
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -989,7 +1034,8 @@
             document.getElementById('headerInstallBtn').classList.remove('hidden');
         });
 
-        document.getElementById('headerInstallBtn').addEventListener('click', async () => {
+        window.triggerInstall = async function() {
+            document.getElementById('installPromptModal').classList.add('hidden');
             if (!deferredPrompt) return;
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
@@ -997,10 +1043,11 @@
                 document.getElementById('headerInstallBtn').classList.add('hidden');
             }
             deferredPrompt = null;
-        });
+        }
 
         window.addEventListener('appinstalled', () => {
             document.getElementById('headerInstallBtn').classList.add('hidden');
+            document.getElementById('installPromptModal').classList.add('hidden');
             showToast("App installed successfully! Check your home screen.", "success");
         });
 
@@ -1070,7 +1117,7 @@
         }
 
         function checkNotificationStatus() {
-            if (!('Notification' in window) || !messaging) return;
+            if (!('Notification' in window)) return;
             const bellBtn = document.getElementById('headerBellBtn');
             if (Notification.permission !== 'granted') {
                 if(bellBtn) bellBtn.classList.remove('hidden');
@@ -1520,6 +1567,7 @@
                     document.getElementById('authSection').classList.remove('hidden');
                     document.getElementById('entrySection').classList.add('hidden');
                     document.getElementById('sidebarEditProfileBtn').classList.add('hidden');
+                    document.getElementById('schoolNameSubHeader').classList.add('hidden');
                 }
             };
         }
@@ -1633,6 +1681,7 @@
             document.getElementById('authSection').classList.add('hidden');
             document.getElementById('entrySection').classList.remove('hidden');
             document.getElementById('sidebarEditProfileBtn').classList.remove('hidden');
+            document.getElementById('schoolNameSubHeader').classList.remove('hidden');
 
             updateSchoolHeader();
 
@@ -1658,10 +1707,27 @@
             
             setupRealtimeListener();
             checkNotificationStatus(); 
+            
+            // Trigger Install Prompt after a brief delay if not installed
+            if (deferredPrompt && !sessionStorage.getItem('installPromptShown')) {
+                setTimeout(() => {
+                    document.getElementById('installPromptModal').classList.remove('hidden');
+                    sessionStorage.setItem('installPromptShown', 'true');
+                }, 1500); 
+            }
         }
 
         function updateSchoolHeader() {
-            document.getElementById('currentSchoolHeader').textContent = currentSchoolData.realSchoolName;
+            const display = currentSchoolData.realSchoolName || "Unknown School";
+            const dist = currentSchoolData.district || 'Unknown District';
+            const udise = currentSchoolData.udise || 'N/A';
+            
+            const srcBadge = currentSchoolData.source === 'excel' 
+                ? `<span class="bg-purple-100/20 text-purple-100 border border-purple-300/50 px-1.5 py-0.5 rounded text-[8px] tracking-wide font-black">EXCEL BATCH</span>` 
+                : `<span class="bg-blue-100/20 text-blue-100 border border-blue-300/50 px-1.5 py-0.5 rounded text-[8px] tracking-wide font-black">MANUAL</span>`;
+                
+            document.getElementById('currentSchoolHeader').innerHTML = `${escapeHtml(display)} ${srcBadge}`;
+            document.getElementById('currentSchoolSubHeader').textContent = `${dist} | UDISE: ${udise}`;
         }
 
         window.openEditSchoolModal = function() {
@@ -1914,15 +1980,6 @@
         window.loadMore = function() {
             visibleCount += 50;
             renderList();
-        }
-
-        window.openAddForm = function() {
-            resetForm(false); 
-            applyCustomFields();
-            document.getElementById('formTitle').innerHTML = 'Add New Student';
-            document.getElementById('saveBtn').innerHTML = 'Save Student';
-            document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
-            document.getElementById('addStudentModal').classList.remove('hidden');
         }
 
         document.getElementById('saveBtn').onclick = async () => {
