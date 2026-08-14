@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin Portal - Bulk Upload</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+    <!-- SheetJS for Excel Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; }
+        .toast-enter { transform: translateY(100%); opacity: 0; }
+        .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toast-exit { transform: translateY(0); opacity: 1; }
+        .toast-exit-active { transform: translateY(100%); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+</head>
+<body class="text-gray-800 pb-20">
+
+    <header class="bg-white/95 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 shadow-sm h-14 flex items-center">
+        <div class="w-full max-w-lg mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center gap-2 text-blue-600 font-black text-lg tracking-tight">
+                <i class="fas fa-server text-xl"></i> ADMIN PORTAL
+            </div>
+            <a href="index.html" class="hover:text-blue-500 transition text-sm font-bold bg-blue-50 px-3 py-1 rounded-lg">Go to App</a>
+        </div>
+    </header>
+
+    <div class="max-w-lg mx-auto p-4 pt-6">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-500 text-2xl">
+                <i class="fas fa-file-excel"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900">Bulk Import</h2>
+            <p class="text-sm text-gray-500 mt-1">Upload student list directly to the main database.</p>
+        </div>
+        
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 mb-1">School Name</label>
+                <input type="text" id="pSchoolName" placeholder="Enter School Name" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-1">UDISE Code</label>
+                <input type="text" id="pUdise" placeholder="11 Digit UDISE Code" maxlength="11" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden">
+            <button onclick="triggerFileInput()" id="uploadBtn" class="w-full bg-blue-50 border-2 border-dashed border-blue-300 hover:bg-blue-100 hover:border-blue-400 text-blue-600 font-bold py-8 px-4 rounded-xl transition flex flex-col justify-center items-center gap-3">
+                <i class="fas fa-file-import text-3xl"></i>
+                <span>Select Excel & Upload</span>
+            </button>
+            
+            <div class="mt-4 text-xs text-gray-500 space-y-1">
+                <p class="font-bold text-gray-700">Supported Columns (Auto-detected):</p>
+                <p>• Full Name</p>
+                <p>• Class</p>
+                <p>• Father`s Name</p>
+                <p>• Mother`s Name</p>
+                <p>• Date of Birth</p>
+                <p>• Mobile Number</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fixed Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+
+    <script>
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let bgClass = type === 'error' ? 'bg-red-600' : 'bg-gray-900';
+            let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-red-400"></i>' : '<i class="fas fa-check-circle text-green-400"></i>';
+            toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
+            toast.innerHTML = `${icon} <span class="text-sm font-medium leading-snug">${msg}</span>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => { toast.classList.remove('toast-enter'); toast.classList.add('toast-enter-active'); });
+            setTimeout(() => {
+                toast.classList.remove('toast-enter-active'); toast.classList.add('toast-exit-active');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        const firebaseConfig = {
+              apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
+              authDomain: "idcard-60586.firebaseapp.com",
+              projectId: "idcard-60586"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const firestore = firebase.firestore();
+
+        function triggerFileInput() {
+            const sName = document.getElementById('pSchoolName').value.trim();
+            const sUdise = document.getElementById('pUdise').value.trim();
+            
+            if(!sName) return showToast("Please enter the School Name", "error");
+            if(!sUdise || !/^\d{11}$/.test(sUdise)) return showToast("Please enter a valid 11-digit UDISE", "error");
+            
+            document.getElementById('excelInput').click();
+        }
+
+        document.getElementById('excelInput').addEventListener('change', handleExcelUpload);
+
+        function handleExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const schoolName = document.getElementById('pSchoolName').value.trim();
+            const udise = document.getElementById('pUdise').value.trim();
+
+            showToast("Reading Excel file...", "info");
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.SheetNames[0];
+                    const excelRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+                    
+                    if(excelRows.length === 0) return showToast("Excel file is empty", "error");
+
+                    const parsedStudents = excelRows.map(row => {
+                        // Data structure correctly includes class, father, and mother
+                        let s = { name: '', class: '', father: '', mother: '', dob: '', mobile: '' };
+                        
+                        for (let key in row) {
+                            let val = row[key] !== undefined ? String(row[key]).trim() : '';
+                            // Remove spaces, backticks (`), apostrophes ('), and convert to lowercase
+                            let normKey = key.toLowerCase().replace(/[^a-z0-9]/g, ''); 
+                            
+                            // Map exact target column headers
+                            if (['fullname', 'name'].includes(normKey)) s.name = val;
+                            else if (['class', 'grade', 'std', 'standard'].includes(normKey)) s.class = val;
+                            else if (['fathersname', 'fathername', 'father'].includes(normKey)) s.father = val;
+                            else if (['mothersname', 'mothername', 'mother'].includes(normKey)) s.mother = val;
+                            else if (['dateofbirth', 'dob'].includes(normKey)) s.dob = val;
+                            else if (['mobilenumber', 'mobile', 'contact'].includes(normKey)) s.mobile = val;
+                        }
+                        return s;
+                    }).filter(s => s.name); // Ignore empty rows
+
+                    if(parsedStudents.length === 0) return showToast("Could not find Full Name column.", "error");
+                    
+                    uploadBatchToFirebase(parsedStudents, schoolName, udise);
+                } catch(error) {
+                    showToast("Error parsing Excel file", "error");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function uploadBatchToFirebase(studentsData, schoolName, udise) {
+            showToast(`Uploading ${studentsData.length} students to Cloud...`, "info");
+            const btn = document.getElementById('uploadBtn');
+            btn.classList.add('opacity-50', 'pointer-events-none');
+            
+            try {
+                const chunks = [];
+                for (let i = 0; i < studentsData.length; i += 400) { chunks.push(studentsData.slice(i, i + 400)); }
+
+                let baseId = Date.now();
+
+                for (const chunk of chunks) {
+                    const batch = firestore.batch();
+                    chunk.forEach((s) => {
+                        const studentId = baseId++;
+                        const docRef = firestore.collection('students').doc(String(studentId));
+                        
+                        batch.set(docRef, {
+                            ...s,
+                            id: studentId,
+                            schoolName: schoolName,
+                            udise: udise,
+                            photoBase64: null,
+                            finalised: false, 
+                            createdAt: Date.now()
+                        });
+                    });
+                    await batch.commit();
+                }
+                
+                showToast("Upload Successful! Tell operators to restore using UDISE.", "success");
+                document.getElementById('excelInput').value = '';
+                document.getElementById('pSchoolName').value = '';
+                document.getElementById('pUdise').value = '';
+            } catch (err) {
+                console.error(err);
+                showToast("Error uploading to cloud.", "error");
+            } finally {
+                btn.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+    </script>
+</body>
+</html>
