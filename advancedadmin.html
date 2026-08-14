@@ -408,7 +408,7 @@
             </div>
             
             <div class="le-preview">
-                <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; font-size: 11px; padding: 4px 8px; border-radius: 4px; z-index: 10;">Live Preview</div>
+                <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; font-size: 11px; padding: 6px 10px; border-radius: 6px; z-index: 10; cursor: move;"><i class="fas fa-hand-pointer"></i> Live Preview (Drag Elements to Move)</div>
                 <canvas id="plCanvas" style="max-height: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.15);"></canvas>
             </div>
         </div>
@@ -1861,8 +1861,12 @@ window.openLayoutEditor = function() {
     
     fields.forEach(f => {
         const defaultSize = f === 'name' ? 36 : 26;
-        const l = window.currentLayoutSettings[f] || { x: 40, y: defaultY, size: defaultSize, color: '#1e293b', showLabel: (f !== 'name'), align: 'left' };
-        const defaultAlign = l.align || 'left';
+        // NEW: Default 'name' to center and middle X coordinate, rest to left
+        const defaultAlign = f === 'name' ? 'center' : 'left';
+        const defaultX = f === 'name' ? CARD_W / 2 : 40; 
+        
+        const l = window.currentLayoutSettings[f] || { x: defaultX, y: defaultY, size: defaultSize, color: '#1e293b', showLabel: (f !== 'name'), align: defaultAlign };
+        const currentAlign = l.align || defaultAlign;
         
         container.innerHTML += `
             <div class="le-field-box">
@@ -1874,9 +1878,9 @@ window.openLayoutEditor = function() {
                     <input type="color" id="le_${f}_color" value="${l.color}" onchange="debouncedUpdateLivePreview()" title="Text Color">
                     <label>Align: 
                         <select id="le_${f}_align" onchange="debouncedUpdateLivePreview()" style="padding:2px; font-size:11px; border:1px solid #ccc;">
-                            <option value="left" ${defaultAlign === 'left' ? 'selected' : ''}>Left</option>
-                            <option value="center" ${defaultAlign === 'center' ? 'selected' : ''}>Center</option>
-                            <option value="right" ${defaultAlign === 'right' ? 'selected' : ''}>Right</option>
+                            <option value="left" ${currentAlign === 'left' ? 'selected' : ''}>Left</option>
+                            <option value="center" ${currentAlign === 'center' ? 'selected' : ''}>Center</option>
+                            <option value="right" ${currentAlign === 'right' ? 'selected' : ''}>Right</option>
                         </select>
                     </label>
                     <label><input type="checkbox" id="le_${f}_label" ${l.showLabel ? 'checked' : ''} onchange="debouncedUpdateLivePreview()"> Label</label>
@@ -2004,6 +2008,122 @@ document.getElementById('saveLayoutBtn').onclick = async () => {
         btn.disabled = false;
     }
 };
+
+// ==========================================
+// DRAG AND DROP FUNCTIONALITY FOR CANVAS
+// ==========================================
+
+let leIsDragging = false;
+let leDragTarget = null;
+let leDragOffsetX = 0;
+let leDragOffsetY = 0;
+
+const plCanvas = document.getElementById('plCanvas');
+
+function getCanvasPointerPos(e) {
+    const rect = plCanvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+        x: (clientX - rect.left) * (plCanvas.width / rect.width),
+        y: (clientY - rect.top) * (plCanvas.height / rect.height)
+    };
+}
+
+function handleCanvasPointerDown(e) {
+    const pos = getCanvasPointerPos(e);
+    const s = schoolsMap[activeUdise];
+    if(!s) return;
+    
+    // 1. Check Text Fields (Reverse order so top visually handles first)
+    const fields = s.customFields && s.customFields.length > 0 ? s.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
+    for (let i = fields.length - 1; i >= 0; i--) {
+        const f = fields[i];
+        const xInput = document.getElementById(`le_${f}_x`);
+        if(!xInput) continue;
+        
+        const x = parseInt(xInput.value) || 0;
+        const y = parseInt(document.getElementById(`le_${f}_y`).value) || 0;
+        const size = parseInt(document.getElementById(`le_${f}_size`).value) || 26;
+        const align = document.getElementById(`le_${f}_align`).value;
+        
+        // Approximate width & hitboxes
+        let boxW = size * 8; // generous width for easy grabbing
+        let boxH = size * 1.5;
+        let bx = x;
+        let by = y - size; // y is roughly the baseline
+        
+        if (align === 'center') bx = x - boxW / 2;
+        if (align === 'right') bx = x - boxW;
+        
+        if (pos.x >= bx && pos.x <= bx + boxW && pos.y >= by && pos.y <= by + boxH) {
+            leIsDragging = true;
+            leDragTarget = f;
+            leDragOffsetX = pos.x - x;
+            leDragOffsetY = pos.y - y;
+            plCanvas.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    // 2. Check Photo Place-holder
+    const pxInput = document.getElementById('le_photo_x');
+    if (pxInput) {
+        const px = parseInt(pxInput.value) || 0;
+        const py = parseInt(document.getElementById('le_photo_y').value) || 0;
+        const pw = parseInt(document.getElementById('le_photo_w').value) || 238;
+        const ph = parseInt(document.getElementById('le_photo_h').value) || 300;
+        
+        if (pos.x >= px && pos.x <= px + pw && pos.y >= py && pos.y <= py + ph) {
+            leIsDragging = true;
+            leDragTarget = 'photo';
+            leDragOffsetX = pos.x - px;
+            leDragOffsetY = pos.y - py;
+            plCanvas.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+    }
+}
+
+function handleCanvasPointerMove(e) {
+    if (!leIsDragging || !leDragTarget) {
+        plCanvas.style.cursor = 'move';
+        return;
+    }
+    
+    const pos = getCanvasPointerPos(e);
+    
+    if (leDragTarget === 'photo') {
+        document.getElementById('le_photo_x').value = Math.round(pos.x - leDragOffsetX);
+        document.getElementById('le_photo_y').value = Math.round(pos.y - leDragOffsetY);
+    } else {
+        document.getElementById(`le_${leDragTarget}_x`).value = Math.round(pos.x - leDragOffsetX);
+        document.getElementById(`le_${leDragTarget}_y`).value = Math.round(pos.y - leDragOffsetY);
+    }
+    
+    // Use requestAnimationFrame for smoother real-time dragging without lag
+    requestAnimationFrame(() => updateLivePreview());
+    e.preventDefault();
+}
+
+function handleCanvasPointerUp(e) {
+    if (leIsDragging) {
+        leIsDragging = false;
+        leDragTarget = null;
+        plCanvas.style.cursor = 'move';
+    }
+}
+
+// Attach Drag & Drop Events for both Mouse & Touch screens
+plCanvas.addEventListener('mousedown', handleCanvasPointerDown);
+plCanvas.addEventListener('mousemove', handleCanvasPointerMove);
+window.addEventListener('mouseup', handleCanvasPointerUp); 
+
+plCanvas.addEventListener('touchstart', handleCanvasPointerDown, {passive: false});
+plCanvas.addEventListener('touchmove', handleCanvasPointerMove, {passive: false});
+window.addEventListener('touchend', handleCanvasPointerUp);
 </script>
 </body>
 </html>
