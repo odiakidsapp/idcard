@@ -117,7 +117,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Import added writeBatch and doc for bulk deleting
+        import { getFirestore, collection, getDocs, query, writeBatch, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU",
@@ -155,7 +156,6 @@
             }, 3000);
         }
 
-        // Helper function to force download an image file
         async function downloadTeacherPhoto(url, teacherName, teacherCode) {
             if (!url) {
                 showToast("No photo available to download.", "error");
@@ -179,7 +179,6 @@
                 window.URL.revokeObjectURL(blobUrl);
             } catch (error) {
                 console.warn("CORS fetch failed, falling back to direct tab download:", error);
-                // Fallback for strict CORS settings: Open in new window/trigger default download
                 const link = document.createElement('a');
                 link.href = url;
                 link.target = '_blank';
@@ -187,6 +186,41 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+            }
+        }
+
+        // New function to delete school and all associated teachers
+        async function deleteSchool(udiseCode, event) {
+            // Stop the card's onclick event from firing when clicking the delete button
+            event.stopPropagation();
+
+            if (!confirm("Are you sure you want to delete this school and ALL its teachers? This action cannot be undone.")) {
+                return;
+            }
+
+            const school = dashboardData[udiseCode];
+            if (!school || !school.teachers) return;
+
+            const loader = document.getElementById('admin-loader');
+            loader.classList.remove('hidden');
+
+            try {
+                // Use writeBatch to delete all teachers in this school atomically
+                const batch = writeBatch(db);
+                school.teachers.forEach(teacher => {
+                    const teacherRef = doc(db, "teachers", teacher.id);
+                    batch.delete(teacherRef);
+                });
+
+                await batch.commit();
+                showToast("School and teachers deleted successfully.");
+                
+                // Refresh the data to reflect the deletion
+                await loadDashboardData();
+            } catch (error) {
+                console.error("Error deleting school records:", error);
+                showToast("Failed to delete records. Check permissions.", "error");
+                loader.classList.add('hidden');
             }
         }
 
@@ -236,6 +270,7 @@
                         card.className = "bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group flex flex-col justify-between";
                         card.onclick = () => openSchoolDetails(school.udiseCode);
                         
+                        // Added delete button in the footer of the card
                         card.innerHTML = `
                             <div>
                                 <div class="flex justify-between items-start mb-2">
@@ -245,9 +280,14 @@
                                 <p class="text-sm text-gray-500 mb-1">UDISE: <span class="font-medium text-gray-700">${school.udiseCode}</span></p>
                                 <p class="text-sm text-gray-500 line-clamp-1">${school.block}, ${school.district}</p>
                             </div>
-                            <div class="mt-4 pt-3 border-t border-gray-100 flex items-center text-sm font-medium text-blue-600">
-                                View Details 
-                                <svg class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-sm font-medium">
+                                <div class="text-blue-600 flex items-center">
+                                    View Details 
+                                    <svg class="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                </div>
+                                <button onclick="deleteSchool('${school.udiseCode}', event)" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors" title="Delete School & Teachers">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
                             </div>
                         `;
                         schoolsGrid.appendChild(card);
@@ -323,13 +363,13 @@
             document.getElementById('school-list-view').classList.replace('hidden', 'block');
         }
 
-        // Make functions globally available for HTML inline events
         window.loadDashboardData = loadDashboardData;
         window.openSchoolDetails = openSchoolDetails;
         window.closeSchoolDetails = closeSchoolDetails;
         window.downloadTeacherPhoto = downloadTeacherPhoto;
+        // Make the new function globally accessible
+        window.deleteSchool = deleteSchool;
 
-        // Load data automatically when admin page loads
         document.addEventListener('DOMContentLoaded', loadDashboardData);
 
     </script>
