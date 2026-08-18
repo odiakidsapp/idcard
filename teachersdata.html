@@ -352,7 +352,6 @@
     <!-- Firebase & Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script type="module">
-        // Added setDoc to imports to fix the save error
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, setDoc, updateDoc, deleteDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
@@ -480,7 +479,6 @@
             };
 
             try {
-                // Now using setDoc properly!
                 await setDoc(doc(db, "schools", udiseCode), window.currentSchool);
                 loadDashboard();
             } catch (error) {
@@ -501,9 +499,9 @@
         window.loadDashboard = async function() {
             showView('viewDashboard');
             
-            document.getElementById('dashSchoolName').innerText = window.currentSchool.schoolName;
-            document.getElementById('dashUdise').innerText = window.currentSchool.udiseCode;
-            document.getElementById('dashBlock').innerText = window.currentSchool.block;
+            document.getElementById('dashSchoolName').innerText = window.currentSchool.schoolName || 'Unknown School';
+            document.getElementById('dashUdise').innerText = window.currentSchool.udiseCode || 'Unknown';
+            document.getElementById('dashBlock').innerText = window.currentSchool.block || 'Unknown Block';
 
             document.getElementById('dashboardLoader').classList.remove('hidden');
             document.getElementById('teachersGrid').classList.add('hidden');
@@ -560,8 +558,8 @@
             window.removeImage();
             
             // Populating visible school fields in the form!
-            document.getElementById('formSchoolName').value = window.currentSchool.schoolName;
-            document.getElementById('formUdiseCode').value = window.currentSchool.udiseCode;
+            document.getElementById('formSchoolName').value = window.currentSchool.schoolName || '';
+            document.getElementById('formUdiseCode').value = window.currentSchool.udiseCode || '';
             
             document.getElementById('formTitle').innerText = "Add New Teacher";
             document.getElementById('submitBtn').innerText = "Save Teacher Details";
@@ -576,8 +574,8 @@
             window.editingTeacherId = id;
             
             // Populating visible school fields in the form!
-            document.getElementById('formSchoolName').value = window.currentSchool.schoolName;
-            document.getElementById('formUdiseCode').value = window.currentSchool.udiseCode;
+            document.getElementById('formSchoolName').value = window.currentSchool.schoolName || teacher.schoolName || '';
+            document.getElementById('formUdiseCode').value = window.currentSchool.udiseCode || teacher.udiseCode || '';
             
             document.getElementById('teacherName').value = teacher.teacherName;
             document.getElementById('designation').value = teacher.designation;
@@ -641,13 +639,13 @@
                     finalPhotoUrl = await getDownloadURL(uploadTask.ref);
                 }
 
-                // Compile data (combining current School info with Form info)
+                // Compile data (combining current School info with Form info) with null-safe fallbacks
                 const teacherData = {
-                    schoolName: window.currentSchool.schoolName,
-                    udiseCode: window.currentSchool.udiseCode,
-                    block: window.currentSchool.block,
-                    district: window.currentSchool.district,
-                    pin: window.currentSchool.pin,
+                    schoolName: document.getElementById('formSchoolName').value || (window.currentSchool && window.currentSchool.schoolName) || 'Unknown School',
+                    udiseCode: document.getElementById('formUdiseCode').value || (window.currentSchool && window.currentSchool.udiseCode) || 'Unknown UDISE',
+                    block: (window.currentSchool && window.currentSchool.block) || 'N/A',
+                    district: (window.currentSchool && window.currentSchool.district) || 'N/A',
+                    pin: (window.currentSchool && window.currentSchool.pin) || 'N/A',
                     
                     teacherName: document.getElementById('teacherName').value,
                     designation: document.getElementById('designation').value,
