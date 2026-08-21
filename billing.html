@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AN DIGITAL - Cloud Billing & Invoice Management</title>
+    <!-- QR Code Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        /* --- GENERAL RESET & BASE --- */
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #3b3f44;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* --- CONTROL BAR --- */
+        .control-bar {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            background-color: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 2000;
+        }
+
+        .brand-title {
+            color: #f8fafc;
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: white;
+        }
+
+        .btn:active { transform: scale(0.97); }
+
+        .btn-new { background-color: #475569; }
+        .btn-new:hover { background-color: #64748b; }
+
+        .btn-add { background-color: #0ea5e9; }
+        .btn-add:hover { background-color: #0284c7; }
+
+        .btn-save { background-color: #10b981; }
+        .btn-save:hover { background-color: #059669; }
+
+        .btn-cloud-list { background-color: #f59e0b; color: #1e293b; font-weight: 700; }
+        .btn-cloud-list:hover { background-color: #d97706; color: white; }
+
+        .btn-import { background-color: #6366f1; position: relative; overflow: hidden; }
+        .btn-import:hover { background-color: #4f46e5; }
+        .btn-import input[type="file"] {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .btn-print { background-color: #8b5cf6; box-shadow: 0 0 10px rgba(139, 92, 246, 0.4); }
+        .btn-print:hover { background-color: #7c3aed; }
+
+        /* --- DASHBOARD DRAWER / MODAL --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-card {
+            background: white;
+            width: 100%;
+            max-width: 900px;
+            max-height: 85vh;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            background: #1e293b;
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 { margin: 0; font-size: 18px; }
+        .close-btn { background: none; border: none; color: #94a3b8; font-size: 24px; cursor: pointer; }
+        .close-btn:hover { color: white; }
+
+        .modal-filters {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tabs { display: flex; gap: 8px; }
+        .tab-btn {
+            padding: 6px 14px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #475569;
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active {
+            background: #1e293b;
+            color: white;
+            border-color: #1e293b;
+        }
+
+        .search-box {
+            padding: 6px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 13px;
+            width: 220px;
+        }
+
+        .modal-body {
+            padding: 16px 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .invoice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px;
+        }
+
+        .invoice-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .invoice-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-color: #94a3b8;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-paid { background: #dcfce7; color: #166534; }
+        .badge-pending { background: #fee2e2; color: #991b1b; }
+
+        .card-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 6px;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 8px;
+        }
+
+        .card-btn {
+            flex: 1;
+            padding: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            cursor: pointer;
+            text-align: center;
+        }
+        .card-btn:hover { background: #e2e8f0; }
+        .card-btn-delete { color: #dc2626; border-color: #fecaca; }
+        .card-btn-delete:hover { background: #fee2e2; }
+
+        /* --- INVOICE CONTAINER (A5 PHYSICAL SHEET) --- */
+        #invoice-sheet {
+            background-color: white;
+            width: 148mm;
+            height: 209mm;
+            margin: 25px auto;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            padding: 5mm;
+        }
+
+        #content-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            transform-origin: top center;
+        }
+
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 75px; 
+            color: rgba(0,0,0,0.03);
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 0;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-family: Arial, sans-serif;
+        }
+
+        .stamp-top-left {
+            position: absolute;
+            top: 5mm;
+            left: 5mm;
+            width: 70px;
+            height: auto;
+            z-index: 10;
+            opacity: 0.9;
+            transform: rotate(-10deg); 
+        }
+
+        .signature-img {
+            max-width: 120px;
+            max-height: 50px;
+            display: block;
+            margin: 0 auto -5px auto;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #1e293b;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .shop-name {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .tagline {
+            font-size: 11px;
+            color: #64748b;
+            font-style: italic;
+            margin-bottom: 2px;
+            display: block;
+        }
+
+        input, select {
+            border: 1px solid transparent;
+            padding: 2px;
+            font-family: inherit;
+            font-size: 11px;
+            background: transparent;
+            transition: border 0.2s;
+        }
+
+        input:hover, input:focus, select:hover, select:focus {
+            border-bottom: 1px solid #94a3b8;
+            background-color: rgba(248, 250, 252, 0.9);
+            outline: none;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 10px;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .info-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #1e293b;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+            font-size: 11px;
+        }
+
+        .invoice-table th {
+            background-color: #1e293b;
+            color: white;
+            padding: 5px 4px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .invoice-table td {
+            border-bottom: 1px solid #f1f5f9;
+            padding: 3px 4px;
+            vertical-align: middle;
+        }
+
+        .invoice-table input { width: 100%; }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        
+        .col-sl { width: 8%; text-align: center; }
+        .col-desc { width: 42%; }
+        .col-qty { width: 15%; }
+        .col-rate { width: 15%; }
+        .col-amt { width: 15%; font-weight: bold; color: #1e293b; }
+        .col-action { width: 5%; }
+
+        .bottom-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .payment-details {
+            width: 55%;
+            padding: 6px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+
+        .totals-box {
+            width: 42%;
+            text-align: right;
+        }
+
+        .grand-total {
+            font-size: 15px;
+            font-weight: 800;
+            color: #1e293b;
+            border-top: 2px solid #1e293b;
+            padding-top: 4px;
+            margin-top: 4px;
+        }
+
+        .footer {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            font-size: 9px;
+            color: #555;
+            position: relative;
+            z-index: 1;
+        }
+
+        .signature-area {
+            text-align: center;
+            width: 130px;
+            position: relative;
+        }
+
+        .signature-line {
+            border-top: 1px solid #333;
+            padding-top: 2px;
+        }
+
+        .declaration {
+            font-size: 8.5px;
+            font-style: italic;
+            margin-top: 8px;
+            text-align: center;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 4px;
+            color: #64748b;
+        }
+
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            width: 18px;
+            height: 18px;
+            font-size: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: auto;
+        }
+
+        /* --- PRINT STYLES --- */
+        @media print {
+            @page {
+                size: A5 portrait;
+                margin: 0;
+            }
+            
+            body { 
+                background-color: white; 
+                margin: 0;
+                padding: 0;
+                width: 148mm;
+                height: 210mm;
+                overflow: hidden;
+            }
+
+            .control-bar, .modal-overlay { display: none !important; }
+            
+            #invoice-sheet { 
+                box-shadow: none; 
+                margin: 0; 
+                border: none;
+            }
+
+            button, .delete-btn { display: none !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- STICKY CONTROL BAR -->
+    <div class="control-bar">
+        <div class="brand-title">⚡ AN DIGITAL POS</div>
+        <div class="btn-group">
+            <button class="btn btn-new" onclick="resetInvoice()">📄 New Bill</button>
+            <button class="btn btn-add" onclick="addNewRow()">➕ Add Row</button>
+            <button class="btn btn-save" onclick="saveToCloud()">☁️ Save to Cloud</button>
+            <button class="btn btn-cloud-list" onclick="openDashboard()">📂 Bills (<span id="totalBillsCount">0</span>)</button>
+            <label class="btn btn-import" title="Upload local JSON files directly to Firestore">
+                📤 Import JSONs
+                <input type="file" id="jsonBulkInput" accept=".json" multiple onchange="importJsonToCloud(event)">
+            </label>
+            <button class="btn btn-print" onclick="autoFitAndPrint()">🖨️ Print (A5)</button>
+        </div>
+    </div>
+
+    <!-- CLOUD INVOICE DASHBOARD MODAL -->
+    <div class="modal-overlay" id="dashboardModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>📑 Invoices & Payment Ledger</h2>
+                <button class="close-btn" onclick="closeDashboard()">&times;</button>
+            </div>
+            <div class="modal-filters">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="filterDashboard('all', this)">All</button>
+                    <button class="tab-btn" onclick="filterDashboard('paid', this)">Paid ✅</button>
+                    <button class="tab-btn" onclick="filterDashboard('pending', this)">Pending ⏳</button>
+                </div>
+                <input type="text" id="searchInput" class="search-box" placeholder="Search customer or invoice #..." oninput="renderDashboard()">
+            </div>
+            <div class="modal-body">
+                <div class="invoice-grid" id="dashboardGrid">
+                    <!-- Dynamic cards injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHYSICAL A5 INVOICE SHEET -->
+    <div id="invoice-sheet">
+        <img src="stamp.png" alt="Stamp" class="stamp-top-left" onerror="this.style.display='none'">
+        <div class="watermark">AN DIGITAL</div>
+
+        <div id="content-wrapper">
+            <div class="header">
+                <h1 class="shop-name">AN DIGITAL</h1>
+                <span class="tagline"><input type="text" value="Premium Digital Printing & Xerox Services" style="width: 100%; text-align: center; font-style: italic; color: #64748b;"></span>
+                
+                <div style="margin-top: 4px; font-size: 10px;">
+                    <input type="text" value="Street 23B, Kotpad, Koraput - 764058" style="width: 100%; text-align: center; font-weight: 500;"><br>
+                    <strong>Ph:</strong> <input type="text" value="7855800205" style="width: 80px;"> 
+                    | <strong>Email:</strong> <input type="text" value="andigital1996@gmail.com" style="width: 160px;">
+                </div>
+            </div>
+
+            <h3 style="text-align: center; text-decoration: underline; margin: 4px 0 10px 0; font-size: 13px; position: relative; z-index: 1;">BILL OF SUPPLY</h3>
+
+            <div class="info-grid">
+                <div class="info-group">
+                    <span class="info-label">Billed To:</span>
+                    <input type="text" id="customerName" placeholder="Customer Name" style="font-size: 12px; font-weight: bold;" oninput="updateQR()">
+                    <input type="text" id="customerAddress" placeholder="Phone Number / Address" style="margin-top: 2px;">
+                </div>
+                <div class="info-group" style="text-align: right;">
+                    <span class="info-label">Invoice Details:</span>
+                    <div>No: #<input type="text" id="invoiceNo" value="001" style="width: 65px; text-align: right; font-weight: bold;" oninput="updateQR()"></div>
+                    <div>Date: <input type="text" id="datePicker" placeholder="DD/MM/YYYY" style="width: 85px; text-align: right;" onchange="updateQR()"></div>
+                </div>
+            </div>
+
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th class="col-sl">Sl.</th>
+                        <th class="col-desc">Description</th>
+                        <th class="col-qty text-center">Qty</th>
+                        <th class="col-rate text-center">Rate</th>
+                        <th class="col-amt text-right">Amount</th>
+                        <th class="col-action"></th>
+                    </tr>
+                </thead>
+                <tbody id="invoiceItems"></tbody>
+            </table>
+
+            <div class="bottom-section">
+                <div class="payment-details">
+                    <strong>PAY TO (OUR DETAILS):</strong><br>
+                    <div style="margin-top: 3px; line-height: 1.35;">
+                        UPI ID: <input type="text" value="andigital@ybl" style="width: 100px;"><br>
+                        Bank: <input type="text" value="SBI Bank" style="width: 100px;"><br>
+                        Acc No: <input type="text" value="39169020482" style="width: 100px;"><br>
+                        IFSC: <input type="text" value="SBIN0009986" style="width: 100px;">
+                    </div>
+                </div>
+
+                <div class="totals-box">
+                    <div class="grand-total">
+                        Total: ₹ <span id="grandTotal">0.00</span>
+                    </div>
+
+                    <div style="margin-top: 6px; border-top: 1px solid #e2e8f0; padding-top: 4px; font-size: 11px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                            <span>Mode:</span>
+                            <select id="paymentMode" style="border: none; border-bottom: 1px dashed #cbd5e1; width: 70px; text-align: right; cursor: pointer;">
+                                <option value="Cash">Cash</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Card">Card</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Credit">Credit</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                            <span>Received:</span>
+                            <span>₹ <input type="number" id="amountPaid" value="0" style="width: 55px; text-align: right; font-weight: bold;" oninput="calculateBalance()"></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; color: #dc2626; font-weight: bold;">
+                            <span>Balance:</span>
+                            <span>₹ <span id="balanceAmount">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <div class="signature-area" style="text-align: left;">
+                    <div id="qrcode"></div>
+                    <div style="font-size: 8.5px; margin-top: 4px; color: #64748b;">Scan to Verify</div>
+                </div>
+
+                <div class="signature-area">
+                    <img src="signature.png" alt="Signature" class="signature-img" onerror="this.style.display='none'">
+                    <div class="signature-line">
+                        <strong>Authorized Signature</strong><br>
+                        (AN DIGITAL)
+                    </div>
+                </div>
+            </div>
+
+            <div class="declaration">
+                We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE MODULE LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { 
+            getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        // Your Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD5pzI0pMVX5nKvXtu4YmSo0BPL4SIbe1E",
+            authDomain: "mrbill-4e4af.firebaseapp.com",
+            projectId: "mrbill-4e4af",
+            storageBucket: "mrbill-4e4af.firebasestorage.app",
+            messagingSenderId: "207805692505",
+            appId: "1:207805692505:web:33b1e3d405f886b0aa8f48"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const invoicesCol = collection(db, "invoices");
+
+        let cachedInvoices = [];
+        let currentTab = 'all';
+
+        // Real-time Cloud Sync
+        onSnapshot(invoicesCol, (snapshot) => {
+            cachedInvoices = [];
+            snapshot.forEach(docSnap => {
+                cachedInvoices.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            document.getElementById('totalBillsCount').innerText = cachedInvoices.length;
+            renderDashboard();
+        }, (error) => {
+            console.error("Firestore sync error:", error);
+        });
+
+        // Save Current Invoice to Firestore
+        window.saveToCloud = async function() {
+            const invoiceNo = document.getElementById('invoiceNo').value.trim();
+            if (!invoiceNo) {
+                alert("Please provide an Invoice Number.");
+                return;
+            }
+
+            const total = parseFloat(document.getElementById('grandTotal').innerText) || 0;
+            const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+            const balance = total - paid;
+            const status = balance <= 0 ? "PAID" : "PENDING";
+
+            const items = [];
+            document.querySelectorAll('#invoiceItems tr').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                items.push({
+                    name: inputs[0].value,
+                    qty: parseFloat(inputs[1].value) || 0,
+                    rate: parseFloat(inputs[2].value) || 0
+                });
+            });
+
+            const invoicePayload = {
+                invoiceNo: invoiceNo,
+                date: document.getElementById('datePicker').value,
+                customerName: document.getElementById('customerName').value || 'Guest',
+                customerAddress: document.getElementById('customerAddress').value,
+                paymentMode: document.getElementById('paymentMode').value,
+                grandTotal: total,
+                amountPaid: paid,
+                balance: balance,
+                status: status,
+                items: items,
+                updatedAt: serverTimestamp()
+            };
+
+            try {
+                await setDoc(doc(db, "invoices", invoiceNo), invoicePayload);
+                alert(`Invoice #${invoiceNo} saved to Cloud successfully!`);
+            } catch (e) {
+                console.error("Error saving to Firebase:", e);
+                alert("Failed to save to Cloud. Check console for details.");
+            }
+        };
+
+        // Bulk or Single Offline JSON Uploader to Cloud
+        window.importJsonToCloud = async function(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            let successCount = 0;
+            for (const file of files) {
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+
+                    const invNo = String(data.invoiceNo || Date.now());
+                    const paid = parseFloat(data.amountPaid) || 0;
+                    
+                    let total = 0;
+                    if (data.items && Array.isArray(data.items)) {
+                        total = data.items.reduce((sum, it) => sum + ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)), 0);
+                    }
+                    const balance = total - paid;
+                    const status = balance <= 0 ? "PAID" : "PENDING";
+
+                    await setDoc(doc(db, "invoices", invNo), {
+                        invoiceNo: invNo,
+                        date: data.date || getTodayFormatted(),
+                        customerName: data.customerName || 'Guest',
+                        customerAddress: data.customerAddress || '',
+                        paymentMode: data.paymentMode || 'Cash',
+                        grandTotal: total,
+                        amountPaid: paid,
+                        balance: balance,
+                        status: status,
+                        items: data.items || [],
+                        importedAt: serverTimestamp()
+                    });
+                    successCount++;
+                } catch (err) {
+                    console.error(`Failed to parse/upload ${file.name}:`, err);
+                }
+            }
+            alert(`Uploaded ${successCount} record(s) to Firebase!`);
+            event.target.value = '';
+        };
+
+        // Render Ledger / Dashboard
+        window.renderDashboard = function() {
+            const grid = document.getElementById('dashboardGrid');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            grid.innerHTML = '';
+
+            let filtered = cachedInvoices.filter(inv => {
+                const matchTab = (currentTab === 'all') || 
+                                 (currentTab === 'paid' && inv.status === 'PAID') || 
+                                 (currentTab === 'pending' && inv.status === 'PENDING');
+                const matchSearch = (inv.customerName || '').toLowerCase().includes(search) || 
+                                    (inv.invoiceNo || '').toLowerCase().includes(search);
+                return matchTab && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 30px;">No invoices found.</div>`;
+                return;
+            }
+
+            filtered.forEach(inv => {
+                const card = document.createElement('div');
+                card.className = 'invoice-card';
+                card.innerHTML = `
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+                            <strong style="color: #1e293b; font-size: 14px;">#${inv.invoiceNo}</strong>
+                            <span class="badge ${inv.status === 'PAID' ? 'badge-paid' : 'badge-pending'}">${inv.status}</span>
+                        </div>
+                        <div style="font-weight: 600; font-size: 13px;">${inv.customerName}</div>
+                        <div style="font-size: 11px; color: #64748b;">📅 ${inv.date}</div>
+                        <div style="margin-top: 8px; font-size: 12px;">
+                            <div>Total: <strong>₹${(inv.grandTotal || 0).toFixed(2)}</strong></div>
+                            <div style="color: ${inv.balance > 0 ? '#dc2626' : '#16a34a'}">Balance: <strong>₹${(inv.balance || 0).toFixed(2)}</strong></div>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="card-btn" onclick="loadInvoiceToForm('${inv.invoiceNo}')">✏️ Load</button>
+                        <button class="card-btn card-btn-delete" onclick="deleteInvoiceFromCloud('${inv.invoiceNo}')">🗑️ Delete</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        };
+
+        // Load an Invoice from Firebase into the UI
+        window.loadInvoiceToForm = function(invoiceNo) {
+            const data = cachedInvoices.find(inv => inv.invoiceNo === invoiceNo);
+            if (!data) return;
+
+            document.getElementById('invoiceNo').value = data.invoiceNo || '';
+            document.getElementById('datePicker').value = data.date || getTodayFormatted();
+            document.getElementById('customerName').value = data.customerName || '';
+            document.getElementById('customerAddress').value = data.customerAddress || '';
+            document.getElementById('paymentMode').value = data.paymentMode || 'Cash';
+            document.getElementById('amountPaid').value = data.amountPaid || 0;
+
+            const tbody = document.getElementById('invoiceItems');
+            tbody.innerHTML = '';
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(item => addNewRow(item.name, item.qty, item.rate));
+            } else {
+                addNewRow();
+            }
+            calculateTotal();
+            closeDashboard();
+        };
+
+        // Delete from Firestore
+        window.deleteInvoiceFromCloud = async function(invoiceNo) {
+            if (confirm(`Are you sure you want to delete Invoice #${invoiceNo} from the Cloud?`)) {
+                await deleteDoc(doc(db, "invoices", invoiceNo));
+            }
+        };
+    </script>
+
+    <!-- CORE APPLICATION INTERFACE LOGIC -->
+    <script>
+        function getTodayFormatted() {
+            const today = new Date();
+            const dd = String(today.getDate()).padStart(2, '0');
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            return `${dd}/${mm}/${yyyy}`;
+        }
+
+        document.getElementById('datePicker').value = getTodayFormatted();
+
+        window.onload = function() {
+            addNewRow();
+            setTimeout(updateQR, 100);
+        };
+
+        function resetInvoice() {
+            document.getElementById('invoiceNo').value = Math.floor(100 + Math.random() * 900);
+            document.getElementById('datePicker').value = getTodayFormatted();
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerAddress').value = '';
+            document.getElementById('amountPaid').value = 0;
+            document.getElementById('paymentMode').value = 'Cash';
+            document.getElementById('invoiceItems').innerHTML = '';
+            addNewRow();
+            calculateTotal();
+        }
+
+        function addNewRow(itemName = '', qty = 1, rate = 0) {
+            const tbody = document.getElementById('invoiceItems');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="text-center sl-no"></td>
+                <td><input type="text" placeholder="Item Name / Description" value="${itemName}"></td>
+                <td class="text-center"><input type="number" value="${qty}" min="1" oninput="calculateTotal()" style="text-align: center;"></td>
+                <td class="text-center"><input type="number" value="${rate}" min="0" oninput="calculateTotal()" style="text-align: center;"></td>
+                <td class="text-right"><span class="amount-text">0.00</span></td>
+                <td class="text-center">
+                    <button class="delete-btn" onclick="removeRow(this)">×</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+            updateSerialNumbers();
+            calculateTotal();
+        }
+
+        function removeRow(btn) {
+            const row = btn.closest('tr');
+            if (document.querySelectorAll('#invoiceItems tr').length > 1) {
+                row.remove();
+            } else {
+                const inputs = row.querySelectorAll('input');
+                inputs[0].value = ''; inputs[1].value = 1; inputs[2].value = 0;
+            }
+            updateSerialNumbers();
+            calculateTotal();
+        }
+
+        function updateSerialNumbers() {
+            const rows = document.querySelectorAll('#invoiceItems tr');
+            rows.forEach((row, index) => {
+                row.querySelector('.sl-no').innerText = index + 1;
+            });
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            document.querySelectorAll('#invoiceItems tr').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const qty = parseFloat(inputs[1].value) || 0;
+                const rate = parseFloat(inputs[2].value) || 0;
+                const amount = qty * rate;
+                row.querySelector('.amount-text').innerText = amount.toFixed(2);
+                total += amount;
+            });
+            document.getElementById('grandTotal').innerText = total.toFixed(2);
+            calculateBalance();
+            updateQR();
+        }
+
+        function calculateBalance() {
+            const total = parseFloat(document.getElementById('grandTotal').innerText) || 0;
+            const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+            const balance = total - paid;
+            const balanceEl = document.getElementById('balanceAmount');
+            balanceEl.innerText = balance.toFixed(2);
+            balanceEl.style.color = balance > 0 ? "#dc2626" : "#16a34a";
+        }
+
+        function updateQR() {
+            const invNo = document.getElementById('invoiceNo').value;
+            const date = document.getElementById('datePicker').value;
+            const total = document.getElementById('grandTotal').innerText;
+            const customer = document.getElementById('customerName').value || 'Guest';
+            const qrText = `AN DIGITAL\nInv: ${invNo}\nDate: ${date}\nCust: ${customer}\nTotal: INR ${total}`;
+            const container = document.getElementById('qrcode');
+            container.innerHTML = '';
+            new QRCode(container, { text: qrText, width: 50, height: 50, correctLevel : QRCode.CorrectLevel.L });
+        }
+
+        function autoFitAndPrint() {
+            const sheet = document.getElementById('invoice-sheet');
+            const wrapper = document.getElementById('content-wrapper');
+            wrapper.style.transform = 'none';
+            const availableHeight = sheet.clientHeight - 30; 
+            const actualHeight = wrapper.scrollHeight;
+
+            let scale = 1;
+            if (actualHeight > availableHeight) {
+                scale = (availableHeight / actualHeight) * 0.98;
+            }
+
+            if (scale < 1) {
+                wrapper.style.transform = `scale(${scale})`;
+            }
+
+            setTimeout(() => { window.print(); }, 250);
+        }
+
+        /* Modal & Filter Helpers */
+        function openDashboard() {
+            document.getElementById('dashboardModal').classList.add('active');
+            if (window.renderDashboard) window.renderDashboard();
+        }
+
+        function closeDashboard() {
+            document.getElementById('dashboardModal').classList.remove('active');
+        }
+
+        function filterDashboard(tab, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            window.currentTab = tab;
+            if (window.renderDashboard) window.renderDashboard();
+        }
+    </script>
+</body>
+</html>
