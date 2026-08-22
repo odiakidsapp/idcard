@@ -35,7 +35,6 @@
     input, select { padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing: border-box; background: #fff; transition: border-color 0.2s;}
     input:focus, select:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.1);}
 
-    /* Tab Styles */
     .dashboard-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
     .tab-btn { padding: 12px 24px; border-radius: 10px; border: 2px solid transparent; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s; background: #e9ecef; color: #555; }
     .tab-btn.active { background: #007bff; color: white; border-color: #0056b3; box-shadow: 0 4px 10px rgba(0,123,255,0.3); }
@@ -81,7 +80,6 @@
     .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
     .danger-zone { margin-top: 30px; padding-top: 20px; border-top: 2px dashed #ffcdd2; display: flex; flex-direction: column; gap: 10px;}
     
-    /* Layout Editor Specific Styles */
     .layout-editor-modal .modal-content { max-width: 1000px; padding: 20px; }
     .le-grid { display: flex; gap: 20px; height: 75vh; }
     .le-controls { flex: 1; overflow-y: auto; padding-right: 15px; border-right: 1px solid #eee; }
@@ -233,7 +231,6 @@
             </select>
         </div>
 
-        <!-- NEW: Re-added Review Filter -->
         <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid #ddd; padding-left: 15px;">
             <label style="font-size:13px; font-weight:bold; color: #444;">Review (Excel):</label>
             <select id="reviewFilterSelect" onchange="renderTable()" style="padding: 8px 12px; border-radius: 6px; min-width: 130px; border-color: #ddd;">
@@ -754,6 +751,8 @@ async function rebuildSchoolsMap() {
             
             let docTime = d.lastModified || d.createdAt || 0;
             if (docTime > maxId) maxId = docTime;
+            // NOTE: We intentionally DO NOT update newMap[udise].latestActivity here
+            // so that Config updates don't push the school to the "Recently Modified" top.
         });
 
         Object.keys(newMap).forEach(k => {
@@ -794,8 +793,8 @@ async function quickSync() {
                 udisePass: d.udisePass || d.password || '',
                 customFields: d.customFields || [],
                 layoutSettings: d.layoutSettings || null,
-                privateTemplateUrl: d.privateTemplateUrl || null,
-                latestActivity: Math.max(schoolsMap[udise].latestActivity || 0, d.lastModified || 0)
+                privateTemplateUrl: d.privateTemplateUrl || null
+                // We intentionally omit updating latestActivity here so config changes are ignored by sorting
             });
             hasChanges = true;
         });
@@ -842,6 +841,8 @@ async function quickSync() {
             if(schoolsMap[udise]) {
                 schoolsMap[udise].completedCount = comp; schoolsMap[udise].pendingCount = pend;
                 schoolsMap[udise].sources = vars; schoolsMap[udise].rawNameCounts = rawCounts;
+                // Since this block only runs for student document modifications, update latestActivity safely
+                schoolsMap[udise].latestActivity = maxId;
             } else if (comp > 0 || pend > 0) {
                 const best = Object.keys(rawCounts).sort((a,b)=>rawCounts[b]-rawCounts[a])[0];
                 schoolsMap[udise] = {
@@ -882,8 +883,8 @@ function renderDashboard(){
         if (!matchSearch) return false;
 
         // 2. Print Status Filter
-        if (printFilter === 'pending' && (s.pendingCount || 0) === 0) return false;
-        if (printFilter === 'completed' && ((s.pendingCount || 0) > 0 || ((s.completedCount || 0) === 0 && (s.pendingCount || 0) === 0))) return false;
+        if (printFilter === 'pending' && s.pendingCount === 0) return false;
+        if (printFilter === 'completed' && (s.pendingCount > 0 || (s.completedCount === 0 && s.pendingCount === 0))) return false;
 
         return true;
     });
@@ -910,6 +911,10 @@ function renderDashboard(){
         div.className = activeTab === 'private' ? 'school-card private-card' : 'school-card';
         let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(udise)}`;
         
+        // Complete Tick Check
+        const isCompleted = (s.completedCount > 0 && (s.pendingCount || 0) === 0);
+        const tickHtml = isCompleted ? `<div style="position:absolute; top:-10px; right:-10px; background:#28a745; color:white; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.15); font-size:16px; z-index:10; border: 3px solid white;"><i class="fas fa-check"></i></div>` : '';
+
         let credsHtml = '';
         if (s.appPassword || s.udisePass) {
             credsHtml = `<div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">`;
@@ -920,11 +925,12 @@ function renderDashboard(){
         }
 
         const statsHtml = `<div style="margin-top:8px; font-size:12px; display:flex; gap:10px;">
-            <span style="color:#28a745"><i class="fas fa-check-circle"></i> ${s.completedCount || 0} Printed</span>
+            <span style="color:#28a745"><i class="fas fa-check-circle"></i> ${s.completedCount || 0} Ready to Print</span>
             <span style="color:#dc3545"><i class="fas fa-clock"></i> ${s.pendingCount || 0} Pending</span>
         </div>`;
 
         div.innerHTML = `
+            ${tickHtml}
             <div class="school-card-content" onclick="openSchoolDetail('${escapeJs(udise)}')">
                 <h3 title="${escapeHtml(udiseTitle)}" style="color:${activeTab==='private'?'#6b21a8':'#0b53a0'}; font-family:monospace; font-size:1.3rem; letter-spacing:1px; margin:0 0 10px 0;">${escapeHtml(udiseTitle)}</h3>
                 <div class="school-meta" style="color:#E85C0D; font-weight:bold; font-size:15px; display:flex; align-items:center;">
@@ -1172,7 +1178,10 @@ async function bulkDeleteSelected() {
             await batch.commit();
         }
         currentSchoolStudents = currentSchoolStudents.filter(s => !ids.includes(s.id.toString()));
-        if(activeUdise && schoolsMap[activeUdise]) await quickSync(); 
+        if(activeUdise && schoolsMap[activeUdise]) {
+            schoolsMap[activeUdise].latestActivity = Date.now(); // Bump to top on delete
+            await quickSync(); 
+        }
         renderTable(); 
     } catch (e) { showMsg("Error deleting students: " + e.message); } 
     finally { btn.innerHTML = originalText; btn.disabled = false; updateSelection(); }
@@ -1635,8 +1644,8 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         pin: document.getElementById('esPin').value.trim(),
         udise: newUdise,
         appPassword: document.getElementById('esAppPassword').value.trim(),
-        udisePass: document.getElementById('esUdisePass').value.trim(),
-        lastModified: Date.now() 
+        udisePass: document.getElementById('esUdisePass').value.trim()
+        // Deliberately removing lastModified: Date.now() so updating config doesn't push it to recent
     };
 
     if (s.schoolType === 'private') {
@@ -1667,7 +1676,8 @@ document.getElementById('saveSchoolBtn').onclick = async () => {
         await db.collection('schools').doc(newUdise).set(updates, { merge: true });
         if(oldUdise !== newUdise) await db.collection('schools').doc(oldUdise).delete();
 
-        const studentUpdates = { schoolName: updates.name, hmPhone: updates.phone, block: updates.block, district: updates.district, pin: updates.pin, udise: updates.udise, lastModified: Date.now() };
+        // Deliberately removing lastModified: Date.now() so updating config doesn't push it to recent
+        const studentUpdates = { schoolName: updates.name, hmPhone: updates.phone, block: updates.block, district: updates.district, pin: updates.pin, udise: updates.udise };
         if (updates.hmSignature) studentUpdates.hmSignature = updates.hmSignature;
 
         const isLegacyNoUdise = oldUdise.startsWith('NO_UDISE:');
@@ -1732,6 +1742,9 @@ window.executeBatchDelete = async function(udise, targetSource) {
             document.getElementById('editSchoolModal').style.display='none';
             await showMsg("All data deleted successfully!"); showDashboard(); 
         } else {
+            schoolsMap[udise].latestActivity = Date.now(); // Bump to top on delete
+            localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+            
             document.getElementById('editSchoolModal').style.display='none';
             await showMsg(`${targetSource === 'excel' ? 'Excel' : 'Manual'} data deleted successfully!`);
             if (activeUdise === udise) { if (schoolsMap[udise]) openSchoolDetail(udise); else showDashboard(); }
@@ -1889,10 +1902,6 @@ document.getElementById('previewEditBtn').onclick = async () => {
     document.getElementById('previewEditBtn').textContent = "👁 Preview Card";
 };
 
-// ==========================================
-// DYNAMIC LAYOUT DESIGNER (PRIVATE SCHOOLS)
-// ==========================================
-
 window.openLayoutEditor = function() {
     const s = schoolsMap[activeUdise];
     if(!s || s.schoolType !== 'private') return;
@@ -1918,7 +1927,7 @@ window.openLayoutEditor = function() {
     
     fields.forEach(f => {
         const defaultSize = f === 'name' ? 36 : 26;
-        // NEW: Default 'name' to center and middle X coordinate, rest to left
+        // Default 'name' to center and middle X coordinate, rest to left
         const defaultAlign = f === 'name' ? 'center' : 'left';
         const defaultX = f === 'name' ? CARD_W / 2 : 40; 
         
@@ -2065,10 +2074,6 @@ document.getElementById('saveLayoutBtn').onclick = async () => {
         btn.disabled = false;
     }
 };
-
-// ==========================================
-// DRAG AND DROP FUNCTIONALITY FOR CANVAS
-// ==========================================
 
 let leIsDragging = false;
 let leDragTarget = null;
