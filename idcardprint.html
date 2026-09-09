@@ -6,93 +6,115 @@
   <title>AN ID Cards - Professional Catalog</title>
   
   <!-- Fonts & Icons -->
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   
   <style>
+    :root {
+      --navy: #0B192C;
+      --blue: #1E3E62;
+      --cyan: #00A9E2;
+      --light-bg: #F8FAFC;
+      --text-main: #334155;
+      --text-light: #64748B;
+      --border: #E2E8F0;
+    }
+
     /* Reset & Base Styles */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Inter', sans-serif;
-      color: #1e293b;
+      color: var(--text-main);
       background-color: #cbd5e1;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Print Button Container */
+    /* Print Controls */
     .no-print-bar {
       text-align: center;
       padding: 15px;
-      background: #0f172a;
+      background: var(--navy);
       color: white;
       position: sticky;
       top: 0;
       z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
     .print-btn {
-      background: #0ea5e9;
+      background: var(--cyan);
       color: white;
       border: none;
       padding: 10px 24px;
-      font-size: 16px;
+      font-size: 14px;
       font-family: 'Montserrat', sans-serif;
       font-weight: 700;
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
-      box-shadow: 0 4px 6px rgba(14, 165, 233, 0.3);
-      transition: background 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
     }
-    .print-btn:hover { background: #0284c7; }
+    .print-btn:hover { background: #008bba; transform: translateY(-1px); }
 
-    /* A4 Page Container */
+    /* A4 Canvas Setup */
     .page {
       width: 210mm;
-      height: 297mm; /* Strict A4 Height */
+      height: 297mm;
       margin: 20px auto;
       background: white;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-      position: relative;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
       display: flex;
       flex-direction: column;
+      position: relative;
       overflow: hidden;
     }
 
-    /* Header Styling */
+    /* Ink-Friendly Premium Header */
     .header {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: white;
-      padding: 20mm 15mm 15mm 15mm;
-      border-bottom: 6px solid #0ea5e9;
+      padding: 18mm 15mm 12mm 15mm;
+      background: white;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-end;
+      position: relative;
       flex-shrink: 0;
     }
-    .header-left h1 { 
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 15mm; right: 15mm;
+      height: 4px;
+      background: linear-gradient(90deg, var(--navy) 0%, var(--cyan) 100%);
+      border-radius: 2px;
+    }
+    .brand h1 { 
       font-family: 'Montserrat', sans-serif;
-      font-size: 34px; 
-      font-weight: 800; 
-      letter-spacing: 1px;
-      margin-bottom: 5px;
-      color: #f8fafc;
+      font-size: 38px; 
+      font-weight: 900; 
+      color: var(--navy);
+      line-height: 1;
+      letter-spacing: -0.5px;
     }
-    .header-left h1 span { color: #0ea5e9; }
-    .header-left p { 
-      font-size: 14px; 
-      color: #94a3b8; 
-      font-weight: 500;
+    .brand h1 span { color: var(--cyan); }
+    .brand p { 
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px; 
+      color: var(--text-light); 
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 3px;
+      margin-top: 6px;
     }
-    .header-right { text-align: right; }
-    .contact-info {
-      font-size: 12px;
-      color: #e2e8f0;
-      line-height: 1.6;
+    .contact-block {
+      text-align: right;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--blue);
+      line-height: 1.8;
     }
-    .contact-info i { color: #0ea5e9; width: 16px; text-align: center; margin-right: 5px; }
+    .contact-block i { color: var(--cyan); width: 14px; margin-right: 4px; }
 
-    /* Content Area */
+    /* Main Content Area */
     .content {
       padding: 10mm 15mm;
       flex: 1;
@@ -100,25 +122,28 @@
       flex-direction: column;
     }
 
-    /* Section Title */
+    /* Elegant Section Titles */
     .section-title {
       font-family: 'Montserrat', sans-serif;
-      font-size: 18px;
-      font-weight: 700;
-      color: #0f172a;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: 1px;
       margin-bottom: 15px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
+    .section-title i { color: var(--cyan); }
     .section-title::after {
       content: '';
       flex: 1;
-      height: 2px;
-      background: #e2e8f0;
+      height: 1px;
+      background: var(--border);
     }
 
-    /* Product Grid */
+    /* Grid Layouts */
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -128,195 +153,205 @@
     .grid-p1 { grid-template-rows: repeat(3, 1fr); }
     .grid-p2 { grid-template-rows: repeat(2, 1fr); margin-bottom: 20px;}
 
-    /* Product Card */
+    /* Modern Product Card */
     .card {
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
       display: flex;
-      background: #ffffff;
-      overflow: hidden;
+      background: white;
       position: relative;
+      transition: border-color 0.3s;
     }
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; bottom: 0; width: 4px;
-      background: #0ea5e9;
-    }
-
-    /* Product Image */
-    .img-container {
-      width: 110px;
-      background: #f8fafc;
+    
+    /* Product Image & Badge */
+    .img-box {
+      width: 105px;
+      background: var(--light-bg);
       padding: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-right: 1px solid #e2e8f0;
+      border-right: 1px solid var(--border);
+      border-radius: 10px 0 0 10px;
       position: relative;
     }
-    .img-container img {
+    .img-box img {
       width: 100%;
-      height: 120px;
-      object-fit: cover;
-      border-radius: 6px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      height: 125px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
     }
-    .item-number {
+    .badge {
       position: absolute;
-      top: 5px;
-      left: 5px;
-      background: #0f172a;
+      top: 10px;
+      left: -8px;
+      background: var(--navy);
       color: white;
+      font-family: 'Montserrat', sans-serif;
       font-size: 10px;
       font-weight: 800;
-      width: 20px;
-      height: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      padding: 4px 8px;
       border-radius: 4px;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.15);
+    }
+    .badge::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      border-width: 4px 4px 0 0;
+      border-style: solid;
+      border-color: #050b14 transparent transparent transparent;
     }
 
-    /* Product Info */
-    .info { 
+    /* Product Details */
+    .details { 
       flex: 1; 
       padding: 12px 15px;
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
     }
     .title {
       font-family: 'Montserrat', sans-serif;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
-      color: #0f172a;
-      margin: 0 0 8px 0;
-      line-height: 1.3;
+      color: var(--navy);
+      line-height: 1.4;
+      margin-bottom: 8px;
+      text-transform: uppercase;
     }
     .features {
       list-style: none;
-      font-size: 11px;
-      color: #64748b;
-      margin-bottom: auto;
+      font-size: 10.5px;
+      color: var(--text-light);
     }
     .features li { 
-      margin-bottom: 4px; 
+      margin-bottom: 5px; 
       display: flex;
       align-items: flex-start;
       gap: 6px;
+      line-height: 1.3;
     }
     .features li i {
-      color: #10b981;
-      font-size: 10px;
+      color: var(--cyan);
+      font-size: 9px;
       margin-top: 2px;
     }
     
     /* Price Tag */
-    .price-container {
-      margin-top: 10px;
+    .price-wrap {
+      margin-top: 8px;
       display: flex;
       align-items: baseline;
-      gap: 4px;
-      background: #f0f9ff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: 1px solid #bae6fd;
-      width: max-content;
+      justify-content: space-between;
+      border-top: 1px dashed var(--border);
+      padding-top: 8px;
     }
     .price {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 800;
-      color: #0284c7;
+      color: var(--navy);
       font-family: 'Montserrat', sans-serif;
+      letter-spacing: -0.5px;
     }
-    .price-unit {
-      font-size: 10px;
-      color: #0284c7;
-      font-weight: 600;
+    .currency { color: var(--cyan); font-size: 16px; margin-right: 2px; }
+    .unit {
+      font-size: 9px;
+      color: var(--text-light);
+      font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
-    /* Editable Price Styling */
+    /* Editable Fields */
     .editable-price {
-      border-bottom: 1px dashed #0284c7;
       cursor: text;
       outline: none;
-      min-width: 20px;
-      display: inline-block;
+      border-bottom: 1px solid transparent;
     }
-    .editable-price:focus, .editable-price:hover { background-color: #e0f2fe; }
+    .editable-price:focus, .editable-price:hover { 
+      border-bottom: 1px dashed var(--cyan); 
+      color: var(--cyan);
+    }
 
-    /* QR Code Banner (Page 2) */
-    .qr-banner {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      border-radius: 16px;
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: white;
-      margin-top: auto;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      position: relative;
-      overflow: hidden;
-    }
-    .qr-banner::after {
-      content: '\f029';
-      font-family: 'Font Awesome 6 Free';
-      font-weight: 900;
-      position: absolute;
-      right: -20px;
-      bottom: -40px;
-      font-size: 150px;
-      opacity: 0.05;
-      color: white;
-    }
-    .qr-text h3 {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 22px;
-      margin-bottom: 5px;
-      color: #f8fafc;
-    }
-    .qr-text p {
-      font-size: 13px;
-      color: #94a3b8;
-      margin-bottom: 10px;
-    }
-    .qr-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: #0ea5e9;
-      color: white;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 12px;
-    }
-    .qr-image {
-      background: white;
-      padding: 8px;
+    /* Call to Action QR Ticket */
+    .qr-ticket {
+      border: 2px solid var(--navy);
       border-radius: 12px;
       display: flex;
+      align-items: center;
+      padding: 15px 25px;
+      margin-top: auto;
+      background: white;
+      position: relative;
     }
-    .qr-image img { width: 90px; height: 90px; }
+    .qr-ticket::before {
+      content: 'ORDER ONLINE';
+      position: absolute;
+      top: -9px;
+      left: 25px;
+      background: white;
+      padding: 0 10px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--navy);
+    }
+    .qr-text { flex: 1; }
+    .qr-text h3 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+    .qr-text p {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-bottom: 12px;
+      max-width: 80%;
+    }
+    .link-pill {
+      display: inline-block;
+      background: var(--light-bg);
+      border: 1px solid var(--border);
+      color: var(--blue);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .link-pill i { color: var(--cyan); margin-right: 4px; }
+    .qr-code img {
+      width: 85px;
+      height: 85px;
+      border: 1px solid var(--border);
+      padding: 4px;
+      border-radius: 6px;
+    }
 
     /* Footer */
     .footer {
-      background: #f8fafc;
-      border-top: 1px solid #e2e8f0;
-      padding: 10px 15mm;
+      padding: 6mm 15mm 10mm 15mm;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: #64748b;
+      align-items: flex-end;
+      font-size: 10px;
+      color: var(--text-light);
       flex-shrink: 0;
     }
-    .footer-terms strong { color: #0f172a; }
-    .page-number { font-weight: 700; color: #0ea5e9; }
+    .rules strong { color: var(--navy); font-family: 'Montserrat', sans-serif; font-size: 11px; }
+    .page-num {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--border);
+      line-height: 0.8;
+    }
 
-    /* Print-Specific Styles */
+    /* Print Specific Overrides */
     @media print {
       @page { size: A4 portrait; margin: 0; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
@@ -328,7 +363,7 @@
         height: 297mm;
       }
       .page:last-child { page-break-after: auto; }
-      .editable-price { border-bottom: none; }
+      .editable-price { border-bottom: none !important; color: inherit !important; }
     }
   </style>
 </head>
@@ -337,7 +372,7 @@
   <!-- Hidden during print -->
   <div class="no-print-bar">
     <button class="print-btn" onclick="window.print()"><i class="fas fa-print mr-2"></i> Print Professional Catalog</button>
-    <p style="margin-top: 8px; font-size: 13px; color: #cbd5e1;">Press <strong>Ctrl + P</strong>. Ensure "Background graphics" is ON in print settings. Prices are editable.</p>
+    <p style="margin-top: 8px; font-size: 12px; color: #94a3b8; font-weight: 500;">Press <strong>Ctrl + P</strong> • Ensure "Background graphics" is ON • Click any price to edit before printing.</p>
   </div>
 
   <!-- PAGE 1 -->
@@ -345,142 +380,152 @@
     
     <!-- Header -->
     <div class="header">
-      <div class="header-left">
+      <div class="brand">
         <h1>AN <span>ID CARDS</span></h1>
         <p>Premium Corporate Solutions</p>
       </div>
-      <div class="header-right">
-        <div class="contact-info">
-          <div><i class="fas fa-phone-alt"></i> +91-7855800205</div>
-          <div style="margin-top: 4px;"><i class="fas fa-envelope"></i> andigital1996@gmail.com</div>
-        </div>
+      <div class="contact-block">
+        <div><i class="fas fa-phone-alt"></i> +91-7855800205</div>
+        <div><i class="fas fa-envelope"></i> andigital1996@gmail.com</div>
       </div>
     </div>
 
     <!-- Content Page 1 -->
     <div class="content">
       <div class="section-title">
-        <i class="fas fa-tags text-sky-500"></i> Standard Holders & Lanyards
+        <i class="fas fa-id-badge"></i> Standard Holders & Lanyards
       </div>
 
       <div class="grid grid-p1">
         
         <!-- Item 1 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">01</span>
-            <img src="idcard_1.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+1'" alt="Item 1">
+          <div class="img-box">
+            <div class="badge">01</div>
+            <img src="idcard_1.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+1'" alt="Single Side Stiki Holder">
           </div>
-          <div class="info">
-            <h2 class="title">Single Side Stiki Holder with Dori</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> Standard thread dori</li>
-              <li><i class="fas fa-check-circle"></i> Single-sided visibility</li>
-              <li><i class="fas fa-check-circle"></i> Cost-effective material</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">22</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">Single Side Stiki Holder with Dori</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> Standard thread dori</li>
+                <li><i class="fas fa-circle"></i> Single-sided visibility</li>
+                <li><i class="fas fa-circle"></i> Cost-effective material</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">22</span></span>
             </div>
           </div>
         </div>
 
         <!-- Item 2 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">02</span>
-            <img src="idcard_2.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+2'" alt="Item 2">
+          <div class="img-box">
+            <div class="badge">02</div>
+            <img src="idcard_2.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+2'" alt="Dual Side Stiki Holder">
           </div>
-          <div class="info">
-            <h2 class="title">Dual Side Stiki Holder with Dori</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> Standard thread dori</li>
-              <li><i class="fas fa-check-circle"></i> Dual-sided visibility</li>
-              <li><i class="fas fa-check-circle"></i> Lightweight & comfortable</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">28</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">Dual Side Stiki Holder with Dori</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> Standard thread dori</li>
+                <li><i class="fas fa-circle"></i> Dual-sided visibility</li>
+                <li><i class="fas fa-circle"></i> Lightweight & comfortable</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">28</span></span>
             </div>
           </div>
         </div>
 
         <!-- Item 3 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">03</span>
-            <img src="idcard_3.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+3'" alt="Item 3">
+          <div class="img-box">
+            <div class="badge">03</div>
+            <img src="idcard_3.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+3'" alt="Stiki Holder 16mm Print">
           </div>
-          <div class="info">
-            <h2 class="title">Single Side Stiki Holder + 16mm Print</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> Premium 16mm printed lanyard</li>
-              <li><i class="fas fa-check-circle"></i> Single-sided visibility</li>
-              <li><i class="fas fa-check-circle"></i> Washable & fade-resistant</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">32</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">Single Side Stiki Holder + 16mm Print</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> Premium 16mm printed lanyard</li>
+                <li><i class="fas fa-circle"></i> Single-sided visibility</li>
+                <li><i class="fas fa-circle"></i> Washable & fade-resistant</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">32</span></span>
             </div>
           </div>
         </div>
 
         <!-- Item 4 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">04</span>
-            <img src="idcard_4.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+4'" alt="Item 4">
+          <div class="img-box">
+            <div class="badge">04</div>
+            <img src="idcard_4.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+4'" alt="Dual Stiki Holder 16mm Print">
           </div>
-          <div class="info">
-            <h2 class="title">Dual Side Stiki Holder + 16mm Print</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> Premium 16mm printed lanyard</li>
-              <li><i class="fas fa-check-circle"></i> Dual-sided visibility</li>
-              <li><i class="fas fa-check-circle"></i> High-res digital sublimation</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">37</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">Dual Side Stiki Holder + 16mm Print</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> Premium 16mm printed lanyard</li>
+                <li><i class="fas fa-circle"></i> Dual-sided visibility</li>
+                <li><i class="fas fa-circle"></i> High-res digital sublimation</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">37</span></span>
             </div>
           </div>
         </div>
 
         <!-- Item 5 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">05</span>
-            <img src="idcard_5.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+5'" alt="Item 5">
+          <div class="img-box">
+            <div class="badge">05</div>
+            <img src="idcard_5.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+5'" alt="Exe Card 16mm Print">
           </div>
-          <div class="info">
-            <h2 class="title">Exe Card + 16mm Digital Lanyard</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> Corporate Exe card holder</li>
-              <li><i class="fas fa-check-circle"></i> Rigid protection for ID</li>
-              <li><i class="fas fa-check-circle"></i> Professional sleek look</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">42</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">Exe Card + 16mm Digital Lanyard</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> Corporate Exe card holder</li>
+                <li><i class="fas fa-circle"></i> Rigid protection for ID</li>
+                <li><i class="fas fa-circle"></i> Professional sleek look</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">42</span></span>
             </div>
           </div>
         </div>
 
         <!-- Item 6 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">06</span>
-            <img src="idcard_6.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+6'" alt="Item 6">
+          <div class="img-box">
+            <div class="badge">06</div>
+            <img src="idcard_6.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+6'" alt="Heavy Plastic Holder">
           </div>
-          <div class="info">
-            <h2 class="title">Heavy Plastic Holder + PVC Card + 16mm Print</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> Heavy-duty plastic enclosure</li>
-              <li><i class="fas fa-check-circle"></i> High-quality PVC card</li>
-              <li><i class="fas fa-check-circle"></i> Max durability & protection</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">47</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">Heavy Plastic Holder + PVC Card + 16mm Print</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> Heavy-duty plastic enclosure</li>
+                <li><i class="fas fa-circle"></i> High-quality PVC card</li>
+                <li><i class="fas fa-circle"></i> Max durability & protection</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">47</span></span>
             </div>
           </div>
         </div>
@@ -490,10 +535,10 @@
 
     <!-- Footer Page 1 -->
     <div class="footer">
-      <div class="footer-terms">
-        <i class="fas fa-info-circle" style="color: #0ea5e9; margin-right: 4px;"></i> <strong>Order Specs:</strong> MOQ 30 pieces. Delivery 5-7 days.
+      <div class="rules">
+        <strong>Order Specs:</strong> MOQ 30 pieces. Delivery 5-7 days.
       </div>
-      <div class="page-number">PAGE 01</div>
+      <div class="page-num">01</div>
     </div>
   </div>
 
@@ -501,118 +546,123 @@
   <!-- PAGE 2 -->
   <div class="page">
     
-    <!-- Header (Smaller for subsequent pages) -->
-    <div class="header" style="padding: 15mm 15mm 10mm 15mm; border-bottom: 4px solid #0ea5e9;">
-      <div class="header-left">
-        <h1 style="font-size: 24px;">AN <span>ID CARDS</span></h1>
+    <!-- Compact Header for Page 2 -->
+    <div class="header" style="padding-top: 15mm; padding-bottom: 8mm;">
+      <div class="brand">
+        <h1 style="font-size: 28px;">AN <span>ID CARDS</span></h1>
       </div>
-      <div class="header-right">
-        <div class="contact-info">
-          <div><i class="fas fa-globe"></i> abapps.in/catalogue.html</div>
-        </div>
+      <div class="contact-block">
+        <div><i class="fas fa-globe"></i> abapps.in/catalogue.html</div>
       </div>
     </div>
 
     <!-- Content Page 2 -->
     <div class="content">
       <div class="section-title">
-        <i class="fas fa-gem text-sky-500"></i> Premium & Metallic Options
+        <i class="fas fa-crown"></i> Premium & Metallic Options
       </div>
       
       <div class="grid grid-p2">
         
         <!-- Item 7 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">07</span>
-            <img src="idcard_7.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+7'" alt="Item 7">
+          <div class="img-box">
+            <div class="badge">07</div>
+            <img src="idcard_7.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+7'" alt="Acrylic Holder">
           </div>
-          <div class="info">
-            <h2 class="title">Acrylic Holder + PVC Card + 16mm Print</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> Premium acrylic glass finish</li>
-              <li><i class="fas fa-check-circle"></i> High-quality PVC card</li>
-              <li><i class="fas fa-check-circle"></i> Scratch-resistant casing</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">52</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">Acrylic Holder + PVC Card + 16mm Print</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> Premium acrylic glass finish</li>
+                <li><i class="fas fa-circle"></i> High-quality PVC card</li>
+                <li><i class="fas fa-circle"></i> Scratch-resistant casing</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">52</span></span>
             </div>
           </div>
         </div>
 
         <!-- Item 8 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">08</span>
-            <img src="idcard_8.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+8'" alt="Item 8">
+          <div class="img-box">
+            <div class="badge">08</div>
+            <img src="idcard_8.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+8'" alt="Metallic Holder">
           </div>
-          <div class="info">
-            <h2 class="title">Metallic Holder + PVC Card + 16mm Print</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> Luxury metallic alloy holder</li>
-              <li><i class="fas fa-check-circle"></i> High-quality PVC card</li>
-              <li><i class="fas fa-check-circle"></i> Ultimate executive aesthetic</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">84</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">Metallic Holder + PVC Card + 16mm Print</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> Luxury metallic alloy holder</li>
+                <li><i class="fas fa-circle"></i> High-quality PVC card</li>
+                <li><i class="fas fa-circle"></i> Ultimate executive aesthetic</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">84</span></span>
             </div>
           </div>
         </div>
 
         <!-- Item 9 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">09</span>
-            <img src="idcard_9.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+9'" alt="Item 9">
+          <div class="img-box">
+            <div class="badge">09</div>
+            <img src="idcard_9.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+9'" alt="16mm Lanyard">
           </div>
-          <div class="info">
-            <h2 class="title">16mm Digital Lanyard Print with Hook</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> 16mm width custom print</li>
-              <li><i class="fas fa-check-circle"></i> Heavy-duty metal dog hook</li>
-              <li><i class="fas fa-check-circle"></i> Edge-to-edge sublimation</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">33</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">16mm Digital Lanyard Print with Hook</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> 16mm width custom print</li>
+                <li><i class="fas fa-circle"></i> Heavy-duty metal dog hook</li>
+                <li><i class="fas fa-circle"></i> Edge-to-edge sublimation</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">33</span></span>
             </div>
           </div>
         </div>
 
         <!-- Item 10 -->
         <div class="card">
-          <div class="img-container">
-            <span class="item-number">10</span>
-            <img src="idcard_10.webp" onerror="this.src='https://placehold.co/300x400/f1f5f9/475569?text=Image+10'" alt="Item 10">
+          <div class="img-box">
+            <div class="badge">10</div>
+            <img src="idcard_10.webp" onerror="this.src='https://placehold.co/300x400/f8fafc/94a3b8?text=Image+10'" alt="20mm Lanyard">
           </div>
-          <div class="info">
-            <h2 class="title">20mm Digital Lanyard Print with Hook</h2>
-            <ul class="features">
-              <li><i class="fas fa-check-circle"></i> Extra-wide 20mm custom print</li>
-              <li><i class="fas fa-check-circle"></i> Ideal for bold text/logos</li>
-              <li><i class="fas fa-check-circle"></i> Heavy-duty metal dog hook</li>
-            </ul>
-            <div class="price-container">
-              <span class="price">₹<span class="editable-price" contenteditable="true">36</span></span>
-              <span class="price-unit">/ Unit</span>
+          <div class="details">
+            <div>
+              <h2 class="title">20mm Digital Lanyard Print with Hook</h2>
+              <ul class="features">
+                <li><i class="fas fa-circle"></i> Extra-wide 20mm custom print</li>
+                <li><i class="fas fa-circle"></i> Ideal for bold text/logos</li>
+                <li><i class="fas fa-circle"></i> Heavy-duty metal dog hook</li>
+              </ul>
+            </div>
+            <div class="price-wrap">
+              <span class="unit">Per Unit</span>
+              <span class="price"><span class="currency">₹</span><span class="editable-price" contenteditable="true">36</span></span>
             </div>
           </div>
         </div>
 
       </div>
 
-      <!-- Professional QR Code Banner -->
-      <div class="qr-banner">
+      <!-- Call to Action Ticket -->
+      <div class="qr-ticket">
         <div class="qr-text">
           <h3>Ready to place an order?</h3>
-          <p>Scan the code to calculate pricing and order bulk quantities instantly online.</p>
-          <div class="qr-link"><i class="fas fa-mouse-pointer"></i> abapps.in/catalogue.html</div>
+          <p>Scan the QR code to calculate pricing and order your bulk quantities instantly online.</p>
+          <div class="link-pill"><i class="fas fa-link"></i> abapps.in/catalogue.html</div>
         </div>
-        <div class="qr-image">
-          <!-- Auto-generated QR code -->
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://abapps.in/catalogue.html&color=0f172a" alt="Catalogue QR Code">
+        <div class="qr-code">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://abapps.in/catalogue.html&margin=0" alt="Order QR Code">
         </div>
       </div>
 
@@ -620,10 +670,10 @@
 
     <!-- Footer Page 2 -->
     <div class="footer">
-      <div class="footer-terms">
-        <i class="fas fa-info-circle" style="color: #0ea5e9; margin-right: 4px;"></i> <strong>Batch Rule:</strong> Lanyards are printed in batches of 30.
+      <div class="rules">
+        <strong>Batch Rule:</strong> Lanyards are printed in batches of 30.
       </div>
-      <div class="page-number">PAGE 02</div>
+      <div class="page-num">02</div>
     </div>
   </div>
 
