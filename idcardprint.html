@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AN ID Cards - Printable Catalog</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Reset & Base Styles */
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #111;
+      background-color: #e2e8f0;
+    }
+
+    /* Print Button Container */
+    .no-print-bar {
+      text-align: center;
+      padding: 20px;
+      background: #0284c7;
+      color: white;
+    }
+    .print-btn {
+      background: white;
+      color: #0284c7;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .print-btn:hover { background: #f0f9ff; }
+
+    /* A4 Page Container */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 20px auto;
+      background: white;
+      padding: 15mm;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header Styling */
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #222;
+      padding-bottom: 15px;
+      margin-bottom: 25px;
+      flex-shrink: 0;
+    }
+    .header h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: 1px; }
+    .header p { margin: 5px 0 0; font-size: 14px; color: #444; }
+
+    /* Product Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+      flex: 1; /* Makes the grid take up all remaining vertical space */
+    }
+    
+    /* Forces rows to stretch equally to fill the blank space */
+    .grid-p1 { grid-template-rows: repeat(3, 1fr); }
+    .grid-p2 { grid-template-rows: repeat(2, 1fr); }
+
+    /* Product Card */
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      gap: 15px;
+      align-items: center; /* Keeps content vertically centered even when stretched */
+      background: #fff;
+    }
+
+    /* Product Image */
+    .img-container {
+      width: 110px;
+      height: 145px;
+      flex-shrink: 0;
+      background: #f1f5f9;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+    .img-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Product Info */
+    .info { flex: 1; }
+    .title {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      line-height: 1.3;
+      text-transform: uppercase;
+    }
+    .features {
+      margin: 0 0 12px 0;
+      padding-left: 15px;
+      font-size: 12px;
+      color: #555;
+    }
+    .features li { margin-bottom: 4px; }
+    .price {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0284c7;
+      margin: 0;
+    }
+
+    /* Editable Price Styling */
+    .editable-price {
+      border-bottom: 1px dashed #0284c7;
+      cursor: text;
+      padding: 0 2px;
+      outline: none;
+      transition: background 0.2s;
+    }
+    .editable-price:focus, .editable-price:hover {
+      background-color: #e0f2fe;
+    }
+
+    /* QR Code Section */
+    .qr-section {
+      text-align: center;
+      padding: 25px 20px;
+      background-color: #f8fafc;
+      border-radius: 12px;
+      border: 2px dashed #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 15px;
+      flex-shrink: 0;
+    }
+    .qr-section img {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 10px;
+    }
+    .qr-section h3 {
+      margin: 0 0 5px 0;
+      font-size: 18px;
+      color: #0f172a;
+    }
+    .qr-section p {
+      margin: 0;
+      font-size: 14px;
+      color: #0284c7;
+      font-weight: 600;
+    }
+
+    /* Footer / Terms */
+    .footer {
+      text-align: center;
+      font-size: 13px;
+      color: #666;
+      border-top: 1px solid #eee;
+      padding-top: 15px;
+      flex-shrink: 0;
+    }
+
+    /* Print-Specific Styles */
+    @media print {
+      @page { size: A4 portrait; margin: 10mm; }
+      body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print-bar { display: none !important; }
+      .page { 
+        width: 100%; 
+        height: 277mm; /* Ensure consistent height for print */
+        margin: 0; 
+        padding: 0; 
+        box-shadow: none; 
+        page-break-after: always;
+      }
+      .page:last-child { page-break-after: auto; }
+      .card { border: 1px solid #ccc; }
+      .editable-price { border-bottom: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hidden during print -->
+  <div class="no-print-bar">
+    <button class="print-btn" onclick="window.print()">🖨️ Print Catalog (Ctrl + P)</button>
+    <p style="margin-top: 10px; font-size: 14px;">Prices are editable. Cards will automatically stretch to fill empty page space.</p>
+  </div>
+
+  <!-- PAGE 1 -->
+  <div class="page">
+    <div class="header">
+      <h1>AN ID CARDS</h1>
+      <p>Premium ID Cards & Accessories | Ph: +91-7855800205 | Email: andigital1996@gmail.com</p>
+    </div>
+
+    <!-- Added grid-p1 class to perfectly divide the vertical space into 3 rows -->
+    <div class="grid grid-p1">
+      <!-- Item 1 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_1.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+1'" alt="Item 1">
+        </div>
+        <div class="info">
+          <h2 class="title">1. Single Side Stiki Holder with Dori</h2>
+          <ul class="features">
+            <li>Standard thread dori</li>
+            <li>Single-sided visibility</li>
+            <li>Cost-effective material</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">22</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+
+      <!-- Item 2 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_2.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+2'" alt="Item 2">
+        </div>
+        <div class="info">
+          <h2 class="title">2. Dual Side Stiki Holder with Dori</h2>
+          <ul class="features">
+            <li>Standard thread dori</li>
+            <li>Dual-sided visibility</li>
+            <li>Lightweight & comfortable</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">28</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+
+      <!-- Item 3 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_3.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+3'" alt="Item 3">
+        </div>
+        <div class="info">
+          <h2 class="title">3. Single Side Stiki Holder + 16mm Print</h2>
+          <ul class="features">
+            <li>Premium 16mm printed lanyard</li>
+            <li>Single-sided visibility</li>
+            <li>Washable & fade-resistant</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">32</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+
+      <!-- Item 4 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_4.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+4'" alt="Item 4">
+        </div>
+        <div class="info">
+          <h2 class="title">4. Dual Side Stiki Holder + 16mm Print</h2>
+          <ul class="features">
+            <li>Premium 16mm printed lanyard</li>
+            <li>Dual-sided visibility</li>
+            <li>High-res digital sublimation</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">37</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+
+      <!-- Item 5 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_5.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+5'" alt="Item 5">
+        </div>
+        <div class="info">
+          <h2 class="title">5. Exe Card + 16mm Digital Lanyard</h2>
+          <ul class="features">
+            <li>Corporate Exe card holder</li>
+            <li>Rigid protection for ID</li>
+            <li>Professional sleek look</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">42</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+
+      <!-- Item 6 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_6.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+6'" alt="Item 6">
+        </div>
+        <div class="info">
+          <h2 class="title">6. Heavy Plastic Holder + PVC Card + 16mm Print</h2>
+          <ul class="features">
+            <li>Heavy-duty plastic enclosure</li>
+            <li>High-quality PVC card</li>
+            <li>Max durability & protection</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">47</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      Page 1 of 2
+    </div>
+  </div>
+
+  <!-- PAGE 2 -->
+  <div class="page">
+    
+    <!-- Added grid-p2 class to perfectly divide the remaining space into 2 rows -->
+    <div class="grid grid-p2">
+      <!-- Item 7 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_7.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+7'" alt="Item 7">
+        </div>
+        <div class="info">
+          <h2 class="title">7. Acrylic Holder + PVC Card + 16mm Print</h2>
+          <ul class="features">
+            <li>Premium acrylic glass finish</li>
+            <li>High-quality PVC card</li>
+            <li>Scratch-resistant casing</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">52</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+
+      <!-- Item 8 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_8.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+8'" alt="Item 8">
+        </div>
+        <div class="info">
+          <h2 class="title">8. Metallic Holder + PVC Card + 16mm Print</h2>
+          <ul class="features">
+            <li>Luxury metallic alloy holder</li>
+            <li>High-quality PVC card</li>
+            <li>Ultimate executive aesthetic</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">84</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+
+      <!-- Item 9 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_9.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+9'" alt="Item 9">
+        </div>
+        <div class="info">
+          <h2 class="title">9. 16mm Digital Lanyard Print with Hook</h2>
+          <ul class="features">
+            <li>16mm width custom print</li>
+            <li>Heavy-duty metal dog hook</li>
+            <li>Edge-to-edge sublimation</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">33</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+
+      <!-- Item 10 -->
+      <div class="card">
+        <div class="img-container">
+          <img src="idcard_10.webp" onerror="this.src='https://placehold.co/300x400/e2e8f0/475569?text=Item+10'" alt="Item 10">
+        </div>
+        <div class="info">
+          <h2 class="title">10. 20mm Digital Lanyard Print with Hook</h2>
+          <ul class="features">
+            <li>Extra-wide 20mm custom print</li>
+            <li>Ideal for bold text/logos</li>
+            <li>Heavy-duty metal dog hook</li>
+          </ul>
+          <p class="price">₹<span class="editable-price" contenteditable="true">36</span> <span style="font-size:11px; color:#666; font-weight:normal;">/unit</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dynamic QR Code Section -->
+    <div class="qr-section">
+      <!-- Auto-generated QR code using an API -->
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://abapps.in/catalogue.html" alt="Catalogue QR Code">
+      <h3>Scan to order online</h3>
+      <p>abapps.in/catalogue.html</p>
+    </div>
+
+    <div class="footer">
+      <strong>Order Requirements:</strong> Minimum order quantity is 30 pieces. Lanyards are printed in batches of 30. Delivery within 5-7 days.<br>
+      Page 2 of 2
+    </div>
+  </div>
+
+</body>
+</html>
