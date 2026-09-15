@@ -26,6 +26,18 @@
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans min-h-screen">
 
+    <!-- Progress Overlay -->
+    <div id="progressModal" class="fixed inset-0 bg-gray-900 bg-opacity-90 z-[100] hidden flex-col items-center justify-center p-4 transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center">
+            <h3 class="text-2xl font-bold text-gray-800 mb-2" id="progressTitle">Generating Export...</h3>
+            <p class="text-sm text-gray-500 mb-6">Please keep this window open while processing.</p>
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-3 overflow-hidden shadow-inner">
+                <div id="progressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+            </div>
+            <p id="progressText" class="text-lg font-bold text-blue-700">0 / 0</p>
+        </div>
+    </div>
+
     <!-- Navigation -->
     <nav class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center relative z-50">
         <h1 class="text-xl font-bold"><i class="fa-solid fa-id-badge mr-2"></i> ID Card Portal</h1>
@@ -63,12 +75,12 @@
                     <h2 id="currentCollegeTitle" class="text-xl font-bold text-gray-700">College Name</h2>
                     <p class="text-sm text-gray-500" id="collegeSubtitle">Manage students and generate ID cards</p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 w-full sm:w-auto">
                     <button id="btnOpenDesigner" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 shadow w-full sm:w-auto"><i class="fa-solid fa-palette mr-1"></i> Open Live Designer</button>
                 </div>
             </div>
 
-            <!-- Import Block (Hidden in Client Mode) -->
+            <!-- Import Block -->
             <div class="bg-white p-6 rounded-lg shadow-sm space-y-4" id="importDataBlock">
                 <h3 class="text-lg font-bold">1. Import / Replace Data</h3>
                 <div class="flex flex-col sm:flex-row gap-4 mt-2">
@@ -140,7 +152,6 @@
                                 <h4 class="font-bold text-green-700 text-sm"><i class="fa-solid fa-barcode mr-1"></i> 3. Barcode Coordinates (px)</h4>
                                 <input type="checkbox" id="enableBarcode" checked class="w-4 h-4 text-green-600" onchange="drawLivePreview()">
                             </div>
-                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Barcode automatically encodes Student Name & Mobile Number.</p>
                             <div class="grid grid-cols-4 gap-2">
                                 <div><label class="text-xs text-gray-500">X</label><input type="number" id="coordBarcodeX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-xs text-gray-500">Y</label><input type="number" id="coordBarcodeY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
@@ -151,8 +162,8 @@
 
                         <!-- Dynamic Text Coordinates -->
                         <div class="bg-gray-50 p-3 rounded border border-gray-300" id="textFieldsSettingsContainer">
-                            <h4 class="font-bold mb-2 text-gray-700 text-sm"><i class="fa-solid fa-font mr-1"></i> 4. Text Settings (Wrap & Color)</h4>
-                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Set Max Width > 0 to enable automatic 2-line text wrapping (Useful for Addresses).</p>
+                            <h4 class="font-bold mb-2 text-gray-700 text-sm"><i class="fa-solid fa-font mr-1"></i> 4. Text Settings</h4>
+                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Drag elements on the canvas to set X/Y. Choose Align 'Center' to perfectly center text.</p>
                             <div id="textFieldsSettings" class="space-y-2">
                                 <!-- Dynamic coordinate inputs injected here -->
                             </div>
@@ -166,7 +177,7 @@
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-grow flex flex-col p-4 relative overflow-hidden">
                         <h3 class="text-lg font-bold text-gray-800 mb-2 flex-shrink-0 flex justify-between items-center">
                             <span><i class="fa-solid fa-eye text-purple-600"></i> Interactive Canvas</span>
-                            <span class="text-[10px] font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner"><i class="fa-solid fa-hand-pointer mr-1"></i> Click & Drag elements to position them</span>
+                            <span class="text-[10px] font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner"><i class="fa-solid fa-hand-pointer mr-1"></i> Click & Drag to position</span>
                         </h3>
                         <div class="flex-grow bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center p-2 overflow-hidden relative">
                             <canvas id="livePreviewCanvas" class="max-w-full max-h-full object-contain shadow-lg bg-white border border-gray-400"></canvas>
@@ -174,11 +185,11 @@
                     </div>
 
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex-shrink-0 grid grid-cols-2 gap-4">
-                        <button id="btnGenerateZip" class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 font-bold shadow flex flex-col items-center justify-center">
-                            <i class="fa-solid fa-file-zipper text-lg mb-1"></i> Download Standard ZIP
+                        <button id="btnGenerateZip" class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 font-bold shadow flex flex-col items-center justify-center transition">
+                            <i class="fa-solid fa-file-zipper text-lg mb-1"></i> Download ZIP
                         </button>
-                        <button id="btnGeneratePDF" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 font-bold shadow flex flex-col items-center justify-center">
-                            <i class="fa-solid fa-file-pdf text-lg mb-1"></i> Download Watermarked PDF
+                        <button id="btnGeneratePDF" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 font-bold shadow flex flex-col items-center justify-center transition">
+                            <i class="fa-solid fa-file-pdf text-lg mb-1"></i> Download PDF
                         </button>
                     </div>
 
@@ -196,19 +207,16 @@
                 <h3 class="font-bold text-lg text-gray-800">Upload or Capture Photo</h3>
                 <button onclick="closePhotoModal()" class="text-gray-500 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            
             <div id="cameraContainer" class="relative w-full h-80 bg-black hidden">
                 <video id="webcamVideo" class="w-full h-full object-cover" autoplay playsinline></video>
                 <div class="camera-overlay"></div>
                 <div class="camera-guideline"><div class="absolute -top-6 w-full text-center text-white text-xs font-bold drop-shadow-md">Align Face Here</div></div>
             </div>
-
             <div id="uploadContainer" class="p-8 text-center bg-gray-100 flex-grow">
                 <img id="cropPreviewImg" src="" class="max-h-64 mx-auto shadow-md rounded-md border-4 border-white mb-4 hidden object-cover">
                 <p id="cropHelperText" class="text-sm text-gray-500 mb-4">Choose a photo from your device or use the webcam.</p>
                 <input type="file" id="manualPhotoInput" accept="image/*" class="hidden" onchange="handleManualPhotoSelection(event)">
             </div>
-
             <div class="p-4 bg-gray-50 border-t flex flex-col sm:flex-row gap-2 justify-center">
                 <button id="btnStartCamera" onclick="startCamera()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex-1"><i class="fa-solid fa-camera mr-2"></i> Open Camera</button>
                 <button id="btnCapturePhoto" onclick="capturePhoto()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow hidden flex-1"><i class="fa-solid fa-camera-retro mr-2"></i> Capture & Crop</button>
@@ -217,7 +225,6 @@
             <div id="modalStatus" class="bg-yellow-100 text-yellow-800 text-xs text-center py-2 hidden font-bold">Processing AI Crop & Compressing...</div>
         </div>
     </div>
-
     <canvas id="processingCanvas" class="hidden"></canvas>
 
 
@@ -234,8 +241,7 @@
         const app = initializeApp(firebaseConfig); const db = getFirestore(app); const storage = getStorage(app);
 
         let currentCollegeId = null; let currentStudents = []; let collegeConfig = {}; let dynamicFields = [];
-        let targetStudentId = null, targetStudentRoll = null;
-        let isClientMode = false;
+        let targetStudentId = null, targetStudentRoll = null; let isClientMode = false;
         
         const dummyDataGen = {
             'name': 'John Doe', 'student': 'Jane Smith', 'contact': '9876543210', 'phone': '9876543210', 'mobile': '9876543210',
@@ -243,21 +249,34 @@
         };
         function getDummyValue(key) {
             const k = key.toLowerCase();
-            for(let d in dummyDataGen) { if(k.includes(d)) return dummyDataGen[d]; }
-            return `Sample ${key}`;
+            for(let d in dummyDataGen) { if(k.includes(d)) return dummyDataGen[d]; } return `Sample ${key}`;
         }
 
         const imageCache = {};
+        // BULLETPROOF IMAGE LOADER: Uses fetch->blob to completely bypass strict canvas tainting if CORS is configured correctly.
         async function loadCachedImage(url) {
-            if (!url) return null; if (imageCache[url]) return imageCache[url];
-            return new Promise((resolve) => {
-                const img = new Image(); img.crossOrigin = "anonymous";
-                // Add a cache buster parameter to force CORS refresh for Firebase Storage
-                const corsUrl = url + (url.includes('?') ? '&' : '?') + 'cors=' + Date.now();
-                img.onload = () => { imageCache[url] = img; resolve(img); }; 
-                img.onerror = (e) => { console.error("CORS Image Error:", e); resolve(null); }; 
-                img.src = corsUrl;
-            });
+            if (!url || url === "No Photo Link") return null;
+            if (imageCache[url]) return imageCache[url];
+            try {
+                const response = await fetch(url, { mode: 'cors' });
+                if (!response.ok) throw new Error("Network response was not ok");
+                const blob = await response.blob();
+                const objectUrl = URL.createObjectURL(blob);
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => { imageCache[url] = img; resolve(img); };
+                    img.onerror = () => resolve(null);
+                    img.src = objectUrl;
+                });
+            } catch (err) {
+                // Fallback attempt
+                return new Promise((resolve) => {
+                    const img = new Image(); img.crossOrigin = "anonymous";
+                    img.onload = () => { imageCache[url] = img; resolve(img); }; 
+                    img.onerror = () => resolve(null); 
+                    img.src = url + (url.includes('?') ? '&' : '?') + 'cors=' + Date.now();
+                });
+            }
         }
 
         const views = { dashboard: document.getElementById('viewDashboard'), college: document.getElementById('viewCollege'), designer: document.getElementById('viewDesigner') };
@@ -283,41 +302,28 @@
         }
         initAI();
 
-        // ================= APP INITIALIZATION (CHECK FOR CLIENT MODE) =================
         window.shareCollege = (id) => {
             const url = window.location.origin + window.location.pathname + "?college=" + id;
-            navigator.clipboard.writeText(url);
-            alert("Share Link Copied! Send this to the college.");
+            navigator.clipboard.writeText(url); alert("Share Link Copied! Send this to the college.");
         };
 
         const urlParams = new URLSearchParams(window.location.search);
         const sharedCollegeParam = urlParams.get('college');
         
         if (sharedCollegeParam) {
-            // LOCK DOWN: CLIENT MODE
-            isClientMode = true;
-            currentCollegeId = sharedCollegeParam;
-            document.getElementById('navDashboard').classList.add('hidden');
-            document.getElementById('btnOpenDesigner').classList.add('hidden');
-            document.getElementById('importDataBlock').classList.add('hidden');
-            document.getElementById('collegeSubtitle').innerText = "Client Edit Mode: Update Student Photos & Info";
-            
+            isClientMode = true; currentCollegeId = sharedCollegeParam;
+            document.getElementById('navDashboard').classList.add('hidden'); document.getElementById('btnOpenDesigner').classList.add('hidden');
+            document.getElementById('importDataBlock').classList.add('hidden'); document.getElementById('collegeSubtitle').innerText = "Client Edit Mode: Update Student Photos & Info";
             getDoc(doc(db, "schools", currentCollegeId)).then(snap => {
-                if(snap.exists()) {
-                    document.getElementById('currentCollegeTitle').innerText = snap.data().name;
-                    showView('college'); loadStudents();
-                } else { alert("Error: College not found."); }
+                if(snap.exists()) { document.getElementById('currentCollegeTitle').innerText = snap.data().name; showView('college'); loadStudents(); } 
+                else { alert("Error: College not found."); }
             });
         } else {
-            // ADMIN MODE
-            document.getElementById('navDashboard').classList.remove('hidden');
-            showView('dashboard'); loadColleges();
+            document.getElementById('navDashboard').classList.remove('hidden'); showView('dashboard'); loadColleges();
         }
 
-        // ================= DASHBOARD =================
         document.getElementById('btnAddCollege').addEventListener('click', async () => {
-            const name = document.getElementById('newCollegeName').value.trim();
-            if(!name) return alert("Enter college name");
+            const name = document.getElementById('newCollegeName').value.trim(); if(!name) return alert("Enter college name");
             const collegeId = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
             await setDoc(doc(db, "schools", collegeId), { name: name, config: {}, source: "admin_id_portal" });
             document.getElementById('newCollegeName').value = ""; loadColleges();
@@ -325,8 +331,7 @@
 
         async function loadColleges() {
             const q = query(collection(db, "schools"), where("source", "==", "admin_id_portal"));
-            const snapshot = await getDocs(q);
-            const list = document.getElementById('collegesList'); list.innerHTML = "";
+            const snapshot = await getDocs(q); const list = document.getElementById('collegesList'); list.innerHTML = "";
             snapshot.forEach(docSnap => {
                 const data = docSnap.data(); const card = document.createElement('div');
                 card.className = "bg-white p-6 rounded-lg shadow border-l-4 border-blue-600 hover:shadow-md transition flex flex-col justify-between";
@@ -340,18 +345,14 @@
             });
         }
         
-        window.openCollegeAdmin = (id, name) => {
-            currentCollegeId = id; document.getElementById('currentCollegeTitle').innerText = name;
-            showView('college'); loadStudents();
-        }
+        window.openCollegeAdmin = (id, name) => { currentCollegeId = id; document.getElementById('currentCollegeTitle').innerText = name; showView('college'); loadStudents(); }
 
-        // ================= IMPORT & REPLACE DATA =================
         document.getElementById('excelUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
             reader.onload = async (event) => {
                 const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, {type: 'array'});
                 const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                alert(`Found ${rows.length} records. Uploading...`);
+                alert(`Uploading ${rows.length} records...`);
                 for (let row of rows) {
                     row.collegeId = currentCollegeId;
                     let docId = row["Roll No."] || row["Serial Number"] || Date.now().toString() + Math.random();
@@ -365,22 +366,16 @@
 
         document.getElementById('excelReplaceUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0]; if(!file) return; 
-            if(!confirm("⚠️ WARNING: This will DELETE ALL CURRENT STUDENTS in this college and replace them with this Excel sheet. Are you sure?")) return;
-            
+            if(!confirm("⚠️ WARNING: This will DELETE ALL CURRENT STUDENTS in this college. Are you sure?")) return;
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, {type: 'array'});
                 const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                 alert(`Erasing old data and uploading ${rows.length} new records... Please wait.`);
-                
-                // Erase Old
                 const q = query(collection(db, "portal_students"), where("collegeId", "==", currentCollegeId));
-                const snapshot = await getDocs(q);
-                const deletePromises = [];
+                const snapshot = await getDocs(q); const deletePromises = [];
                 snapshot.forEach(docSnap => deletePromises.push(deleteDoc(doc(db, "portal_students", docSnap.id))));
                 await Promise.all(deletePromises);
-
-                // Upload New
                 const uploadPromises = [];
                 for (let row of rows) {
                     row.collegeId = currentCollegeId;
@@ -388,8 +383,7 @@
                     docId = docId.toString().replace(/[^a-zA-Z0-9]/g, '_');
                     uploadPromises.push(setDoc(doc(db, "portal_students", docId), row, {merge: true}));
                 }
-                await Promise.all(uploadPromises);
-                alert("Replacement complete!"); loadStudents();
+                await Promise.all(uploadPromises); alert("Replacement complete!"); loadStudents();
             };
             reader.readAsArrayBuffer(file); e.target.value = '';
         });
@@ -428,7 +422,6 @@
 
         window.updateStudentField = async (docId, field, value) => { await setDoc(doc(db, "portal_students", docId), { [field]: value }, {merge: true}); };
 
-        // ================= WEBCAM & IMAGE PROCESSING =================
         let videoStream = null;
         window.openPhotoModal = (docId, rollNo) => {
             targetStudentId = docId; targetStudentRoll = rollNo;
@@ -486,7 +479,6 @@
             } catch(e) { status.innerText = "Error. Try Again."; status.classList.replace('bg-yellow-100', 'bg-red-100'); }
         }
 
-        // ================= BARCODE HELPER =================
         function createBarcode(text) {
             return new Promise((resolve) => {
                 if(!text) return resolve(null);
@@ -496,16 +488,16 @@
             });
         }
 
-        // ================= WRAP TEXT HELPER (FOR ADDRESSES) =================
-        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
             const words = text.split(' '); let line = ''; let currentY = y;
+            ctx.textAlign = align;
             for(let n = 0; n < words.length; n++) {
                 const testLine = line + words[n] + ' ';
                 const testWidth = ctx.measureText(testLine).width;
-                if (testWidth > maxWidth && n > 0) { ctx.fillText(line, x, currentY); line = words[n] + ' '; currentY += lineHeight; } 
+                if (testWidth > maxWidth && n > 0) { ctx.fillText(line.trim(), x, currentY); line = words[n] + ' '; currentY += lineHeight; } 
                 else { line = testLine; }
             }
-            ctx.fillText(line, x, currentY);
+            ctx.fillText(line.trim(), x, currentY);
         }
 
         // ================= DRAG AND DROP & LIVE DESIGNER =================
@@ -531,10 +523,11 @@
             for(let field of dynamicFields) {
                 if(document.getElementById(`enable_${field}`)?.checked) {
                     const tx = parseInt(document.getElementById(`fX_${field}`).value); const ty = parseInt(document.getElementById(`fY_${field}`).value);
-                    const tSize = parseInt(document.getElementById(`fS_${field}`).value) || 24;
+                    const tSize = parseInt(document.getElementById(`fS_${field}`).value) || 24; const tAlign = document.getElementById(`fA_${field}`).value;
                     if(!isNaN(tx) && !isNaN(ty)) {
                         liveCtx.font = `bold ${tSize}px Arial`; const tw = liveCtx.measureText(getDummyValue(field)).width;
-                        if(x >= tx && x <= tx + tw && y >= ty - tSize && y <= ty) return { type: 'text', id: field };
+                        let hitX = tx; if(tAlign === 'center') hitX = tx - (tw/2);
+                        if(x >= hitX && x <= hitX + tw && y >= ty - tSize && y <= ty) return { type: 'text', id: field };
                     }
                 }
             }
@@ -550,8 +543,7 @@
             }
         });
         liveCanvas.addEventListener('mousemove', (e) => {
-            if(!isDragging || !dragItem) return;
-            const pos = getMousePos(e);
+            if(!isDragging || !dragItem) return; const pos = getMousePos(e);
             if(dragItem.type === 'photo' || dragItem.type === 'barcode') {
                 document.getElementById(`${dragItem.id}X`).value = Math.round(pos.x - dragOffsetX); document.getElementById(`${dragItem.id}Y`).value = Math.round(pos.y - dragOffsetY);
             } else if(dragItem.type === 'text') {
@@ -586,19 +578,18 @@
                 }
             }
 
-            liveCtx.textAlign = 'left'; liveCtx.textBaseline = 'alphabetic';
+            liveCtx.textBaseline = 'alphabetic';
             dynamicFields.forEach(field => {
                 if(document.getElementById(`enable_${field}`)?.checked) {
                     const x = parseInt(document.getElementById(`fX_${field}`)?.value); const y = parseInt(document.getElementById(`fY_${field}`)?.value);
-                    const size = parseInt(document.getElementById(`fS_${field}`)?.value) || 24;
-                    const maxW = parseInt(document.getElementById(`fW_${field}`)?.value) || 0;
-                    const color = document.getElementById(`fC_${field}`)?.value || '#000000';
+                    const size = parseInt(document.getElementById(`fS_${field}`)?.value) || 24; const maxW = parseInt(document.getElementById(`fW_${field}`)?.value) || 0;
+                    const color = document.getElementById(`fC_${field}`)?.value || '#000000'; const align = document.getElementById(`fA_${field}`)?.value || 'left';
                     
                     if(!isNaN(x) && !isNaN(y)) {
-                        liveCtx.fillStyle = color; liveCtx.font = `bold ${size}px Arial`; 
-                        if(maxW > 0) { wrapText(liveCtx, getDummyValue(field), x, y, maxW, size + 6); } 
+                        liveCtx.fillStyle = color; liveCtx.font = `bold ${size}px Arial`; liveCtx.textAlign = align;
+                        if(maxW > 0) { wrapText(liveCtx, getDummyValue(field), x, y, maxW, size + 6, align); } 
                         else { liveCtx.fillText(getDummyValue(field), x, y); }
-                        liveCtx.fillStyle = 'red'; liveCtx.beginPath(); liveCtx.arc(x, y, 5, 0, Math.PI*2); liveCtx.fill(); // Anchor dot
+                        liveCtx.fillStyle = 'red'; liveCtx.beginPath(); liveCtx.arc(x, y, 5, 0, Math.PI*2); liveCtx.fill(); 
                     }
                 }
             });
@@ -617,13 +608,16 @@
 
             const fieldsDiv = document.getElementById('textFieldsSettings'); fieldsDiv.innerHTML = '';
             dynamicFields.forEach(field => {
-                const conf = collegeConfig.fields ? collegeConfig.fields[field] : {};
-                const isChecked = conf?.enabled !== false;
+                const conf = collegeConfig.fields ? collegeConfig.fields[field] : {}; const isChecked = conf?.enabled !== false;
                 fieldsDiv.innerHTML += `
                     <div class="flex items-center gap-1.5 p-2 bg-white rounded border border-gray-200 shadow-sm transition hover:bg-gray-50 overflow-x-auto">
                         <input type="checkbox" id="enable_${field}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-blue-600 cursor-pointer" onchange="drawLivePreview()">
-                        <span class="font-bold text-xs text-gray-700 w-24 truncate cursor-move" title="${field}">${field}</span>
+                        <span class="font-bold text-xs text-gray-700 w-20 truncate cursor-move" title="${field}">${field}</span>
                         <input type="color" id="fC_${field}" value="${conf?.color || '#000000'}" class="w-6 h-6 p-0 border-0 rounded cursor-pointer" oninput="drawLivePreview()" title="Text Color">
+                        <select id="fA_${field}" class="border p-1 w-16 text-xs rounded bg-gray-50 focus:bg-white" onchange="drawLivePreview()" title="Alignment">
+                            <option value="left" ${conf?.align === 'left' ? 'selected' : ''}>Left</option>
+                            <option value="center" ${conf?.align === 'center' ? 'selected' : ''}>Center</option>
+                        </select>
                         <input type="number" id="fX_${field}" placeholder="X" value="${conf?.x || ''}" class="border p-1 w-14 text-xs rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
                         <input type="number" id="fY_${field}" placeholder="Y" value="${conf?.y || ''}" class="border p-1 w-14 text-xs rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
                         <input type="number" id="fS_${field}" placeholder="Size" value="${conf?.size || 24}" class="border p-1 w-12 text-xs rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()" title="Font Size">
@@ -660,12 +654,23 @@
                 if(x && y) { 
                     collegeConfig.fields[field] = { 
                         enabled: enabled, x: parseInt(x), y: parseInt(y), size: parseInt(document.getElementById(`fS_${field}`).value),
-                        width: parseInt(document.getElementById(`fW_${field}`).value) || 0, color: document.getElementById(`fC_${field}`).value || '#000000'
+                        width: parseInt(document.getElementById(`fW_${field}`).value) || 0, color: document.getElementById(`fC_${field}`).value || '#000000',
+                        align: document.getElementById(`fA_${field}`).value || 'left'
                     }; 
                 }
             });
             await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true}); alert("Configuration Saved!");
         });
+
+        // ================= PROGRESS MODAL HELPER =================
+        function updateProgress(current, total, title) {
+            const modal = document.getElementById('progressModal');
+            if (current === 0) { modal.classList.remove('hidden'); modal.classList.add('flex'); document.getElementById('progressTitle').innerText = title; }
+            const percentage = Math.round((current / total) * 100);
+            document.getElementById('progressBar').style.width = `${percentage}%`;
+            document.getElementById('progressText').innerText = `${current} / ${total} Cards`;
+            if (current >= total) { setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 800); }
+        }
 
         // ================= EXPORT LOGIC (ZIP / PDF) =================
         async function renderCardOnCanvas(student, config, addWatermark = false) {
@@ -673,13 +678,13 @@
                 const canvas = document.getElementById('idCanvas'); const ctx = canvas.getContext('2d');
                 const bgImg = await loadCachedImage(config.bgUrl); canvas.width = bgImg.width; canvas.height = bgImg.height; ctx.drawImage(bgImg, 0, 0);
 
-                ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+                ctx.textBaseline = 'alphabetic';
                 if(config.fields) {
                     Object.keys(config.fields).forEach(key => {
                         const fConf = config.fields[key];
                         if(fConf.enabled !== false && student[key] && fConf.x && fConf.y) { 
-                            ctx.fillStyle = fConf.color || '#000000'; ctx.font = `bold ${fConf.size}px Arial`; 
-                            if(fConf.width > 0) { wrapText(ctx, student[key].toString(), fConf.x, fConf.y, fConf.width, fConf.size + 6); }
+                            ctx.fillStyle = fConf.color || '#000000'; ctx.font = `bold ${fConf.size}px Arial`; ctx.textAlign = fConf.align || 'left';
+                            if(fConf.width > 0) { wrapText(ctx, student[key].toString(), fConf.x, fConf.y, fConf.width, fConf.size + 6, fConf.align || 'left'); }
                             else { ctx.fillText(student[key].toString(), fConf.x, fConf.y); }
                         }
                     });
@@ -702,7 +707,14 @@
 
                 if(config.enablePhoto !== false && student['Photo Link'] && student['Photo Link'] !== "No Photo Link") {
                     const photoImg = await loadCachedImage(student['Photo Link']);
-                    if(photoImg) ctx.drawImage(photoImg, config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||200);
+                    if(photoImg) {
+                        ctx.drawImage(photoImg, config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||200);
+                    } else {
+                        // Failsafe: Draw a gray error box so you know the image link is broken
+                        ctx.fillStyle = '#e5e7eb'; ctx.fillRect(config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||200);
+                        ctx.fillStyle = '#ef4444'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.fillText('Image Error', (config.photoX||0) + (config.photoW||150)/2, (config.photoY||0) + (config.photoH||200)/2);
+                    }
                 }
                 resolve(canvas.toDataURL("image/jpeg", 0.9));
             });
@@ -710,29 +722,41 @@
 
         document.getElementById('btnGenerateZip').addEventListener('click', async () => {
             if(!collegeConfig.bgUrl) return alert("Save a template first!");
-            const btn = document.getElementById('btnGenerateZip'); btn.innerText = "Processing ZIP...";
+            const total = currentStudents.length; if(total === 0) return alert("No students to process!");
+            
+            updateProgress(0, total, "Generating ZIP File...");
             const zip = new JSZip(); const folder = zip.folder("ID_Cards");
-            for(let student of currentStudents) {
+            
+            for(let i=0; i < total; i++) {
+                const student = currentStudents[i];
                 const dataUrl = await renderCardOnCanvas(student, collegeConfig, false);
                 folder.file(`${student["Roll No."] || student.docId}.jpg`, dataUrl.split(',')[1], {base64: true});
+                updateProgress(i + 1, total, "Generating ZIP File...");
+                await new Promise(r => setTimeout(r, 10)); // Tiny pause to allow UI to update
             }
+            
             zip.generateAsync({type:"blob"}).then(c => {
                 const a = document.createElement("a"); a.href = URL.createObjectURL(c);
-                a.download = `ID_Cards_${currentCollegeId}.zip`; a.click(); btn.innerHTML = `<i class="fa-solid fa-file-zipper text-lg mb-1"></i> Download Standard ZIP`;
+                a.download = `ID_Cards_${currentCollegeId}.zip`; a.click();
             });
         });
 
         document.getElementById('btnGeneratePDF').addEventListener('click', async () => {
             if(!collegeConfig.bgUrl) return alert("Save a template first!");
-            const btn = document.getElementById('btnGeneratePDF'); btn.innerText = "Processing PDF...";
+            const total = currentStudents.length; if(total === 0) return alert("No students to process!");
+            
+            updateProgress(0, total, "Generating PDF File...");
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [document.getElementById('livePreviewCanvas').width, document.getElementById('livePreviewCanvas').height] });
-            for(let i=0; i < currentStudents.length; i++) {
+            
+            for(let i=0; i < total; i++) {
                 const dataUrl = await renderCardOnCanvas(currentStudents[i], collegeConfig, true);
                 if (i > 0) pdf.addPage();
                 pdf.addImage(dataUrl, 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+                updateProgress(i + 1, total, "Generating PDF File...");
+                await new Promise(r => setTimeout(r, 10)); // Tiny pause to allow UI to update
             }
-            pdf.save(`Verified_IDs_${currentCollegeId}.pdf`); btn.innerHTML = `<i class="fa-solid fa-file-pdf text-lg mb-1"></i> Download Watermarked PDF`;
+            pdf.save(`Verified_IDs_${currentCollegeId}.pdf`);
         });
     </script>
 </body>
