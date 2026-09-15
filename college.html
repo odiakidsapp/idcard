@@ -16,6 +16,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- JsBarcode for Barcode Generation -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <!-- Cropper.js for Interactive Photo Cropping -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     <style>
         .camera-guideline { 
@@ -23,12 +26,14 @@
             width: 300px; height: 300px; border: 3px dashed rgba(255,255,255,0.9); border-radius: 12px; 
             z-index: 11; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
             pointer-events: none;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); 
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
         }
         .silhouette-head { width: 90px; height: 110px; border: 2px solid rgba(255,255,255,0.4); border-radius: 50%; margin-bottom: 5px; }
         .silhouette-shoulders { width: 160px; height: 80px; border: 2px solid rgba(255,255,255,0.4); border-radius: 50% 50% 0 0; border-bottom: none; }
         .custom-scroll::-webkit-scrollbar { width: 6px; } .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         #livePreviewCanvas { cursor: grab; } #livePreviewCanvas:active { cursor: grabbing; }
+        .cropper-container { width: 100%; max-height: 400px; background: #000; display: flex; justify-content: center; }
+        #cropperImage { max-width: 100%; max-height: 400px; display: block; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans min-h-screen">
@@ -37,7 +42,7 @@
     <div id="progressModal" class="fixed inset-0 bg-gray-900 bg-opacity-90 z-[100] hidden flex-col items-center justify-center p-4 transition-opacity">
         <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center">
             <h3 class="text-2xl font-bold text-gray-800 mb-2" id="progressTitle">Processing...</h3>
-            <p class="text-sm text-gray-500 mb-6" id="progressSubtitle">Please wait.</p>
+            <p class="text-sm text-gray-500 mb-6" id="progressSubtitle">Please keep this window open.</p>
             <div class="w-full bg-gray-200 rounded-full h-4 mb-3 overflow-hidden shadow-inner">
                 <div id="progressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-100 ease-out" style="width: 0%"></div>
             </div>
@@ -54,8 +59,7 @@
     </nav>
 
     <main class="p-4 sm:p-6 max-w-7xl mx-auto">
-        
-        <!-- ================= DASHBOARD VIEW ================= -->
+        <!-- DASHBOARD VIEW -->
         <section id="viewDashboard" class="hidden space-y-6">
             <div class="bg-white p-6 rounded-lg shadow-sm flex flex-col sm:flex-row gap-4 items-end">
                 <div class="flex-1 w-full">
@@ -69,12 +73,10 @@
                 <h2 class="text-xl font-bold text-gray-700">App-Specific Dashboard</h2>
                 <span class="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">Filtered: "admin_id_portal" only</span>
             </div>
-            <div id="collegesList" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Colleges injected here -->
-            </div>
+            <div id="collegesList" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
         </section>
 
-        <!-- ================= COLLEGE DETAIL VIEW ================= -->
+        <!-- COLLEGE DETAIL VIEW -->
         <section id="viewCollege" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm gap-4 border-l-4 border-blue-500">
                 <div>
@@ -91,22 +93,19 @@
                 <h3 class="text-lg font-bold">1. Import / Replace Data</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
                     <div class="border p-4 rounded-lg bg-blue-50">
-                        <h4 class="font-bold text-blue-800 mb-2"><i class="fa-solid fa-file-excel"></i> Add Excel Data</h4>
+                        <h4 class="font-bold text-blue-800 mb-2"><i class="fa-solid fa-file-excel"></i> Add New Data</h4>
                         <p class="text-xs text-gray-500 mb-3">Appends new students. Updates existing if Roll No matches.</p>
                         <button onclick="document.getElementById('excelUpload').click()" class="bg-blue-600 text-white px-4 py-2 rounded w-full hover:bg-blue-700 text-sm font-bold">Upload Excel</button>
                         <input type="file" id="excelUpload" accept=".xlsx, .xls" class="hidden"/>
                     </div>
-                    
-                    <!-- NEW: Bulk Photo Fetcher -->
                     <div class="border p-4 rounded-lg bg-indigo-50 border-indigo-200">
                         <h4 class="font-bold text-indigo-800 mb-2"><i class="fa-solid fa-cloud-arrow-down"></i> Sync Photos</h4>
                         <p class="text-xs text-gray-500 mb-3">Downloads external SAMS photos to Firebase for Instant ZIP/PDF generation!</p>
                         <button onclick="bulkFetchExternalPhotos()" class="bg-indigo-600 text-white px-4 py-2 rounded w-full hover:bg-indigo-700 text-sm font-bold shadow-md">Fetch All Photos</button>
                     </div>
-
                     <div class="border p-4 rounded-lg bg-red-50">
                         <h4 class="font-bold text-red-800 mb-2"><i class="fa-solid fa-trash-can"></i> Replace All Data</h4>
-                        <p class="text-xs text-gray-500 mb-3">Deletes all current students in this college and uploads a fresh sheet.</p>
+                        <p class="text-xs text-gray-500 mb-3">Deletes all current students and uploads a fresh sheet.</p>
                         <button onclick="document.getElementById('excelReplaceUpload').click()" class="bg-red-600 text-white px-4 py-2 rounded w-full hover:bg-red-700 text-sm font-bold">Replace Excel Data</button>
                         <input type="file" id="excelReplaceUpload" accept=".xlsx, .xls" class="hidden"/>
                     </div>
@@ -118,21 +117,18 @@
                     <h3 class="text-lg font-bold">2. Student Records & Photos</h3>
                     <div class="text-sm font-medium text-gray-500">Total: <span id="stat-total" class="text-blue-600 font-bold">0</span></div>
                 </div>
-                <div id="studentsList" class="space-y-4">
-                    <!-- Students injected here -->
-                </div>
+                <div id="studentsList" class="space-y-4"></div>
             </div>
         </section>
 
-        <!-- ================= LIVE ID CARD DESIGNER VIEW ================= -->
+        <!-- LIVE ID CARD DESIGNER VIEW -->
         <section id="viewDesigner" class="hidden space-y-4 h-[calc(100vh-100px)] flex flex-col">
             <div class="flex-shrink-0">
                 <button id="btnBackToCollege" class="text-blue-600 hover:underline mb-2 font-medium">&larr; Back to College</button>
             </div>
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow overflow-hidden">
-                
-                <!-- Left Panel: Settings Inputs -->
+                <!-- Settings Panel -->
                 <div class="bg-white p-6 rounded-lg shadow-sm flex flex-col h-full overflow-hidden border border-gray-200 relative">
                     <div class="flex justify-between items-center mb-4 flex-shrink-0 border-b pb-2">
                         <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-sliders text-blue-600"></i> Settings & Coordinates</h3>
@@ -175,16 +171,13 @@
                         <div class="bg-gray-50 p-3 rounded border border-gray-300" id="textFieldsSettingsContainer">
                             <h4 class="font-bold mb-2 text-gray-700 text-sm"><i class="fa-solid fa-font mr-1"></i> 4. Text Settings</h4>
                             <p class="text-[10px] text-gray-500 mb-2 leading-tight">Drag elements on the canvas to set X/Y. Choose Align 'Center' to perfectly center text. Use MaxW for 2 lines.</p>
-                            <div id="textFieldsSettings" class="space-y-2">
-                                <!-- Dynamic coordinate inputs injected here -->
-                            </div>
+                            <div id="textFieldsSettings" class="space-y-2"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right Panel: LIVE PREVIEW & EXPORT -->
+                <!-- Right Panel: Live Preview & Export -->
                 <div class="flex flex-col gap-4 h-full overflow-hidden">
-                    
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-grow flex flex-col p-4 relative overflow-hidden">
                         <h3 class="text-lg font-bold text-gray-800 mb-2 flex-shrink-0 flex justify-between items-center">
                             <span><i class="fa-solid fa-eye text-purple-600"></i> Interactive Canvas</span>
@@ -194,7 +187,6 @@
                             <canvas id="livePreviewCanvas" class="max-w-full max-h-full object-contain shadow-lg bg-white border border-gray-400"></canvas>
                         </div>
                     </div>
-
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex-shrink-0 grid grid-cols-2 gap-4">
                         <button id="btnGenerateZip" class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 font-bold shadow flex flex-col items-center justify-center transition">
                             <i class="fa-solid fa-file-zipper text-lg mb-1"></i> Download ZIP
@@ -203,15 +195,13 @@
                             <i class="fa-solid fa-file-pdf text-lg mb-1"></i> Download Verification PDF
                         </button>
                     </div>
-
                 </div>
             </div>
-            
             <canvas id="idCanvas" class="hidden"></canvas>
         </section>
     </main>
 
-    <!-- ================= CAMERA MODAL ================= -->
+    <!-- CAMERA & INTERACTIVE CROP MODAL -->
     <div id="photoModal" class="fixed inset-0 bg-gray-900 bg-opacity-90 z-50 hidden flex flex-col items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-full">
             <div class="p-4 border-b flex justify-between items-center bg-gray-50">
@@ -222,29 +212,30 @@
             <div id="cameraContainer" class="relative w-full h-[400px] bg-black hidden overflow-hidden">
                 <button id="btnFlipCamera" onclick="flipCamera()" class="absolute top-4 right-4 bg-gray-900 bg-opacity-60 text-white p-3 rounded-full hover:bg-opacity-90 z-20 transition"><i class="fa-solid fa-camera-rotate text-xl"></i></button>
                 <video id="webcamVideo" class="w-full h-full object-cover" autoplay playsinline></video>
-                <div class="camera-guideline">
-                    <div class="silhouette-head"></div><div class="silhouette-shoulders"></div>
-                    <div class="absolute -top-6 w-full text-center text-white text-xs font-bold drop-shadow-md tracking-wider">ALIGN BODY HERE</div>
-                </div>
+                <div class="camera-guideline"><div class="silhouette-head"></div><div class="silhouette-shoulders"></div><div class="absolute -top-6 w-full text-center text-white text-xs font-bold drop-shadow-md tracking-wider">ALIGN BODY HERE</div></div>
             </div>
 
             <div id="uploadContainer" class="p-8 text-center bg-gray-100 flex-grow">
-                <img id="cropPreviewImg" src="" class="max-h-64 mx-auto shadow-md rounded-md border-4 border-white mb-4 hidden object-cover">
                 <p id="cropHelperText" class="text-sm text-gray-500 mb-4">Choose a photo from your device or use the webcam.</p>
                 <input type="file" id="manualPhotoInput" accept="image/*" class="hidden" onchange="handleManualPhotoSelection(event)">
             </div>
 
+            <!-- Cropper UI -->
+            <div id="cropperContainer" class="hidden flex-grow bg-black w-full overflow-hidden flex flex-col relative">
+                <div class="cropper-container"><img id="cropperImage" src="" /></div>
+                <div class="bg-gray-800 text-white text-xs text-center p-2"><i class="fa-solid fa-hand-pointer mr-1"></i> Drag box to crop face. Zoom with mouse wheel.</div>
+            </div>
+
             <div class="p-4 bg-gray-50 border-t flex flex-col sm:flex-row gap-2 justify-center" id="photoControls">
-                <button id="btnStartCamera" onclick="startCamera()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex-1"><i class="fa-solid fa-camera mr-2"></i> Open Camera</button>
-                <button id="btnUploadFile" onclick="document.getElementById('manualPhotoInput').click()" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded shadow flex-1"><i class="fa-solid fa-upload mr-2"></i> Upload File</button>
+                <button id="btnStartCamera" onclick="startCamera()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex-1 font-bold"><i class="fa-solid fa-camera mr-2"></i> Open Camera</button>
+                <button id="btnUploadFile" onclick="document.getElementById('manualPhotoInput').click()" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded shadow flex-1 font-bold"><i class="fa-solid fa-upload mr-2"></i> Upload File</button>
                 <button id="btnCapturePhoto" onclick="capturePhoto()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded shadow hidden flex-1 font-bold text-lg"><i class="fa-solid fa-camera-retro mr-2"></i> Capture Photo</button>
+                <button id="btnSaveCrop" onclick="saveCrop()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded shadow hidden flex-1 font-bold text-lg"><i class="fa-solid fa-crop mr-2"></i> Save Crop & Upload</button>
             </div>
             <div id="modalStatus" class="bg-blue-100 text-blue-800 text-sm text-center py-3 hidden font-bold">Uploading to Database...</div>
         </div>
     </div>
-    
     <canvas id="processingCanvas" class="hidden"></canvas>
-
 
     <!-- FIREBASE & APP LOGIC -->
     <script type="module">
@@ -270,9 +261,9 @@
             for(let d in dummyDataGen) { if(k.includes(d)) return dummyDataGen[d]; } return `Sample ${key}`;
         }
 
+        // ================= IMPROVED IMAGE LOADER =================
         const imageCache = {};
-        
-        // STANDARD IMAGE LOADER FOR EXPORTING
+        // Tries standard fetch, if CORS blocks it, relies on proxy, if proxy blocks, uses AllOrigins fallback.
         async function loadCachedImage(originalUrl) {
             if (!originalUrl || originalUrl === "No Photo Link") return null;
             if (imageCache[originalUrl]) return imageCache[originalUrl];
@@ -288,43 +279,51 @@
                     imageCache[originalUrl] = img; return img;
                 } catch(e) { return null; }
             }
-            
-            // If it's still an external URL during generation, fallback to proxy
-            try { const proxy1 = "https://corsproxy.io/?" + encodeURIComponent(originalUrl); const img1 = await loadImg(proxy1); imageCache[originalUrl] = img1; return img1; } 
-            catch(e1) {
-                try { const proxy2 = "https://api.allorigins.win/raw?url=" + encodeURIComponent(originalUrl); const img2 = await loadImg(proxy2); imageCache[originalUrl] = img2; return img2; } 
-                catch(e2) { return null; }
+
+            // Fallbacks for restrictive SAMS Odisha Server
+            try {
+                // Tier 1: Direct fetch via blob
+                const resp = await fetch(originalUrl, { mode: 'no-cors' });
+                const proxy1 = "https://corsproxy.io/?" + encodeURIComponent(originalUrl);
+                const img1 = await loadImg(proxy1); imageCache[originalUrl] = img1; return img1;
+            } catch(e1) {
+                try {
+                    // Tier 2: allorigins raw proxy
+                    const proxy2 = "https://api.allorigins.win/raw?url=" + encodeURIComponent(originalUrl);
+                    const img2 = await loadImg(proxy2); imageCache[originalUrl] = img2; return img2;
+                } catch(e2) {
+                    return null;
+                }
             }
         }
 
-        // ================= NEW: BULK PHOTO FETCHER =================
-        // This solves the generation lag by moving the external proxy downloads to a pre-processing step
+        // BULK FETCHER TO FIX 403 & LAG
         window.bulkFetchExternalPhotos = async () => {
             if(currentStudents.length === 0) return alert("No students loaded!");
             const externalStudents = currentStudents.filter(s => s['Photo Link'] && !s['Photo Link'].includes('firebasestorage') && s['Photo Link'] !== "No Photo Link");
             
             if(externalStudents.length === 0) return alert("All photos are already synced to Firebase! You are ready for high-speed generation.");
-            
             if(!confirm(`Found ${externalStudents.length} external photos. Downloading them to Firebase will make PDF/ZIP generation instant. Start Sync?`)) return;
 
-            updateProgress(0, externalStudents.length, "Syncing Photos to Firebase...");
-            document.getElementById('progressSubtitle').innerText = "Downloading from external server. This only needs to be done once.";
+            updateProgress(0, externalStudents.length, "Syncing Photos...");
+            document.getElementById('progressSubtitle').innerText = "Downloading from external server. This might take a moment, but fixes the lag!";
 
             for(let i=0; i < externalStudents.length; i++) {
                 const student = externalStudents[i];
                 let externalUrl = student['Photo Link'];
                 
                 try {
-                    const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(externalUrl);
+                    // Route through allorigins to bypass SAMS Odisha 403 locks
+                    const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(externalUrl);
                     const response = await fetch(proxyUrl);
                     if(response.ok) {
                         const blob = await response.blob();
                         const objectUrl = URL.createObjectURL(blob);
                         
-                        // Load into Image to apply the 1:1 Square Format crop
                         const img = new Image(); img.src = objectUrl;
                         await new Promise(r => img.onload = r);
                         
+                        // Apply 1:1 Square Format crop
                         const targetRatio = 1.0; const imgRatio = img.width / img.height;
                         let sx = 0, sy = 0, sw = img.width, sh = img.height;
                         if(imgRatio > targetRatio) { sh = img.height; sw = img.height * targetRatio; sx = (img.width - sw)/2; sy=0; } 
@@ -334,24 +333,19 @@
                         pCanvas.width = sw * sc; pCanvas.height = sh * sc; pCanvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, pCanvas.width, pCanvas.height);
                         
                         const finalBase64 = pCanvas.toDataURL('image/jpeg', 0.85);
-                        
-                        // Upload to Firebase
                         const roll = student["Roll No."] || student.docId;
                         const storageRef = ref(storage, `student_photos/${roll}_${Date.now()}.jpg`);
                         await uploadString(storageRef, finalBase64, 'data_url');
                         const downloadUrl = await getDownloadURL(storageRef);
                         
-                        // Update Database with new lightning-fast Firebase Link
                         await setDoc(doc(db, "portal_students", student.docId), { "Photo Link": downloadUrl }, {merge: true});
                         URL.revokeObjectURL(objectUrl);
                     }
                 } catch(e) { console.warn(`Failed to sync photo for ${student["Roll No."]}`); }
                 
-                updateProgress(i + 1, externalStudents.length, "Syncing Photos to Firebase...");
+                updateProgress(i + 1, externalStudents.length, "Syncing Photos...");
             }
-            
-            alert("Photo Sync Complete! Generation will now be instant.");
-            loadStudents(); // Reload the UI to reflect new links
+            alert("Photo Sync Complete! Generation will now be instant."); loadStudents(); 
         };
 
         function drawRoundedRect(ctx, x, y, w, h, r) {
@@ -426,7 +420,7 @@
                     docId = docId.toString().replace(/[^a-zA-Z0-9]/g, '_');
                     await setDoc(doc(db, "portal_students", docId), row, {merge: true});
                 }
-                alert("Upload complete!"); loadStudents();
+                alert("Upload complete! Please click 'Fetch All Photos' if there are new links."); loadStudents();
             };
             reader.readAsArrayBuffer(file); e.target.value = '';
         });
@@ -450,7 +444,7 @@
                     docId = docId.toString().replace(/[^a-zA-Z0-9]/g, '_');
                     uploadPromises.push(setDoc(doc(db, "portal_students", docId), row, {merge: true}));
                 }
-                await Promise.all(uploadPromises); alert("Replacement complete!"); loadStudents();
+                await Promise.all(uploadPromises); alert("Replacement complete! Please click 'Fetch All Photos'."); loadStudents();
             };
             reader.readAsArrayBuffer(file); e.target.value = '';
         });
@@ -476,9 +470,15 @@
                 });
                 detailsHTML += `</div>`;
                 
-                const photoSrc = student['Photo Link'] || "https://placehold.co/150x150/e2e8f0/64748b?text=No+Photo";
+                // Real-time photo load logic for UI list
+                let photoSrc = student['Photo Link'];
+                // If it's a raw SAMS Odisha link, we route through proxy just to show the thumbnail
+                if(photoSrc && !photoSrc.includes('firebasestorage') && photoSrc !== "No Photo Link") {
+                    photoSrc = "https://api.allorigins.win/raw?url=" + encodeURIComponent(photoSrc);
+                } else if(!photoSrc) { photoSrc = "https://placehold.co/150x150/e2e8f0/64748b?text=No+Photo"; }
+
                 detailsHTML += `<div class="flex flex-col items-center justify-center border-l border-gray-200 pl-4">
-                    <img src="${photoSrc}" class="w-24 h-24 object-cover border-2 border-white rounded shadow mb-3" />
+                    <img src="${photoSrc}" onerror="this.src='https://placehold.co/150x150/fca5a5/7f1d1d?text=Error'" class="w-24 h-24 object-cover border-2 border-white rounded shadow mb-3" />
                     <button onclick="openPhotoModal('${docSnap.id}', '${student['Roll No.'] || docSnap.id}')" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-xs font-bold w-full"><i class="fa-solid fa-crop-simple mr-1"></i> Add / Edit</button>
                 </div>`;
                 div.innerHTML = detailsHTML; list.appendChild(div);
@@ -489,19 +489,21 @@
 
         window.updateStudentField = async (docId, field, value) => { await setDoc(doc(db, "portal_students", docId), { [field]: value }, {merge: true}); };
 
-        // ================= WEBCAM & SQUARE CROP =================
-        let videoStream = null; let currentFacingMode = "user";
+        // ================= INTERACTIVE CROPPER.JS ENGINE =================
+        let videoStream = null; let currentFacingMode = "user"; let cropper = null;
 
         window.openPhotoModal = (docId, rollNo) => {
             targetStudentId = docId; targetStudentRoll = rollNo;
             document.getElementById('photoModal').classList.remove('hidden'); document.getElementById('photoModalTitle').innerText = "Upload or Capture Photo";
-            document.getElementById('cropPreviewImg').classList.add('hidden');
-            document.getElementById('cropHelperText').classList.remove('hidden'); document.getElementById('uploadContainer').classList.remove('hidden');
-            document.getElementById('cameraContainer').classList.add('hidden'); document.getElementById('btnStartCamera').classList.remove('hidden');
-            document.getElementById('btnUploadFile').classList.remove('hidden'); document.getElementById('btnCapturePhoto').classList.add('hidden');
-            document.getElementById('photoControls').classList.remove('hidden'); document.getElementById('modalStatus').classList.add('hidden');
+            document.getElementById('uploadContainer').classList.remove('hidden'); document.getElementById('cameraContainer').classList.add('hidden');
+            document.getElementById('cropperContainer').classList.add('hidden');
+            document.getElementById('btnStartCamera').classList.remove('hidden'); document.getElementById('btnUploadFile').classList.remove('hidden');
+            document.getElementById('btnCapturePhoto').classList.add('hidden'); document.getElementById('btnSaveCrop').classList.add('hidden');
+            document.getElementById('modalStatus').classList.add('hidden'); document.getElementById('photoControls').classList.remove('hidden');
+            if(cropper) { cropper.destroy(); cropper = null; }
         };
-        window.closePhotoModal = () => { document.getElementById('photoModal').classList.add('hidden'); if(videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; } };
+
+        window.closePhotoModal = () => { document.getElementById('photoModal').classList.add('hidden'); if(videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; } if(cropper) { cropper.destroy(); cropper = null; } };
         
         window.startCamera = async () => {
             document.getElementById('uploadContainer').classList.add('hidden'); document.getElementById('cameraContainer').classList.remove('hidden');
@@ -522,42 +524,51 @@
         window.capturePhoto = () => {
             const video = document.getElementById('webcamVideo'); const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight; canvas.getContext('2d').drawImage(video, 0, 0);
-            processImage(canvas.toDataURL('image/jpeg')); if(videoStream) { videoStream.getTracks().forEach(t => t.stop()); }
-            document.getElementById('cameraContainer').classList.add('hidden'); document.getElementById('btnCapturePhoto').classList.add('hidden');
-            document.getElementById('uploadContainer').classList.remove('hidden');
+            initCropper(canvas.toDataURL('image/jpeg')); if(videoStream) { videoStream.getTracks().forEach(t => t.stop()); }
+            document.getElementById('cameraContainer').classList.add('hidden');
         };
-        window.handleManualPhotoSelection = (e) => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => processImage(ev.target.result); r.readAsDataURL(f); };
-        
-        async function processImage(dataUrl) {
-            document.getElementById('cropHelperText').classList.add('hidden'); const preview = document.getElementById('cropPreviewImg');
-            preview.src = dataUrl; preview.classList.remove('hidden'); const status = document.getElementById('modalStatus');
-            document.getElementById('photoControls').classList.add('hidden');
-            status.classList.remove('hidden'); status.innerText = "Formatting Square Image...";
-            try {
-                const img = new Image(); img.src = dataUrl; await new Promise(r => img.onload = r);
-                
-                // 1:1 SQUARE CROP
-                const targetRatio = 1.0; const imgRatio = img.width / img.height;
-                let sx = 0, sy = 0, sw = img.width, sh = img.height;
-                if(imgRatio > targetRatio) { sh = img.height; sw = img.height * targetRatio; sx = (img.width - sw)/2; sy=0; } 
-                else { sw = img.width; sh = img.width / targetRatio; sx = 0; sy = img.height * 0.05; }
 
-                const pCanvas = document.getElementById('processingCanvas'); const sc = Math.min(1, 600 / sw);
-                pCanvas.width = sw * sc; pCanvas.height = sh * sc; pCanvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, pCanvas.width, pCanvas.height);
-                const finalBase64 = pCanvas.toDataURL('image/jpeg', 0.85); preview.src = finalBase64;
-                status.classList.replace('bg-yellow-100', 'bg-blue-100'); status.classList.replace('text-yellow-800', 'text-blue-800'); status.innerText = "Uploading to Firebase...";
+        window.handleManualPhotoSelection = (e) => { 
+            const f = e.target.files[0]; if(!f) return; const r = new FileReader(); 
+            r.onload = (ev) => { document.getElementById('uploadContainer').classList.add('hidden'); initCropper(ev.target.result); }; 
+            r.readAsDataURL(f); e.target.value = '';
+        };
+        
+        function initCropper(dataUrl) {
+            document.getElementById('photoModalTitle').innerText = "Crop Image";
+            document.getElementById('btnCapturePhoto').classList.add('hidden'); document.getElementById('btnStartCamera').classList.add('hidden'); document.getElementById('btnUploadFile').classList.add('hidden');
+            document.getElementById('btnSaveCrop').classList.remove('hidden'); document.getElementById('btnSaveCrop').classList.add('flex');
+            document.getElementById('cropperContainer').classList.remove('hidden');
+            
+            const image = document.getElementById('cropperImage');
+            image.src = dataUrl;
+            
+            if(cropper) { cropper.destroy(); }
+            // Force 1:1 Aspect Ratio Box for IDs
+            cropper = new Cropper(image, { aspectRatio: 1, viewMode: 1, dragMode: 'move', autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false });
+        }
+
+        window.saveCrop = async () => {
+            if(!cropper) return;
+            document.getElementById('photoControls').classList.add('hidden');
+            document.getElementById('modalStatus').classList.remove('hidden');
+
+            try {
+                const canvas = cropper.getCroppedCanvas({ width: 600, height: 600, imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+                const finalBase64 = canvas.toDataURL('image/jpeg', 0.85);
                 
                 const storageRef = ref(storage, `student_photos/${targetStudentRoll}_${Date.now()}.jpg`);
                 await uploadString(storageRef, finalBase64, 'data_url');
                 await setDoc(doc(db, "portal_students", targetStudentId), { "Photo Link": await getDownloadURL(storageRef) }, {merge: true});
                 closePhotoModal(); loadStudents();
-            } catch(e) { status.innerText = "Error. Try Again."; status.classList.replace('bg-yellow-100', 'bg-red-100'); }
-        }
+            } catch(e) { 
+                alert("Upload Failed. Check internet."); closePhotoModal(); 
+            }
+        };
 
         function createBarcode(text) {
             return new Promise((resolve) => {
-                if(!text) return resolve(null);
-                const canvas = document.createElement('canvas');
+                if(!text) return resolve(null); const canvas = document.createElement('canvas');
                 try { JsBarcode(canvas, text, { format: "CODE128", displayValue: false, margin: 0, width: 2, height: 50 }); const img = new Image(); img.onload = () => resolve(img); img.src = canvas.toDataURL("image/png"); } 
                 catch(e) { resolve(null); }
             });
@@ -740,7 +751,7 @@
             await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true}); alert("Configuration Saved!");
         });
 
-        // ================= FAST ASYNC EXPORT ENGINE =================
+        // ================= FAST EXPORT LOGIC =================
         function updateProgress(current, total, title) {
             const modal = document.getElementById('progressModal');
             if (current === 0) { modal.classList.remove('hidden'); modal.classList.add('flex'); document.getElementById('progressTitle').innerText = title; }
@@ -801,7 +812,7 @@
             const total = currentStudents.length; if(total === 0) return alert("No students to process!");
             
             updateProgress(0, total, "Generating ZIP File...");
-            document.getElementById('progressSubtitle').innerText = "Compressing ID cards into a ZIP file.";
+            document.getElementById('progressSubtitle').innerText = "Processing at high speed. Please wait.";
             const zip = new JSZip(); const folder = zip.folder("ID_Cards");
             
             for(let i=0; i < total; i++) {
@@ -809,7 +820,6 @@
                 const dataUrl = await renderCardOnCanvas(student, collegeConfig, false);
                 folder.file(`${student["Roll No."] || student.docId}.jpg`, dataUrl.split(',')[1], {base64: true});
                 updateProgress(i + 1, total, "Generating ZIP File...");
-                if(i % 3 === 0) await new Promise(r => setTimeout(r, 1)); 
             }
             
             zip.generateAsync({type:"blob"}).then(c => {
@@ -823,7 +833,7 @@
             const total = currentStudents.length; if(total === 0) return alert("No students to process!");
             
             updateProgress(0, total, "Generating PDF File...");
-            document.getElementById('progressSubtitle').innerText = "Compiling ID cards into a multi-page PDF.";
+            document.getElementById('progressSubtitle').innerText = "Processing at high speed. Please wait.";
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [document.getElementById('livePreviewCanvas').width, document.getElementById('livePreviewCanvas').height] });
             
@@ -832,7 +842,6 @@
                 if (i > 0) pdf.addPage();
                 pdf.addImage(dataUrl, 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
                 updateProgress(i + 1, total, "Generating PDF File...");
-                if(i % 3 === 0) await new Promise(r => setTimeout(r, 1));
             }
             pdf.save(`Verified_IDs_${currentCollegeId}.pdf`);
         });
