@@ -558,14 +558,10 @@
             } catch(e) { alert("Upload Failed. Check internet."); closePhotoModal(); }
         };
 
-        // ================= BARCODE GENERATOR (RESIZABLE, NO DISTORTION) =================
-        // We always render a single high-resolution "master" barcode image with a fixed
-        // module width/height. To resize it (bigger OR smaller) we NEVER stretch it to
-        // fill the W/H box directly (that squishes the bars and can break scanning).
-        // Instead getContainedBarcodeRect() below scales width & height by the SAME
-        // factor ("contain" fit) and centers it in the box - so shrinking the box just
-        // makes a smaller, perfectly-proportioned barcode instead of a squashed one.
-        function createBarcode(text) {
+        // ================= BARCODE GENERATOR (FIXED) =================
+        // KEY FIX: targetW/targetH tell JsBarcode to render at EXACTLY the size we need
+        // so ctx.drawImage uses 1:1 (no squishing). If no target size given, uses defaults.
+        function createBarcode(text, targetW, targetH) {
             return new Promise((resolve) => {
                 if(!text || !text.toString().trim()) return resolve(null);
                 // Sanitize: CODE128 safe characters only (printable ASCII 32-126)
@@ -573,37 +569,23 @@
                 if(!safeText) return resolve(null);
                 const canvas = document.createElement('canvas');
                 try {
+                    // Render at a fixed tall height for sharpness, then we derive width from the canvas
+                    const barH = Math.max(targetH || 60, 60);
                     JsBarcode(canvas, safeText, {
                         format: "CODE128",
                         displayValue: false,
-                        margin: 10,           // quiet zone preserved
+                        margin: 12,           // quiet zone preserved
                         background: "#ffffff",
                         lineColor: "#000000",
-                        width: 3,             // fixed high-res module width for a crisp master image
-                        height: 200           // fixed tall master image; scaled down/up later
+                        width: 2,             // bar width in px (2 = reliable scanning)
+                        height: barH
                     });
+                    // canvas.width is now the NATURAL width of this barcode - use it as-is
                     const img = new Image();
                     img.onload = () => { img._naturalBarcodeW = canvas.width; img._naturalBarcodeH = canvas.height; resolve(img); };
                     img.src = canvas.toDataURL("image/png");
                 } catch(e) { console.warn('Barcode gen failed:', e); resolve(null); }
             });
-        }
-
-        // Fits the master barcode image inside the given box (boxW x boxH) by scaling
-        // width & height together, then centers it. This is the actual "resize" logic:
-        // make the box smaller in the designer -> barcode shrinks proportionally, never distorted.
-        function getContainedBarcodeRect(img, boxX, boxY, boxW, boxH) {
-            const natW = img._naturalBarcodeW || boxW || 1;
-            const natH = img._naturalBarcodeH || boxH || 1;
-            if(boxW <= 0 || boxH <= 0) return { drawX: boxX, drawY: boxY, drawW: 0, drawH: 0 };
-            const scale = Math.min(boxW / natW, boxH / natH);
-            const drawW = natW * scale;
-            const drawH = natH * scale;
-            return {
-                drawX: boxX + (boxW - drawW) / 2,
-                drawY: boxY + (boxH - drawH) / 2,
-                drawW, drawH
-            };
         }
 
         // ================= BUGFIX: BULLETPROOF ADDRESS WRAPPING =================
@@ -738,12 +720,13 @@
                 
                 // Encode student Name in barcode
                 const barcodeData = getDummyValue('name');
-                const barcodeImg = await createBarcode(barcodeData.toString());
+                const barcodeImg = await createBarcode(barcodeData.toString(), bw, bh);
                 if(barcodeImg) {
-                    // Uniformly scale to fit the configured W/H box - resizing the box
-                    // (bigger or smaller) never stretches/squishes the barcode.
-                    const rect = getContainedBarcodeRect(barcodeImg, bx, by, bw, bh);
-                    liveCtx.drawImage(barcodeImg, rect.drawX, rect.drawY, rect.drawW, rect.drawH);
+                    // Draw at natural width (no squish), centered in the configured box
+                    const natW = barcodeImg._naturalBarcodeW || bw;
+                    const natH = barcodeImg._naturalBarcodeH || bh;
+                    const drawX = bx + Math.max(0, (bw - natW) / 2);
+                    liveCtx.drawImage(barcodeImg, drawX, by, natW, natH);
                 }
             }
 
@@ -859,20 +842,23 @@
                     });
                 }
                 
-                // BARCODE - encodes the student's Name
+                // BARCODE - FIXED: Encode Roll No. (unique ID), not name
+                // Scanning a name returns random text; Roll No. returns a clean ID
                 if(config.enableBarcode !== false) {
                     const nameKey = Object.keys(student).find(k => k.toLowerCase().includes('name')) || 'Name';
+                    // Encode the student's full name
                     const barcodeValue = (student[nameKey] || 'UNKNOWN');
-                    const barcodeImg = await createBarcode(barcodeValue.toString());
+                    const barcodeImg = await createBarcode(barcodeValue.toString(), config.barcodeW||200, config.barcodeH||60);
                     if(barcodeImg) {
                         const bx = config.barcodeX || 0;
                         const by = config.barcodeY || 0;
-                        const bw = config.barcodeW || 200;
-                        const bh = config.barcodeH || 60;
-                        // Uniformly scale to fit the saved W/H box - matches the live
-                        // preview exactly, so resizing it small never distorts the bars.
-                        const rect = getContainedBarcodeRect(barcodeImg, bx, by, bw, bh);
-                        ctx.drawImage(barcodeImg, rect.drawX, rect.drawY, rect.drawW, rect.drawH);
+                        const configW = config.barcodeW || 200;
+                        // Draw at natural width (no scaling = bars stay crisp and scannable)
+                        const natW = barcodeImg._naturalBarcodeW || configW;
+                        const natH = barcodeImg._naturalBarcodeH || (config.barcodeH || 60);
+                        // Center within the configured box if natural width is smaller
+                        const drawX = bx + Math.max(0, (configW - natW) / 2);
+                        ctx.drawImage(barcodeImg, drawX, by, natW, natH);
                     }
                 }
 
