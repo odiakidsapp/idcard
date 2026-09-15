@@ -18,20 +18,10 @@
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
     <style>
-        .camera-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
-            background: radial-gradient(ellipse 120px 160px at center, transparent 95%, rgba(0, 0, 0, 0.6) 100%); z-index: 10;
-        }
-        .camera-guideline {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 240px; height: 320px; border: 2px dashed rgba(255,255,255,0.7); border-radius: 50% 50% 40% 40%; z-index: 11;
-        }
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        
-        /* Drag pointer for the canvas */
-        #livePreviewCanvas { cursor: grab; }
-        #livePreviewCanvas:active { cursor: grabbing; }
+        .camera-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background: radial-gradient(ellipse 120px 160px at center, transparent 95%, rgba(0, 0, 0, 0.6) 100%); z-index: 10; }
+        .camera-guideline { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 240px; height: 320px; border: 2px dashed rgba(255,255,255,0.7); border-radius: 50% 50% 40% 40%; z-index: 11; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; } .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        #livePreviewCanvas { cursor: grab; } #livePreviewCanvas:active { cursor: grabbing; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans min-h-screen">
@@ -41,14 +31,14 @@
         <h1 class="text-xl font-bold"><i class="fa-solid fa-id-badge mr-2"></i> ID Card Portal</h1>
         <div class="space-x-4 flex items-center">
             <span id="aiStatusBadge" class="text-xs bg-blue-800 px-3 py-1 rounded-full border border-blue-500 font-mono">⏳ Loading AI Crop...</span>
-            <button id="navDashboard" class="hover:underline font-semibold ml-4">Dashboard</button>
+            <button id="navDashboard" class="hover:underline font-semibold ml-4 hidden">Dashboard</button>
         </div>
     </nav>
 
     <main class="p-4 sm:p-6 max-w-7xl mx-auto">
         
         <!-- ================= DASHBOARD VIEW ================= -->
-        <section id="viewDashboard" class="space-y-6">
+        <section id="viewDashboard" class="hidden space-y-6">
             <div class="bg-white p-6 rounded-lg shadow-sm flex flex-col sm:flex-row gap-4 items-end">
                 <div class="flex-1 w-full">
                     <label class="block text-sm font-medium text-gray-700">New College Name</label>
@@ -68,18 +58,33 @@
 
         <!-- ================= COLLEGE DETAIL VIEW ================= -->
         <section id="viewCollege" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm gap-4">
+            <div class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm gap-4 border-l-4 border-blue-500">
                 <div>
                     <h2 id="currentCollegeTitle" class="text-xl font-bold text-gray-700">College Name</h2>
-                    <p class="text-sm text-gray-500">Manage students and generate ID cards</p>
+                    <p class="text-sm text-gray-500" id="collegeSubtitle">Manage students and generate ID cards</p>
                 </div>
-                <button id="btnOpenDesigner" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 shadow w-full sm:w-auto"><i class="fa-solid fa-palette mr-1"></i> Open Live Designer</button>
+                <div class="flex gap-2">
+                    <button id="btnOpenDesigner" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 shadow w-full sm:w-auto"><i class="fa-solid fa-palette mr-1"></i> Open Live Designer</button>
+                </div>
             </div>
 
-            <div class="bg-white p-6 rounded-lg shadow-sm space-y-4">
-                <h3 class="text-lg font-bold">1. Import Data</h3>
-                <input type="file" id="excelUpload" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                <p class="text-xs text-gray-500">Upload Excel. Ensure there is a unique column (e.g., "Roll No.") to prevent duplicates.</p>
+            <!-- Import Block (Hidden in Client Mode) -->
+            <div class="bg-white p-6 rounded-lg shadow-sm space-y-4" id="importDataBlock">
+                <h3 class="text-lg font-bold">1. Import / Replace Data</h3>
+                <div class="flex flex-col sm:flex-row gap-4 mt-2">
+                    <div class="flex-1 border p-4 rounded-lg bg-blue-50">
+                        <h4 class="font-bold text-blue-800 mb-2"><i class="fa-solid fa-file-excel"></i> Add New Data</h4>
+                        <p class="text-xs text-gray-500 mb-3">Appends new students. Updates existing if Roll No matches.</p>
+                        <button onclick="document.getElementById('excelUpload').click()" class="bg-blue-600 text-white px-4 py-2 rounded w-full hover:bg-blue-700 text-sm font-bold">Upload Excel</button>
+                        <input type="file" id="excelUpload" accept=".xlsx, .xls" class="hidden"/>
+                    </div>
+                    <div class="flex-1 border p-4 rounded-lg bg-red-50">
+                        <h4 class="font-bold text-red-800 mb-2"><i class="fa-solid fa-trash-can"></i> Replace All Data</h4>
+                        <p class="text-xs text-gray-500 mb-3">Deletes all current students in this college and uploads a fresh sheet.</p>
+                        <button onclick="document.getElementById('excelReplaceUpload').click()" class="bg-red-600 text-white px-4 py-2 rounded w-full hover:bg-red-700 text-sm font-bold">Replace Excel Data</button>
+                        <input type="file" id="excelReplaceUpload" accept=".xlsx, .xls" class="hidden"/>
+                    </div>
+                </div>
             </div>
 
             <div class="bg-white p-6 rounded-lg shadow-sm">
@@ -146,8 +151,8 @@
 
                         <!-- Dynamic Text Coordinates -->
                         <div class="bg-gray-50 p-3 rounded border border-gray-300" id="textFieldsSettingsContainer">
-                            <h4 class="font-bold mb-2 text-gray-700 text-sm"><i class="fa-solid fa-font mr-1"></i> 4. Text Coordinates (px)</h4>
-                            <p class="text-xs text-gray-500 mb-2">Check the box to print the field. Uncheck to hide it.</p>
+                            <h4 class="font-bold mb-2 text-gray-700 text-sm"><i class="fa-solid fa-font mr-1"></i> 4. Text Settings (Wrap & Color)</h4>
+                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Set Max Width > 0 to enable automatic 2-line text wrapping (Useful for Addresses).</p>
                             <div id="textFieldsSettings" class="space-y-2">
                                 <!-- Dynamic coordinate inputs injected here -->
                             </div>
@@ -158,19 +163,16 @@
                 <!-- Right Panel: LIVE PREVIEW & EXPORT -->
                 <div class="flex flex-col gap-4 h-full overflow-hidden">
                     
-                    <!-- Live Preview Canvas Box -->
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-grow flex flex-col p-4 relative overflow-hidden">
                         <h3 class="text-lg font-bold text-gray-800 mb-2 flex-shrink-0 flex justify-between items-center">
                             <span><i class="fa-solid fa-eye text-purple-600"></i> Interactive Canvas</span>
-                            <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner"><i class="fa-solid fa-hand-pointer mr-1"></i> Click & Drag elements to position them</span>
+                            <span class="text-[10px] font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner"><i class="fa-solid fa-hand-pointer mr-1"></i> Click & Drag elements to position them</span>
                         </h3>
                         <div class="flex-grow bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center p-2 overflow-hidden relative">
-                            <!-- Visual scaling canvas, doesn't break actual high res exports -->
                             <canvas id="livePreviewCanvas" class="max-w-full max-h-full object-contain shadow-lg bg-white border border-gray-400"></canvas>
                         </div>
                     </div>
 
-                    <!-- Export Buttons Box -->
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex-shrink-0 grid grid-cols-2 gap-4">
                         <button id="btnGenerateZip" class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 font-bold shadow flex flex-col items-center justify-center">
                             <i class="fa-solid fa-file-zipper text-lg mb-1"></i> Download Standard ZIP
@@ -183,10 +185,8 @@
                 </div>
             </div>
             
-            <!-- Hidden Export Canvas -->
             <canvas id="idCanvas" class="hidden"></canvas>
         </section>
-
     </main>
 
     <!-- ================= CAMERA & CROP MODAL ================= -->
@@ -218,40 +218,33 @@
         </div>
     </div>
 
-    <!-- Hidden canvas for image processing operations -->
     <canvas id="processingCanvas" class="hidden"></canvas>
 
 
     <!-- FIREBASE & APP LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, getDocs, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, getDoc, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC76wT0RbwuLGbhp0mU7kje25g-xxydLqU", authDomain: "idcard-60586.firebaseapp.com", projectId: "idcard-60586",
             storageBucket: "idcard-60586.firebasestorage.app", messagingSenderId: "331979663377", appId: "1:331979663377:web:026e537a7fcaca813129b0"
         };
+        const app = initializeApp(firebaseConfig); const db = getFirestore(app); const storage = getStorage(app);
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
-
-        let currentCollegeId = null;
-        let currentStudents = [];
-        let collegeConfig = {};
-        let dynamicFields = [];
+        let currentCollegeId = null; let currentStudents = []; let collegeConfig = {}; let dynamicFields = [];
         let targetStudentId = null, targetStudentRoll = null;
+        let isClientMode = false;
         
-        // --- Dummy Data Generator for Realistic Live Preview ---
         const dummyDataGen = {
             'name': 'John Doe', 'student': 'Jane Smith', 'contact': '9876543210', 'phone': '9876543210', 'mobile': '9876543210',
-            'roll': '101', 'class': '12th Grade', 'stream': 'Science', 'blood': 'O+', 'dob': '15-Aug-2005', 'session': '2025-2026', 'father': 'Robert Doe', 'address': '123 Fake Street, City'
+            'roll': '101', 'class': '12th Grade', 'stream': 'Science', 'blood': 'O+', 'dob': '15-Aug-2005', 'session': '2025-2026', 'father': 'Robert Doe', 'address': 'At- Fake Village, Po- Fake Post, Dist- Fake City, 765001'
         };
         function getDummyValue(key) {
             const k = key.toLowerCase();
             for(let d in dummyDataGen) { if(k.includes(d)) return dummyDataGen[d]; }
-            return `Sample ${key}`; // fallback
+            return `Sample ${key}`;
         }
 
         const imageCache = {};
@@ -259,7 +252,11 @@
             if (!url) return null; if (imageCache[url]) return imageCache[url];
             return new Promise((resolve) => {
                 const img = new Image(); img.crossOrigin = "anonymous";
-                img.onload = () => { imageCache[url] = img; resolve(img); }; img.onerror = () => resolve(null); img.src = url;
+                // Add a cache buster parameter to force CORS refresh for Firebase Storage
+                const corsUrl = url + (url.includes('?') ? '&' : '?') + 'cors=' + Date.now();
+                img.onload = () => { imageCache[url] = img; resolve(img); }; 
+                img.onerror = (e) => { console.error("CORS Image Error:", e); resolve(null); }; 
+                img.src = corsUrl;
             });
         }
 
@@ -286,6 +283,38 @@
         }
         initAI();
 
+        // ================= APP INITIALIZATION (CHECK FOR CLIENT MODE) =================
+        window.shareCollege = (id) => {
+            const url = window.location.origin + window.location.pathname + "?college=" + id;
+            navigator.clipboard.writeText(url);
+            alert("Share Link Copied! Send this to the college.");
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedCollegeParam = urlParams.get('college');
+        
+        if (sharedCollegeParam) {
+            // LOCK DOWN: CLIENT MODE
+            isClientMode = true;
+            currentCollegeId = sharedCollegeParam;
+            document.getElementById('navDashboard').classList.add('hidden');
+            document.getElementById('btnOpenDesigner').classList.add('hidden');
+            document.getElementById('importDataBlock').classList.add('hidden');
+            document.getElementById('collegeSubtitle').innerText = "Client Edit Mode: Update Student Photos & Info";
+            
+            getDoc(doc(db, "schools", currentCollegeId)).then(snap => {
+                if(snap.exists()) {
+                    document.getElementById('currentCollegeTitle').innerText = snap.data().name;
+                    showView('college'); loadStudents();
+                } else { alert("Error: College not found."); }
+            });
+        } else {
+            // ADMIN MODE
+            document.getElementById('navDashboard').classList.remove('hidden');
+            showView('dashboard'); loadColleges();
+        }
+
+        // ================= DASHBOARD =================
         document.getElementById('btnAddCollege').addEventListener('click', async () => {
             const name = document.getElementById('newCollegeName').value.trim();
             if(!name) return alert("Enter college name");
@@ -300,14 +329,24 @@
             const list = document.getElementById('collegesList'); list.innerHTML = "";
             snapshot.forEach(docSnap => {
                 const data = docSnap.data(); const card = document.createElement('div');
-                card.className = "bg-white p-6 rounded-lg shadow border-l-4 border-blue-600 hover:shadow-md cursor-pointer transition";
-                card.innerHTML = `<h3 class="font-bold text-lg text-gray-800">${data.name}</h3><p class="text-xs text-gray-500 mt-1">ID: ${docSnap.id}</p>`;
-                card.onclick = () => { currentCollegeId = docSnap.id; document.getElementById('currentCollegeTitle').innerText = data.name; showView('college'); loadStudents(); };
+                card.className = "bg-white p-6 rounded-lg shadow border-l-4 border-blue-600 hover:shadow-md transition flex flex-col justify-between";
+                card.innerHTML = `
+                    <div class="cursor-pointer" onclick="openCollegeAdmin('${docSnap.id}', '${data.name}')">
+                        <h3 class="font-bold text-lg text-gray-800">${data.name}</h3><p class="text-xs text-gray-500 mt-1">ID: ${docSnap.id}</p>
+                    </div>
+                    <button onclick="shareCollege('${docSnap.id}')" class="mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-1.5 px-3 rounded border font-medium w-max"><i class="fa-solid fa-link"></i> Copy Client Link</button>
+                `;
                 list.appendChild(card);
             });
         }
+        
+        window.openCollegeAdmin = (id, name) => {
+            currentCollegeId = id; document.getElementById('currentCollegeTitle').innerText = name;
+            showView('college'); loadStudents();
+        }
 
-        document.getElementById('excelUpload').addEventListener('change', (e) => {
+        // ================= IMPORT & REPLACE DATA =================
+        document.getElementById('excelUpload').addEventListener('change', async (e) => {
             const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
             reader.onload = async (event) => {
                 const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, {type: 'array'});
@@ -315,13 +354,44 @@
                 alert(`Found ${rows.length} records. Uploading...`);
                 for (let row of rows) {
                     row.collegeId = currentCollegeId;
-                    let docId = row["Roll No."] || row["Serial Number"] || Date.now().toString();
+                    let docId = row["Roll No."] || row["Serial Number"] || Date.now().toString() + Math.random();
                     docId = docId.toString().replace(/[^a-zA-Z0-9]/g, '_');
                     await setDoc(doc(db, "portal_students", docId), row, {merge: true});
                 }
                 alert("Upload complete!"); loadStudents();
             };
-            reader.readAsArrayBuffer(file);
+            reader.readAsArrayBuffer(file); e.target.value = '';
+        });
+
+        document.getElementById('excelReplaceUpload').addEventListener('change', async (e) => {
+            const file = e.target.files[0]; if(!file) return; 
+            if(!confirm("⚠️ WARNING: This will DELETE ALL CURRENT STUDENTS in this college and replace them with this Excel sheet. Are you sure?")) return;
+            
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, {type: 'array'});
+                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                alert(`Erasing old data and uploading ${rows.length} new records... Please wait.`);
+                
+                // Erase Old
+                const q = query(collection(db, "portal_students"), where("collegeId", "==", currentCollegeId));
+                const snapshot = await getDocs(q);
+                const deletePromises = [];
+                snapshot.forEach(docSnap => deletePromises.push(deleteDoc(doc(db, "portal_students", docSnap.id))));
+                await Promise.all(deletePromises);
+
+                // Upload New
+                const uploadPromises = [];
+                for (let row of rows) {
+                    row.collegeId = currentCollegeId;
+                    let docId = row["Roll No."] || row["Serial Number"] || Date.now().toString() + Math.random();
+                    docId = docId.toString().replace(/[^a-zA-Z0-9]/g, '_');
+                    uploadPromises.push(setDoc(doc(db, "portal_students", docId), row, {merge: true}));
+                }
+                await Promise.all(uploadPromises);
+                alert("Replacement complete!"); loadStudents();
+            };
+            reader.readAsArrayBuffer(file); e.target.value = '';
         });
 
         async function loadStudents() {
@@ -358,6 +428,7 @@
 
         window.updateStudentField = async (docId, field, value) => { await setDoc(doc(db, "portal_students", docId), { [field]: value }, {merge: true}); };
 
+        // ================= WEBCAM & IMAGE PROCESSING =================
         let videoStream = null;
         window.openPhotoModal = (docId, rollNo) => {
             targetStudentId = docId; targetStudentRoll = rollNo;
@@ -415,6 +486,7 @@
             } catch(e) { status.innerText = "Error. Try Again."; status.classList.replace('bg-yellow-100', 'bg-red-100'); }
         }
 
+        // ================= BARCODE HELPER =================
         function createBarcode(text) {
             return new Promise((resolve) => {
                 if(!text) return resolve(null);
@@ -424,32 +496,38 @@
             });
         }
 
+        // ================= WRAP TEXT HELPER (FOR ADDRESSES) =================
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' '); let line = ''; let currentY = y;
+            for(let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const testWidth = ctx.measureText(testLine).width;
+                if (testWidth > maxWidth && n > 0) { ctx.fillText(line, x, currentY); line = words[n] + ' '; currentY += lineHeight; } 
+                else { line = testLine; }
+            }
+            ctx.fillText(line, x, currentY);
+        }
+
         // ================= DRAG AND DROP & LIVE DESIGNER =================
         let isDragging = false, dragItem = null, dragOffsetX = 0, dragOffsetY = 0;
-        const liveCanvas = document.getElementById('livePreviewCanvas');
-        const liveCtx = liveCanvas.getContext('2d');
+        const liveCanvas = document.getElementById('livePreviewCanvas'); const liveCtx = liveCanvas.getContext('2d');
 
         function getMousePos(evt) {
-            const rect = liveCanvas.getBoundingClientRect();
-            const scaleX = liveCanvas.width / rect.width;
-            const scaleY = liveCanvas.height / rect.height;
+            const rect = liveCanvas.getBoundingClientRect(); const scaleX = liveCanvas.width / rect.width; const scaleY = liveCanvas.height / rect.height;
             return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
         }
 
         function hitTest(x, y) {
-            // Check Photo
             if(document.getElementById('enablePhoto').checked) {
-                const px = parseInt(document.getElementById('coordPhotoX').value) || 0; const py = parseInt(document.getElementById('coordPhotoY').value) || 0;
-                const pw = parseInt(document.getElementById('coordPhotoW').value) || 150; const ph = parseInt(document.getElementById('coordPhotoH').value) || 200;
+                const px = parseInt(document.getElementById('coordPhotoX').value)||0; const py = parseInt(document.getElementById('coordPhotoY').value)||0;
+                const pw = parseInt(document.getElementById('coordPhotoW').value)||150; const ph = parseInt(document.getElementById('coordPhotoH').value)||200;
                 if(x >= px && x <= px + pw && y >= py && y <= py + ph) return { type: 'photo', id: 'coordPhoto' };
             }
-            // Check Barcode
             if(document.getElementById('enableBarcode').checked) {
-                const bx = parseInt(document.getElementById('coordBarcodeX').value) || 0; const by = parseInt(document.getElementById('coordBarcodeY').value) || 0;
-                const bw = parseInt(document.getElementById('coordBarcodeW').value) || 150; const bh = parseInt(document.getElementById('coordBarcodeH').value) || 40;
+                const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
+                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
                 if(x >= bx && x <= bx + bw && y >= by && y <= by + bh) return { type: 'barcode', id: 'coordBarcode' };
             }
-            // Check Text Fields
             for(let field of dynamicFields) {
                 if(document.getElementById(`enable_${field}`)?.checked) {
                     const tx = parseInt(document.getElementById(`fX_${field}`).value); const ty = parseInt(document.getElementById(`fY_${field}`).value);
@@ -467,35 +545,25 @@
             const pos = getMousePos(e); const hit = hitTest(pos.x, pos.y);
             if(hit) {
                 isDragging = true; dragItem = hit;
-                if(hit.type === 'photo' || hit.type === 'barcode') {
-                    dragOffsetX = pos.x - parseInt(document.getElementById(`${hit.id}X`).value);
-                    dragOffsetY = pos.y - parseInt(document.getElementById(`${hit.id}Y`).value);
-                } else if(hit.type === 'text') {
-                    dragOffsetX = pos.x - parseInt(document.getElementById(`fX_${hit.id}`).value);
-                    dragOffsetY = pos.y - parseInt(document.getElementById(`fY_${hit.id}`).value);
-                }
+                if(hit.type === 'photo' || hit.type === 'barcode') { dragOffsetX = pos.x - parseInt(document.getElementById(`${hit.id}X`).value); dragOffsetY = pos.y - parseInt(document.getElementById(`${hit.id}Y`).value); } 
+                else if(hit.type === 'text') { dragOffsetX = pos.x - parseInt(document.getElementById(`fX_${hit.id}`).value); dragOffsetY = pos.y - parseInt(document.getElementById(`fY_${hit.id}`).value); }
             }
         });
-
         liveCanvas.addEventListener('mousemove', (e) => {
             if(!isDragging || !dragItem) return;
             const pos = getMousePos(e);
             if(dragItem.type === 'photo' || dragItem.type === 'barcode') {
-                document.getElementById(`${dragItem.id}X`).value = Math.round(pos.x - dragOffsetX);
-                document.getElementById(`${dragItem.id}Y`).value = Math.round(pos.y - dragOffsetY);
+                document.getElementById(`${dragItem.id}X`).value = Math.round(pos.x - dragOffsetX); document.getElementById(`${dragItem.id}Y`).value = Math.round(pos.y - dragOffsetY);
             } else if(dragItem.type === 'text') {
-                document.getElementById(`fX_${dragItem.id}`).value = Math.round(pos.x - dragOffsetX);
-                document.getElementById(`fY_${dragItem.id}`).value = Math.round(pos.y - dragOffsetY);
+                document.getElementById(`fX_${dragItem.id}`).value = Math.round(pos.x - dragOffsetX); document.getElementById(`fY_${dragItem.id}`).value = Math.round(pos.y - dragOffsetY);
             }
             window.drawLivePreview();
         });
-
         liveCanvas.addEventListener('mouseup', () => { isDragging = false; dragItem = null; });
         liveCanvas.addEventListener('mouseleave', () => { isDragging = false; dragItem = null; });
 
         window.drawLivePreview = async () => {
-            if(!liveCanvas) return;
-            const bgUrl = collegeConfig.bgUrl;
+            if(!liveCanvas) return; const bgUrl = collegeConfig.bgUrl;
             if(!bgUrl) {
                 liveCanvas.width = 600; liveCanvas.height = 400; liveCtx.fillStyle = "#e5e7eb"; liveCtx.fillRect(0,0,600,400);
                 liveCtx.fillStyle = "#9ca3af"; liveCtx.font = "20px Arial"; liveCtx.textAlign="center"; liveCtx.fillText("Upload background to see preview", 300, 200); return;
@@ -503,33 +571,34 @@
             const bgImg = await loadCachedImage(bgUrl); if(!bgImg) return;
             liveCanvas.width = bgImg.width; liveCanvas.height = bgImg.height; liveCtx.drawImage(bgImg, 0, 0);
 
-            // Dummy Photo Box
             if(document.getElementById('enablePhoto').checked) {
-                const px = parseInt(document.getElementById('coordPhotoX').value) || 0; const py = parseInt(document.getElementById('coordPhotoY').value) || 0;
-                const pw = parseInt(document.getElementById('coordPhotoW').value) || 150; const ph = parseInt(document.getElementById('coordPhotoH').value) || 200;
+                const px = parseInt(document.getElementById('coordPhotoX').value)||0; const py = parseInt(document.getElementById('coordPhotoY').value)||0;
+                const pw = parseInt(document.getElementById('coordPhotoW').value)||150; const ph = parseInt(document.getElementById('coordPhotoH').value)||200;
                 liveCtx.fillStyle = 'rgba(59, 130, 246, 0.3)'; liveCtx.fillRect(px, py, pw, ph); liveCtx.strokeStyle = '#3b82f6'; liveCtx.lineWidth = 3; liveCtx.strokeRect(px, py, pw, ph);
-                liveCtx.fillStyle = '#1e3a8a'; liveCtx.font = 'bold 20px Arial'; liveCtx.textAlign = 'center'; liveCtx.textBaseline = 'middle'; liveCtx.fillText('PHOTO ZONE', px + pw/2, py + ph/2);
+                liveCtx.fillStyle = '#1e3a8a'; liveCtx.font = 'bold 20px Arial'; liveCtx.textAlign = 'center'; liveCtx.textBaseline = 'middle'; liveCtx.fillText('PHOTO', px + pw/2, py + ph/2);
             }
-
-            // Dummy Barcode Box
             if(document.getElementById('enableBarcode').checked) {
-                const bx = parseInt(document.getElementById('coordBarcodeX').value) || 0; const by = parseInt(document.getElementById('coordBarcodeY').value) || 0;
-                const bw = parseInt(document.getElementById('coordBarcodeW').value) || 150; const bh = parseInt(document.getElementById('coordBarcodeH').value) || 40;
+                const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
+                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
                 if(bw > 0 && bh > 0) {
                     liveCtx.fillStyle = 'rgba(16, 185, 129, 0.3)'; liveCtx.fillRect(bx, by, bw, bh); liveCtx.strokeStyle = '#10b981'; liveCtx.lineWidth = 3; liveCtx.strokeRect(bx, by, bw, bh);
-                    liveCtx.fillStyle = '#065f46'; liveCtx.font = 'bold 16px Arial'; liveCtx.textAlign = 'center'; liveCtx.textBaseline = 'middle'; liveCtx.fillText('||| BARCODE |||', bx + bw/2, by + bh/2);
+                    liveCtx.fillStyle = '#065f46'; liveCtx.font = 'bold 16px Arial'; liveCtx.textAlign = 'center'; liveCtx.textBaseline = 'middle'; liveCtx.fillText('BARCODE', bx + bw/2, by + bh/2);
                 }
             }
 
-            // Dynamic Text
-            liveCtx.fillStyle = '#000000'; liveCtx.textAlign = 'left'; liveCtx.textBaseline = 'alphabetic';
+            liveCtx.textAlign = 'left'; liveCtx.textBaseline = 'alphabetic';
             dynamicFields.forEach(field => {
                 if(document.getElementById(`enable_${field}`)?.checked) {
                     const x = parseInt(document.getElementById(`fX_${field}`)?.value); const y = parseInt(document.getElementById(`fY_${field}`)?.value);
                     const size = parseInt(document.getElementById(`fS_${field}`)?.value) || 24;
+                    const maxW = parseInt(document.getElementById(`fW_${field}`)?.value) || 0;
+                    const color = document.getElementById(`fC_${field}`)?.value || '#000000';
+                    
                     if(!isNaN(x) && !isNaN(y)) {
-                        liveCtx.font = `bold ${size}px Arial`; liveCtx.fillText(getDummyValue(field), x, y);
-                        liveCtx.fillStyle = 'red'; liveCtx.beginPath(); liveCtx.arc(x, y, 5, 0, Math.PI*2); liveCtx.fill(); liveCtx.fillStyle = '#000000'; // Red anchor dot
+                        liveCtx.fillStyle = color; liveCtx.font = `bold ${size}px Arial`; 
+                        if(maxW > 0) { wrapText(liveCtx, getDummyValue(field), x, y, maxW, size + 6); } 
+                        else { liveCtx.fillText(getDummyValue(field), x, y); }
+                        liveCtx.fillStyle = 'red'; liveCtx.beginPath(); liveCtx.arc(x, y, 5, 0, Math.PI*2); liveCtx.fill(); // Anchor dot
                     }
                 }
             });
@@ -551,12 +620,14 @@
                 const conf = collegeConfig.fields ? collegeConfig.fields[field] : {};
                 const isChecked = conf?.enabled !== false;
                 fieldsDiv.innerHTML += `
-                    <div class="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 shadow-sm transition hover:bg-gray-50">
+                    <div class="flex items-center gap-1.5 p-2 bg-white rounded border border-gray-200 shadow-sm transition hover:bg-gray-50 overflow-x-auto">
                         <input type="checkbox" id="enable_${field}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-blue-600 cursor-pointer" onchange="drawLivePreview()">
-                        <span class="font-bold text-xs text-gray-700 w-1/4 truncate cursor-move" title="${field}">${field}</span>
-                        <input type="number" id="fX_${field}" placeholder="X" value="${conf?.x || ''}" class="border p-1 w-16 text-sm rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
-                        <input type="number" id="fY_${field}" placeholder="Y" value="${conf?.y || ''}" class="border p-1 w-16 text-sm rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
-                        <input type="number" id="fS_${field}" placeholder="Size" value="${conf?.size || 24}" class="border p-1 w-16 text-sm rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
+                        <span class="font-bold text-xs text-gray-700 w-24 truncate cursor-move" title="${field}">${field}</span>
+                        <input type="color" id="fC_${field}" value="${conf?.color || '#000000'}" class="w-6 h-6 p-0 border-0 rounded cursor-pointer" oninput="drawLivePreview()" title="Text Color">
+                        <input type="number" id="fX_${field}" placeholder="X" value="${conf?.x || ''}" class="border p-1 w-14 text-xs rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
+                        <input type="number" id="fY_${field}" placeholder="Y" value="${conf?.y || ''}" class="border p-1 w-14 text-xs rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
+                        <input type="number" id="fS_${field}" placeholder="Size" value="${conf?.size || 24}" class="border p-1 w-12 text-xs rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()" title="Font Size">
+                        <input type="number" id="fW_${field}" placeholder="MaxW" value="${conf?.width || 0}" class="border p-1 w-14 text-xs rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()" title="Max Width (>0 wraps text)">
                     </div>
                 `;
             });
@@ -586,22 +657,31 @@
             dynamicFields.forEach(field => {
                 const enabled = document.getElementById(`enable_${field}`).checked;
                 const x = document.getElementById(`fX_${field}`).value; const y = document.getElementById(`fY_${field}`).value;
-                if(x && y) { collegeConfig.fields[field] = { enabled: enabled, x: parseInt(x), y: parseInt(y), size: parseInt(document.getElementById(`fS_${field}`).value) }; }
+                if(x && y) { 
+                    collegeConfig.fields[field] = { 
+                        enabled: enabled, x: parseInt(x), y: parseInt(y), size: parseInt(document.getElementById(`fS_${field}`).value),
+                        width: parseInt(document.getElementById(`fW_${field}`).value) || 0, color: document.getElementById(`fC_${field}`).value || '#000000'
+                    }; 
+                }
             });
             await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true}); alert("Configuration Saved!");
         });
 
-        // ================= EXPORT LOGIC =================
+        // ================= EXPORT LOGIC (ZIP / PDF) =================
         async function renderCardOnCanvas(student, config, addWatermark = false) {
             return new Promise(async (resolve) => {
                 const canvas = document.getElementById('idCanvas'); const ctx = canvas.getContext('2d');
                 const bgImg = await loadCachedImage(config.bgUrl); canvas.width = bgImg.width; canvas.height = bgImg.height; ctx.drawImage(bgImg, 0, 0);
 
-                ctx.fillStyle = "#000000"; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+                ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
                 if(config.fields) {
                     Object.keys(config.fields).forEach(key => {
                         const fConf = config.fields[key];
-                        if(fConf.enabled !== false && student[key] && fConf.x && fConf.y) { ctx.font = `bold ${fConf.size}px Arial`; ctx.fillText(student[key], fConf.x, fConf.y); }
+                        if(fConf.enabled !== false && student[key] && fConf.x && fConf.y) { 
+                            ctx.fillStyle = fConf.color || '#000000'; ctx.font = `bold ${fConf.size}px Arial`; 
+                            if(fConf.width > 0) { wrapText(ctx, student[key].toString(), fConf.x, fConf.y, fConf.width, fConf.size + 6); }
+                            else { ctx.fillText(student[key].toString(), fConf.x, fConf.y); }
+                        }
                     });
                 }
                 
@@ -615,7 +695,9 @@
 
                 if(addWatermark) {
                     ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-Math.PI / 4);
-                    ctx.font = "bold 80px Arial"; ctx.fillStyle = "rgba(255, 0, 0, 0.3)"; ctx.textAlign = "center"; ctx.textBaseline = 'middle'; ctx.fillText("VERIFIED", 0, 0); ctx.restore();
+                    ctx.font = "bold 60px Arial"; ctx.fillStyle = "rgba(255, 0, 0, 0.25)"; ctx.textAlign = "center"; ctx.textBaseline = 'middle'; 
+                    ctx.fillText("ONLY FOR VERIFICATION", 0, 0); ctx.fillText("ONLY FOR VERIFICATION", 0, -250); ctx.fillText("ONLY FOR VERIFICATION", 0, 250);
+                    ctx.restore();
                 }
 
                 if(config.enablePhoto !== false && student['Photo Link'] && student['Photo Link'] !== "No Photo Link") {
@@ -652,8 +734,6 @@
             }
             pdf.save(`Verified_IDs_${currentCollegeId}.pdf`); btn.innerHTML = `<i class="fa-solid fa-file-pdf text-lg mb-1"></i> Download Watermarked PDF`;
         });
-
-        loadColleges();
     </script>
 </body>
 </html>
