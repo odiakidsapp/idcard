@@ -160,7 +160,7 @@
                                 <h4 class="font-bold text-green-700 text-sm"><i class="fa-solid fa-barcode mr-1"></i> 3. Barcode Properties</h4>
                                 <input type="checkbox" id="enableBarcode" checked class="w-4 h-4 text-green-600" onchange="drawLivePreview()">
                             </div>
-                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Barcode automatically encodes the Student's Name.</p>
+                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Barcode automatically encodes only the Student's Name.</p>
                             <div class="grid grid-cols-4 gap-2">
                                 <div><label class="text-[10px] text-gray-500 uppercase">X</label><input type="number" id="coordBarcodeX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Y</label><input type="number" id="coordBarcodeY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
@@ -383,7 +383,6 @@
             });
         }
 
-
         const views = { dashboard: document.getElementById('viewDashboard'), college: document.getElementById('viewCollege'), designer: document.getElementById('viewDesigner') };
         function showView(viewName) { Object.values(views).forEach(v => v.classList.add('hidden')); views[viewName].classList.remove('hidden'); }
         
@@ -563,14 +562,13 @@
             return new Promise((resolve) => {
                 if(!text) return resolve(null); const canvas = document.createElement('canvas');
                 try { 
-                    // Generate a high-resolution base barcode with quiet zones for max scannability
                     JsBarcode(canvas, text, { format: "CODE128", displayValue: false, margin: 10, background: "#ffffff", width: 4, height: 100 }); 
                     const img = new Image(); img.onload = () => resolve(img); img.src = canvas.toDataURL("image/png"); 
                 } catch(e) { resolve(null); }
             });
         }
 
-        // ================= BUGFIX: BULLETPROOF ADDRESS WRAPPING =================
+        // ================= BULLETPROOF ADDRESS WRAPPING =================
         function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
             if (!text) return;
             text = text.toString();
@@ -578,7 +576,6 @@
             let lines = [];
             let currentLine = '';
 
-            // ABSOLUTE FAILSAFE: Prevents browser from hanging if user types 0 or 1 into MaxWidth
             let safeMaxWidth = Math.max(maxWidth, 40);
 
             for (let i = 0; i < words.length; i++) {
@@ -685,6 +682,12 @@
             const bgImg = await loadCachedImage(bgUrl); if(!bgImg) return;
             liveCanvas.width = bgImg.width; liveCanvas.height = bgImg.height; liveCtx.drawImage(bgImg, 0, 0);
 
+            // DRAW WATERMARK FIRST IN PREVIEW (So it stays beneath the barcode)
+            liveCtx.save(); liveCtx.translate(liveCanvas.width / 2, liveCanvas.height / 2); liveCtx.rotate(-Math.PI / 4);
+            liveCtx.font = "bold 60px Arial"; liveCtx.fillStyle = "rgba(255, 0, 0, 0.15)"; liveCtx.textAlign = "center"; liveCtx.textBaseline = 'middle'; 
+            liveCtx.fillText("ONLY FOR VERIFICATION", 0, 0); liveCtx.fillText("ONLY FOR VERIFICATION", 0, -250); liveCtx.fillText("ONLY FOR VERIFICATION", 0, 250);
+            liveCtx.restore();
+
             if(document.getElementById('enablePhoto').checked) {
                 const px = parseInt(document.getElementById('coordPhotoX').value)||0; const py = parseInt(document.getElementById('coordPhotoY').value)||0;
                 const pw = parseInt(document.getElementById('coordPhotoW').value)||150; const ph = parseInt(document.getElementById('coordPhotoH').value)||150;
@@ -695,16 +698,17 @@
                 liveCtx.restore();
             }
             
-            // DRAW REAL BARCODE ON PREVIEW
+            // DRAW BARCODE ENCODING EXACTLY THE DUMMY NAME
             if(document.getElementById('enableBarcode').checked) {
                 const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
                 const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
                 
-                // BARCODE BUGFIX: Only encode Name!
                 const barcodeData = getDummyValue('name').toString().substring(0, 40);
                 const barcodeImg = await createBarcode(barcodeData);
                 if(barcodeImg) { 
+                    liveCtx.imageSmoothingEnabled = false; 
                     liveCtx.drawImage(barcodeImg, bx, by, bw, bh); 
+                    liveCtx.imageSmoothingEnabled = true;
                 }
             }
 
@@ -800,7 +804,7 @@
                 const canvas = document.getElementById('idCanvas'); const ctx = canvas.getContext('2d');
                 const bgImg = await loadCachedImage(config.bgUrl); canvas.width = bgImg.width; canvas.height = bgImg.height; ctx.drawImage(bgImg, 0, 0);
 
-                // DRAW WATERMARK *BEFORE* BARCODE SO IT DOESN'T RUIN THE SCANNER
+                // DRAW WATERMARK FIRST IN EXPORT
                 if(addWatermark) {
                     ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-Math.PI / 4);
                     ctx.font = "bold 60px Arial"; ctx.fillStyle = "rgba(255, 0, 0, 0.15)"; ctx.textAlign = "center"; ctx.textBaseline = 'middle'; 
@@ -826,7 +830,9 @@
                     const barcodeData = (student[nameKey] || 'Unknown').toString().substring(0, 40);
                     const barcodeImg = await createBarcode(barcodeData);
                     if(barcodeImg) { 
+                        ctx.imageSmoothingEnabled = false; 
                         ctx.drawImage(barcodeImg, config.barcodeX||0, config.barcodeY||0, config.barcodeW||150, config.barcodeH||40); 
+                        ctx.imageSmoothingEnabled = true;
                     }
                 }
 
