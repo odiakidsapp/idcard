@@ -718,8 +718,8 @@
                 const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
                 const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
                 
-                // FIXED: Encode Roll No for preview (scannable IDs, not names)
-                const barcodeData = getDummyValue('roll') || getDummyValue('name');
+                // Encode student Name in barcode
+                const barcodeData = getDummyValue('name');
                 const barcodeImg = await createBarcode(barcodeData.toString(), bw, bh);
                 if(barcodeImg) {
                     // Draw at natural width (no squish), centered in the configured box
@@ -845,11 +845,9 @@
                 // BARCODE - FIXED: Encode Roll No. (unique ID), not name
                 // Scanning a name returns random text; Roll No. returns a clean ID
                 if(config.enableBarcode !== false) {
-                    const rollKey = Object.keys(student).find(k => k.toLowerCase().includes('roll')) || null;
                     const nameKey = Object.keys(student).find(k => k.toLowerCase().includes('name')) || 'Name';
-                    // Priority: Roll No. > Contact No. > Name (last resort)
-                    const barcodeValue = (rollKey && student[rollKey]) ? student[rollKey]
-                                       : (student['Contact No.'] || student[nameKey] || 'UNKNOWN');
+                    // Encode the student's full name
+                    const barcodeValue = (student[nameKey] || 'UNKNOWN');
                     const barcodeImg = await createBarcode(barcodeValue.toString(), config.barcodeW||200, config.barcodeH||60);
                     if(barcodeImg) {
                         const bx = config.barcodeX || 0;
