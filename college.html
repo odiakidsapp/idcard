@@ -94,14 +94,11 @@
                 <p class="text-sm text-gray-600 mb-4"><strong>Step 1:</strong> Select your Custom Excel file. <strong>Step 2:</strong> Select all the photos from the extracted Photos folder. We will automatically link them!</p>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                    <!-- Excel Upload -->
                     <label class="border-2 border-dashed border-blue-300 p-4 rounded-lg bg-blue-50 text-center cursor-pointer hover:bg-blue-100 transition">
                         <div class="font-bold text-blue-800 mb-1"><i class="fa-solid fa-file-excel text-xl"></i> Select Excel File</div>
                         <div id="excel-status-text" class="text-xs text-gray-500">.xlsx or .xls</div>
                         <input type="file" id="excelUploadInput" accept=".xlsx, .xls" class="hidden"/>
                     </label>
-                    
-                    <!-- Photos Upload -->
                     <label class="border-2 border-dashed border-green-300 p-4 rounded-lg bg-green-50 text-center cursor-pointer hover:bg-green-100 transition">
                         <div class="font-bold text-green-800 mb-1"><i class="fa-solid fa-images text-xl"></i> Select Extracted Photos</div>
                         <div id="photo-status-text" class="text-xs text-gray-500">Select multiple images at once</div>
@@ -109,7 +106,6 @@
                     </label>
                 </div>
                 
-                <!-- Action Buttons -->
                 <div id="uploadActions" class="hidden flex flex-col sm:flex-row gap-4 mt-4">
                     <button onclick="processUploads(false)" class="bg-blue-600 text-white px-4 py-3 rounded w-full hover:bg-blue-700 text-sm font-bold shadow"><i class="fa-solid fa-plus mr-1"></i> Append & Upload</button>
                     <button onclick="processUploads(true)" class="bg-red-600 text-white px-4 py-3 rounded w-full hover:bg-red-700 text-sm font-bold shadow"><i class="fa-solid fa-trash-can mr-1"></i> Replace All & Upload</button>
@@ -161,14 +157,14 @@
 
                         <div class="bg-gray-50 p-3 rounded border border-green-200">
                             <div class="flex items-center justify-between mb-2">
-                                <h4 class="font-bold text-green-700 text-sm"><i class="fa-solid fa-barcode mr-1"></i> 3. Barcode Coordinates (px)</h4>
+                                <h4 class="font-bold text-green-700 text-sm"><i class="fa-solid fa-barcode mr-1"></i> 3. Barcode Properties</h4>
                                 <input type="checkbox" id="enableBarcode" checked class="w-4 h-4 text-green-600" onchange="drawLivePreview()">
                             </div>
-                            <div class="grid grid-cols-4 gap-2">
+                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Scale multiplier keeps barcode scannable without distortion.</p>
+                            <div class="grid grid-cols-3 gap-2">
                                 <div><label class="text-[10px] text-gray-500 uppercase">X</label><input type="number" id="coordBarcodeX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Y</label><input type="number" id="coordBarcodeY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
-                                <div><label class="text-[10px] text-gray-500 uppercase">Width</label><input type="number" id="coordBarcodeW" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
-                                <div><label class="text-[10px] text-gray-500 uppercase">Height</label><input type="number" id="coordBarcodeH" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
+                                <div><label class="text-[10px] text-gray-500 uppercase">Size / Scale</label><input type="number" id="coordBarcodeS" value="1.0" step="0.1" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                             </div>
                         </div>
 
@@ -338,19 +334,14 @@
 
             for (let row of pendingExcelData) {
                 row.collegeId = currentCollegeId;
-                // Use a safe, unique document ID logic
                 let docId = row["Roll No."] || row["Contact No."] || Date.now().toString() + Math.random();
                 docId = docId.toString().replace(/[^a-zA-Z0-9]/g, '_');
                 
                 let matchedFile = null;
-                
-                // 1. Direct Match using your new custom "Photo_File" column
                 if (row["Photo_File"]) {
                     let expectedFilename = row["Photo_File"].toLowerCase();
                     matchedFile = pendingPhotoFiles.find(f => f.name.toLowerCase() === expectedFilename);
                 }
-                
-                // 2. Fallback Regex Match
                 if (!matchedFile) {
                     const studentValuesStr = Object.values(row).join(' ').toLowerCase();
                     matchedFile = pendingPhotoFiles.find(f => {
@@ -371,6 +362,7 @@
                     row["Photo Link"] = "No Photo Link";
                 }
 
+                delete row["Photo_File"];
                 uploadPromises.push(setDoc(doc(db, "portal_students", docId), row, {merge: true}));
                 
                 processedCount++;
@@ -380,7 +372,6 @@
             await Promise.all(uploadPromises);
             alert("Upload Complete! Students and photos successfully matched and synced.");
             
-            // Reset UI and Clear Ghost Data
             document.getElementById('uploadActions').classList.add('hidden');
             document.getElementById('excelUploadInput').value = '';
             document.getElementById('photoUploadInput').value = '';
@@ -458,7 +449,6 @@
 
             snapshot.forEach(docSnap => {
                 const student = docSnap.data(); student.docId = docSnap.id; currentStudents.push(student);
-                // Ignore internal fields AND your custom local mapping field "Photo_File"
                 Object.keys(student).forEach(k => { if(k !== 'collegeId' && k !== 'docId' && k !== 'Photo Link' && k !== 'Photo_File') dynamicFields.add(k); });
 
                 const div = document.createElement('div');
@@ -543,7 +533,8 @@
 
         window.saveCrop = async () => {
             if(!cropper) return;
-            document.getElementById('photoControls').classList.add('hidden'); document.getElementById('modalStatus').classList.remove('hidden');
+            document.getElementById('photoControls').classList.add('hidden');
+            document.getElementById('modalStatus').classList.remove('hidden');
             document.getElementById('modalStatus').innerText = "Uploading to Database...";
 
             try {
@@ -557,22 +548,56 @@
             } catch(e) { alert("Upload Failed. Check internet."); closePhotoModal(); }
         };
 
+        // ================= FIX 3: BULLETPROOF BARCODE SCALER =================
+        // Generates a mathematically perfect barcode internally, then scales it evenly on the canvas.
         function createBarcode(text) {
             return new Promise((resolve) => {
                 if(!text) return resolve(null); const canvas = document.createElement('canvas');
-                try { JsBarcode(canvas, text, { format: "CODE128", displayValue: false, margin: 0, width: 2, height: 50 }); const img = new Image(); img.onload = () => resolve(img); img.src = canvas.toDataURL("image/png"); } 
-                catch(e) { resolve(null); }
+                try { 
+                    // Render base barcode perfectly crisp and scannable without forced width/height limits
+                    JsBarcode(canvas, text, { format: "CODE128", displayValue: false, margin: 0, width: 2, height: 60 }); 
+                    const img = new Image(); img.onload = () => resolve(img); img.src = canvas.toDataURL("image/png"); 
+                } catch(e) { resolve(null); }
             });
         }
 
+        // ================= FIX 2: BULLETPROOF ADDRESS WRAPPER =================
         function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
-            const words = text.toString().split(' '); let line = ''; let currentY = y; ctx.textAlign = align;
-            for(let n = 0; n < words.length; n++) {
-                const testLine = line + words[n] + ' '; const testWidth = ctx.measureText(testLine).width;
-                if (testWidth > maxWidth && n > 0) { ctx.fillText(line.trim(), x, currentY); line = words[n] + ' '; currentY += lineHeight; } 
-                else { line = testLine; }
+            const words = text.toString().split(' ');
+            let lines = [];
+            let currentLine = '';
+
+            for (let i = 0; i < words.length; i++) {
+                let word = words[i];
+                
+                // FORCE BREAK: If a single word is literally wider than the whole box!
+                while(ctx.measureText(word).width > maxWidth) {
+                    // Chop the word character by character until it fits
+                    let fitStr = '';
+                    let charIndex = 0;
+                    while(charIndex < word.length && ctx.measureText(fitStr + word[charIndex]).width <= maxWidth) {
+                        fitStr += word[charIndex];
+                        charIndex++;
+                    }
+                    if(currentLine) { lines.push(currentLine); currentLine = ''; }
+                    lines.push(fitStr);
+                    word = word.substring(charIndex);
+                }
+
+                const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                if (ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
             }
-            ctx.fillText(line.trim(), x, currentY);
+            if (currentLine) lines.push(currentLine);
+
+            ctx.textAlign = align;
+            for(let j = 0; j < lines.length; j++) {
+                ctx.fillText(lines[j], x, y + (j * lineHeight));
+            }
         }
 
         function drawRoundedRect(ctx, x, y, w, h, r) {
@@ -600,8 +625,8 @@
             }
             if(document.getElementById('enableBarcode').checked) {
                 const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
-                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
-                if(x >= bx && x <= bx + bw && y >= by && y <= by + bh) return { type: 'barcode', id: 'coordBarcode' };
+                // Barcode Hit box is roughly 150x50 based on scale
+                if(x >= bx && x <= bx + 150 && y >= by && y <= by + 50) return { type: 'barcode', id: 'coordBarcode' };
             }
             for(let field of dynamicFields) {
                 if(document.getElementById(`enable_${field}`)?.checked) {
@@ -657,11 +682,11 @@
             }
             if(document.getElementById('enableBarcode').checked) {
                 const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
-                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
-                if(bw > 0 && bh > 0) {
-                    liveCtx.fillStyle = 'rgba(16, 185, 129, 0.3)'; liveCtx.fillRect(bx, by, bw, bh); liveCtx.strokeStyle = '#10b981'; liveCtx.lineWidth = 3; liveCtx.strokeRect(bx, by, bw, bh);
-                    liveCtx.fillStyle = '#065f46'; liveCtx.font = 'bold 16px Arial'; liveCtx.textAlign = 'center'; liveCtx.textBaseline = 'middle'; liveCtx.fillText('BARCODE', bx + bw/2, by + bh/2);
-                }
+                const bScale = parseFloat(document.getElementById('coordBarcodeS').value)||1.0;
+                
+                liveCtx.fillStyle = 'rgba(16, 185, 129, 0.3)'; liveCtx.fillRect(bx, by, 150 * bScale, 50 * bScale); 
+                liveCtx.strokeStyle = '#10b981'; liveCtx.lineWidth = 3; liveCtx.strokeRect(bx, by, 150 * bScale, 50 * bScale);
+                liveCtx.fillStyle = '#065f46'; liveCtx.font = 'bold 16px Arial'; liveCtx.textAlign = 'left'; liveCtx.textBaseline = 'top'; liveCtx.fillText('BARCODE', bx + 5, by + 5);
             }
 
             liveCtx.textBaseline = 'alphabetic';
@@ -691,7 +716,7 @@
             
             document.getElementById('enableBarcode').checked = collegeConfig.enableBarcode !== false;
             document.getElementById('coordBarcodeX').value = collegeConfig.barcodeX || 0; document.getElementById('coordBarcodeY').value = collegeConfig.barcodeY || 0;
-            document.getElementById('coordBarcodeW').value = collegeConfig.barcodeW || 150; document.getElementById('coordBarcodeH').value = collegeConfig.barcodeH || 40;
+            document.getElementById('coordBarcodeS').value = collegeConfig.barcodeS || 1.0;
 
             const fieldsDiv = document.getElementById('textFieldsSettings'); fieldsDiv.innerHTML = '';
             dynamicFields.forEach(field => {
@@ -733,7 +758,7 @@
             
             collegeConfig.enableBarcode = document.getElementById('enableBarcode').checked;
             collegeConfig.barcodeX = parseInt(document.getElementById('coordBarcodeX').value); collegeConfig.barcodeY = parseInt(document.getElementById('coordBarcodeY').value);
-            collegeConfig.barcodeW = parseInt(document.getElementById('coordBarcodeW').value); collegeConfig.barcodeH = parseInt(document.getElementById('coordBarcodeH').value);
+            collegeConfig.barcodeS = parseFloat(document.getElementById('coordBarcodeS').value) || 1.0;
             
             collegeConfig.fields = {};
             dynamicFields.forEach(field => {
@@ -750,7 +775,7 @@
             await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true}); alert("Configuration Saved!");
         });
 
-        // ================= FAST EXPORT LOGIC =================
+        // ================= FIX 1: NEVER SKIP CARDS EXPORT LOGIC =================
         async function renderCardOnCanvas(student, config, addWatermark = false) {
             return new Promise(async (resolve) => {
                 const canvas = document.getElementById('idCanvas'); const ctx = canvas.getContext('2d');
@@ -768,12 +793,14 @@
                     });
                 }
                 
+                // BARCODE - Undistorted Scaling
                 if(config.enableBarcode !== false) {
                     const nameKey = Object.keys(student).find(k => k.toLowerCase().includes('name')) || 'Name';
                     const phoneKey = Object.keys(student).find(k => k.toLowerCase().includes('contact') || k.toLowerCase().includes('phone') || k.toLowerCase().includes('mobile')) || 'Contact No.';
                     const barcodeData = `${student[nameKey]||'NA'}-${student[phoneKey]||'NA'}`.substring(0, 40);
                     const barcodeImg = await createBarcode(barcodeData);
-                    if(barcodeImg && config.barcodeW > 0 && config.barcodeH > 0) { ctx.drawImage(barcodeImg, config.barcodeX||0, config.barcodeY||0, config.barcodeW||150, config.barcodeH||40); }
+                    const bScale = config.barcodeS || 1.0;
+                    if(barcodeImg) { ctx.drawImage(barcodeImg, config.barcodeX||0, config.barcodeY||0, barcodeImg.width * bScale, barcodeImg.height * bScale); }
                 }
 
                 if(addWatermark) {
@@ -783,15 +810,20 @@
                     ctx.restore();
                 }
 
-                if(config.enablePhoto !== false && student['Photo Link'] && student['Photo Link'] !== "No Photo Link") {
-                    const photoImg = await loadCachedImage(student['Photo Link']);
-                    if(photoImg) {
-                        ctx.save(); ctx.beginPath(); drawRoundedRect(ctx, config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||150, config.photoR||0);
-                        ctx.clip(); ctx.drawImage(photoImg, config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||150); ctx.restore();
-                    } else {
+                // BULLETPROOF PHOTO TRY-CATCH
+                if(config.enablePhoto !== false) {
+                    try {
+                        const photoImg = await loadCachedImage(student['Photo Link']);
+                        if(photoImg) {
+                            ctx.save(); ctx.beginPath(); drawRoundedRect(ctx, config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||150, config.photoR||0);
+                            ctx.clip(); ctx.drawImage(photoImg, config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||150); ctx.restore();
+                        } else {
+                            ctx.fillStyle = '#e5e7eb'; ctx.fillRect(config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||150);
+                            ctx.fillStyle = '#ef4444'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                            ctx.fillText('NO PHOTO', (config.photoX||0) + (config.photoW||150)/2, (config.photoY||0) + (config.photoH||150)/2);
+                        }
+                    } catch(e) {
                         ctx.fillStyle = '#e5e7eb'; ctx.fillRect(config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||150);
-                        ctx.fillStyle = '#ef4444'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                        ctx.fillText('Image Error', (config.photoX||0) + (config.photoW||150)/2, (config.photoY||0) + (config.photoH||150)/2);
                     }
                 }
                 resolve(canvas.toDataURL("image/jpeg", 0.85));
@@ -803,6 +835,7 @@
             const total = currentStudents.length; if(total === 0) return alert("No students to process!");
             
             updateProgress(0, total, "Generating ZIP File...");
+            document.getElementById('progressSubtitle').innerText = "Processing at high speed. Please wait.";
             const zip = new JSZip(); const folder = zip.folder("ID_Cards");
             
             for(let i=0; i < total; i++) {
@@ -824,6 +857,7 @@
             const total = currentStudents.length; if(total === 0) return alert("No students to process!");
             
             updateProgress(0, total, "Generating PDF File...");
+            document.getElementById('progressSubtitle').innerText = "Processing at high speed. Please wait.";
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [document.getElementById('livePreviewCanvas').width, document.getElementById('livePreviewCanvas').height] });
             
