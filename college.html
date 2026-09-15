@@ -220,7 +220,6 @@
                 <input type="file" id="manualPhotoInput" accept="image/*" class="hidden" onchange="handleManualPhotoSelection(event)">
             </div>
 
-            <!-- Cropper UI -->
             <div id="cropperContainer" class="hidden flex-grow bg-black w-full overflow-hidden flex flex-col relative">
                 <div class="cropper-container"><img id="cropperImage" src="" /></div>
                 <div class="bg-gray-800 text-white text-xs text-center p-2"><i class="fa-solid fa-hand-pointer mr-1"></i> Drag box to crop face. Zoom with mouse wheel.</div>
@@ -252,8 +251,7 @@
         let currentCollegeId = null; let currentStudents = []; let collegeConfig = {}; let dynamicFields = [];
         let targetStudentId = null, targetStudentRoll = null; let isClientMode = false;
         
-        let pendingExcelData = [];
-        let pendingPhotoFiles = [];
+        let pendingExcelData = []; let pendingPhotoFiles = [];
 
         const dummyDataGen = {
             'name': 'John Doe', 'student': 'Jane Smith', 'contact': '9876543210', 'phone': '9876543210', 'mobile': '9876543210',
@@ -295,7 +293,6 @@
         document.getElementById('excelUploadInput').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
             document.getElementById('excel-status-text').innerText = `✔️ ${file.name}`;
-            
             const reader = new FileReader();
             reader.onload = function(evt) {
                 const data = evt.target.result; const workbook = XLSX.read(data, { type: 'binary' });
@@ -320,7 +317,6 @@
 
         window.processUploads = async (isReplacement) => {
             if(isReplacement && !confirm("⚠️ WARNING: This will DELETE ALL CURRENT STUDENTS in this college. Are you sure?")) return;
-            
             updateProgress(0, pendingExcelData.length, "Syncing to Firebase...");
             
             if(isReplacement) {
@@ -336,8 +332,9 @@
 
             for (let row of pendingExcelData) {
                 row.collegeId = currentCollegeId;
-                let docId = row["Roll No."] || row["Contact No."] || Date.now().toString() + Math.random();
-                docId = docId.toString().replace(/[^a-zA-Z0-9]/g, '_');
+                // BUGFIX: Use Name+Contact as unique ID if Roll No is missing so we never overwrite students with same Contact
+                let baseId = row["Roll No."] || (row["Name"] + "_" + row["Contact No."]) || Date.now().toString() + Math.random();
+                let docId = baseId.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
                 
                 let matchedFile = null;
                 if (row["Photo_File"]) {
@@ -366,21 +363,16 @@
 
                 delete row["Photo_File"];
                 uploadPromises.push(setDoc(doc(db, "portal_students", docId), row, {merge: true}));
-                
-                processedCount++;
-                updateProgress(processedCount, pendingExcelData.length, "Uploading Data...");
+                processedCount++; updateProgress(processedCount, pendingExcelData.length, "Uploading Data...");
             }
 
             await Promise.all(uploadPromises);
             alert("Upload Complete! Students and photos successfully matched and synced.");
             
             document.getElementById('uploadActions').classList.add('hidden');
-            document.getElementById('excelUploadInput').value = '';
-            document.getElementById('photoUploadInput').value = '';
-            document.getElementById('excel-status-text').innerText = '.xlsx or .xls';
-            document.getElementById('photo-status-text').innerText = 'Select multiple images at once';
+            document.getElementById('excelUploadInput').value = ''; document.getElementById('photoUploadInput').value = '';
+            document.getElementById('excel-status-text').innerText = '.xlsx or .xls'; document.getElementById('photo-status-text').innerText = 'Select multiple images at once';
             pendingExcelData = []; pendingPhotoFiles = [];
-            
             loadStudents();
         };
 
@@ -390,6 +382,7 @@
                 reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error);
             });
         }
+
 
         const views = { dashboard: document.getElementById('viewDashboard'), college: document.getElementById('viewCollege'), designer: document.getElementById('viewDesigner') };
         function showView(viewName) { Object.values(views).forEach(v => v.classList.add('hidden')); views[viewName].classList.remove('hidden'); }
@@ -425,6 +418,20 @@
             document.getElementById('newCollegeName').value = ""; loadColleges();
         });
 
+        // BUGFIX: Add Delete College Feature
+        window.deleteCollege = async (collegeId) => {
+            if(!confirm("⚠️ EXTREME DANGER: Are you sure you want to permanently delete this ENTIRE college, its layout, and ALL its students? This cannot be undone.")) return;
+            const btn = event.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...'; btn.disabled = true;
+            try {
+                await deleteDoc(doc(db, "schools", collegeId));
+                const q = query(collection(db, "portal_students"), where("collegeId", "==", collegeId));
+                const snapshot = await getDocs(q); const deletePromises = [];
+                snapshot.forEach(docSnap => deletePromises.push(deleteDoc(doc(db, "portal_students", docSnap.id))));
+                await Promise.all(deletePromises);
+                alert("College completely deleted."); loadColleges();
+            } catch(e) { alert("Error deleting college."); btn.innerHTML = '<i class="fa-solid fa-trash"></i> Delete'; btn.disabled = false; }
+        };
+
         async function loadColleges() {
             const q = query(collection(db, "schools"), where("source", "==", "admin_id_portal"));
             const snapshot = await getDocs(q); const list = document.getElementById('collegesList'); list.innerHTML = "";
@@ -432,10 +439,13 @@
                 const data = docSnap.data(); const card = document.createElement('div');
                 card.className = "bg-white p-6 rounded-lg shadow border-l-4 border-blue-600 hover:shadow-md transition flex flex-col justify-between";
                 card.innerHTML = `
-                    <div class="cursor-pointer" onclick="openCollegeAdmin('${docSnap.id}', '${data.name}')">
+                    <div class="cursor-pointer flex-grow" onclick="openCollegeAdmin('${docSnap.id}', '${data.name}')">
                         <h3 class="font-bold text-lg text-gray-800">${data.name}</h3><p class="text-xs text-gray-500 mt-1">ID: ${docSnap.id}</p>
                     </div>
-                    <button onclick="shareCollege('${docSnap.id}')" class="mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-1.5 px-3 rounded border font-medium w-max"><i class="fa-solid fa-link"></i> Copy Client Link</button>
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="shareCollege('${docSnap.id}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-1.5 px-3 rounded border font-medium flex-1"><i class="fa-solid fa-link"></i> Link</button>
+                        <button onclick="deleteCollege('${docSnap.id}')" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs py-1.5 px-3 rounded border border-red-200 font-medium flex-1"><i class="fa-solid fa-trash"></i> Delete</button>
+                    </div>
                 `;
                 list.appendChild(card);
             });
@@ -560,7 +570,7 @@
             });
         }
 
-        // ================= BULLETPROOF TEXT WRAPPING =================
+        // ================= BUGFIX: PERFECT ADDRESS WRAPPING =================
         function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
             if (!text) return;
             text = text.toString();
@@ -571,27 +581,25 @@
             for (let i = 0; i < words.length; i++) {
                 let word = words[i];
                 
-                // Force break if a single word is larger than the max width
-                if(ctx.measureText(word).width > maxWidth) {
+                // Force break if a single massive string (like village name) is wider than max width
+                while(ctx.measureText(word).width > maxWidth) {
+                    let fitStr = '';
+                    let charIndex = 0;
+                    while(charIndex < word.length && ctx.measureText(fitStr + word[charIndex]).width <= maxWidth) {
+                        fitStr += word[charIndex];
+                        charIndex++;
+                    }
                     if(currentLine) { lines.push(currentLine); currentLine = ''; }
-                    let tempWord = '';
-                    for(let char of word) {
-                        if(ctx.measureText(tempWord + char).width > maxWidth) {
-                            lines.push(tempWord);
-                            tempWord = char;
-                        } else {
-                            tempWord += char;
-                        }
-                    }
-                    currentLine = tempWord;
+                    lines.push(fitStr);
+                    word = word.substring(charIndex);
+                }
+
+                const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                if (ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
+                    lines.push(currentLine);
+                    currentLine = word;
                 } else {
-                    let testLine = currentLine + (currentLine ? ' ' : '') + word;
-                    if (ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
-                        lines.push(currentLine);
-                        currentLine = word;
-                    } else {
-                        currentLine = testLine;
-                    }
+                    currentLine = testLine;
                 }
             }
             if (currentLine) lines.push(currentLine);
@@ -776,7 +784,7 @@
             await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true}); alert("Configuration Saved!");
         });
 
-        // ================= BULLETPROOF EXPORT ENGINE =================
+        // ================= BUGFIX: BULLETPROOF EXPORT ENGINE =================
         async function renderCardOnCanvas(student, config, addWatermark = false) {
             return new Promise(async (resolve) => {
                 const canvas = document.getElementById('idCanvas'); const ctx = canvas.getContext('2d');
@@ -794,14 +802,15 @@
                     });
                 }
                 
+                // BARCODE - Undistorted Scaling
                 if(config.enableBarcode !== false) {
                     const nameKey = Object.keys(student).find(k => k.toLowerCase().includes('name')) || 'Name';
                     const phoneKey = Object.keys(student).find(k => k.toLowerCase().includes('contact') || k.toLowerCase().includes('phone') || k.toLowerCase().includes('mobile')) || 'Contact No.';
                     const barcodeData = `${student[nameKey]||'NA'}-${student[phoneKey]||'NA'}`.substring(0, 40);
                     const barcodeImg = await createBarcode(barcodeData);
+                    const bScale = config.barcodeS || 1.0;
                     if(barcodeImg) { 
-                        const bScale = config.barcodeS || 1.0;
-                        ctx.imageSmoothingEnabled = false; // Keeps barcode lines perfectly sharp
+                        ctx.imageSmoothingEnabled = false; // Keeps lines sharp
                         ctx.drawImage(barcodeImg, config.barcodeX||0, config.barcodeY||0, barcodeImg.width * bScale, barcodeImg.height * bScale); 
                         ctx.imageSmoothingEnabled = true;
                     }
@@ -814,7 +823,7 @@
                     ctx.restore();
                 }
 
-                // Never-Fail Photo Box
+                // NEVER-SKIP PHOTO BOX (try-catch prevents the export from crashing)
                 if(config.enablePhoto !== false) {
                     try {
                         const photoImg = await loadCachedImage(student['Photo Link']);
@@ -844,6 +853,7 @@
             const total = currentStudents.length; if(total === 0) return alert("No students to process!");
             
             updateProgress(0, total, "Generating ZIP File...");
+            document.getElementById('progressSubtitle').innerText = "Processing at high speed. Please wait.";
             const zip = new JSZip(); const folder = zip.folder("ID_Cards");
             
             for(let i=0; i < total; i++) {
@@ -868,6 +878,7 @@
             const total = currentStudents.length; if(total === 0) return alert("No students to process!");
             
             updateProgress(0, total, "Generating PDF File...");
+            document.getElementById('progressSubtitle').innerText = "Processing at high speed. Please wait.";
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [document.getElementById('livePreviewCanvas').width, document.getElementById('livePreviewCanvas').height] });
             
