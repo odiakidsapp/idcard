@@ -160,11 +160,11 @@
                                 <h4 class="font-bold text-green-700 text-sm"><i class="fa-solid fa-barcode mr-1"></i> 3. Barcode Properties</h4>
                                 <input type="checkbox" id="enableBarcode" checked class="w-4 h-4 text-green-600" onchange="drawLivePreview()">
                             </div>
-                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Scale multiplier keeps barcode scannable without distortion.</p>
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="grid grid-cols-4 gap-2">
                                 <div><label class="text-[10px] text-gray-500 uppercase">X</label><input type="number" id="coordBarcodeX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Y</label><input type="number" id="coordBarcodeY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
-                                <div><label class="text-[10px] text-gray-500 uppercase">Size / Scale</label><input type="number" id="coordBarcodeS" value="1.0" step="0.1" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
+                                <div><label class="text-[10px] text-gray-500 uppercase">Width</label><input type="number" id="coordBarcodeW" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
+                                <div><label class="text-[10px] text-gray-500 uppercase">Height</label><input type="number" id="coordBarcodeH" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                             </div>
                         </div>
 
@@ -254,8 +254,8 @@
         let pendingExcelData = []; let pendingPhotoFiles = [];
 
         const dummyDataGen = {
-            'name': 'John Doe', 'student': 'Jane Smith', 'contact': '9876543210', 'phone': '9876543210', 'mobile': '9876543210',
-            'roll': '101', 'class': '12th Grade', 'stream': 'Science', 'blood': 'O+', 'dob': '15-Aug-2005', 'session': '2025-2026', 'father': 'Robert Doe', 'address': 'At- Fake Village, Po- Fake Post, Dist- Fake City, 765001'
+            'name': 'JAYSHREE BHATRA', 'contact': '6232061078', 'phone': '6232061078', 'mobile': '6232061078',
+            'roll': '101', 'class': '12th Grade', 'stream': 'Science', 'blood': 'O+', 'dob': '11 Apr 2010', 'session': '2025-2026', 'father': 'BALI BHATRA', 'address': 'GHATBASULI, UKIAPALI, KOSAGUMUDA'
         };
         function getDummyValue(key) {
             const k = key.toLowerCase();
@@ -332,7 +332,6 @@
 
             for (let row of pendingExcelData) {
                 row.collegeId = currentCollegeId;
-                // BUGFIX: Use Name+Contact as unique ID if Roll No is missing so we never overwrite students with same Contact
                 let baseId = row["Roll No."] || (row["Name"] + "_" + row["Contact No."]) || Date.now().toString() + Math.random();
                 let docId = baseId.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
                 
@@ -418,7 +417,6 @@
             document.getElementById('newCollegeName').value = ""; loadColleges();
         });
 
-        // BUGFIX: Add Delete College Feature
         window.deleteCollege = async (collegeId) => {
             if(!confirm("⚠️ EXTREME DANGER: Are you sure you want to permanently delete this ENTIRE college, its layout, and ALL its students? This cannot be undone.")) return;
             const btn = event.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...'; btn.disabled = true;
@@ -560,6 +558,7 @@
         };
 
         // ================= BARCODE GENERATOR =================
+        // Generates the raw barcode perfectly to avoid line distortion
         function createBarcode(text) {
             return new Promise((resolve) => {
                 if(!text) return resolve(null); const canvas = document.createElement('canvas');
@@ -570,13 +569,15 @@
             });
         }
 
-        // ================= BUGFIX: PERFECT ADDRESS WRAPPING =================
+        // ================= BUGFIX 1: BULLETPROOF ADDRESS WRAPPING =================
         function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
             if (!text) return;
             text = text.toString();
             let words = text.split(' ');
             let lines = [];
             let currentLine = '';
+
+            if (maxWidth <= 0) maxWidth = 10; // Failsafe to completely prevent infinite loop hang
 
             for (let i = 0; i < words.length; i++) {
                 let word = words[i];
@@ -589,6 +590,8 @@
                         fitStr += word[charIndex];
                         charIndex++;
                     }
+                    if (charIndex === 0) { fitStr = word[0]; charIndex = 1; } // Failsafe to force at least 1 character
+                    
                     if(currentLine) { lines.push(currentLine); currentLine = ''; }
                     lines.push(fitStr);
                     word = word.substring(charIndex);
@@ -635,7 +638,8 @@
             }
             if(document.getElementById('enableBarcode').checked) {
                 const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
-                if(x >= bx && x <= bx + 150 && y >= by && y <= by + 50) return { type: 'barcode', id: 'coordBarcode' };
+                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
+                if(x >= bx && x <= bx + bw && y >= by && y <= by + bh) return { type: 'barcode', id: 'coordBarcode' };
             }
             for(let field of dynamicFields) {
                 if(document.getElementById(`enable_${field}`)?.checked) {
@@ -689,13 +693,19 @@
                 liveCtx.fillStyle = '#1e3a8a'; liveCtx.font = 'bold 20px Arial'; liveCtx.textAlign = 'center'; liveCtx.textBaseline = 'middle'; liveCtx.fillText('PHOTO', px + pw/2, py + ph/2);
                 liveCtx.restore();
             }
+            
+            // BUGFIX 2: REAL BARCODE PREVIEW SO IT MATCHES EXPORT
             if(document.getElementById('enableBarcode').checked) {
                 const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
-                const bScale = parseFloat(document.getElementById('coordBarcodeS').value)||1.0;
+                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
                 
-                liveCtx.fillStyle = 'rgba(16, 185, 129, 0.3)'; liveCtx.fillRect(bx, by, 150 * bScale, 50 * bScale); 
-                liveCtx.strokeStyle = '#10b981'; liveCtx.lineWidth = 3; liveCtx.strokeRect(bx, by, 150 * bScale, 50 * bScale);
-                liveCtx.fillStyle = '#065f46'; liveCtx.font = 'bold 16px Arial'; liveCtx.textAlign = 'left'; liveCtx.textBaseline = 'top'; liveCtx.fillText('BARCODE', bx + 5, by + 5);
+                const barcodeData = `${getDummyValue('name')}-${getDummyValue('contact')}`.substring(0, 40);
+                const barcodeImg = await createBarcode(barcodeData);
+                if(barcodeImg) { 
+                    liveCtx.imageSmoothingEnabled = false; // Keeps lines sharp and scannable
+                    liveCtx.drawImage(barcodeImg, bx, by, bw, bh); 
+                    liveCtx.imageSmoothingEnabled = true;
+                }
             }
 
             liveCtx.textBaseline = 'alphabetic';
@@ -725,7 +735,7 @@
             
             document.getElementById('enableBarcode').checked = collegeConfig.enableBarcode !== false;
             document.getElementById('coordBarcodeX').value = collegeConfig.barcodeX || 0; document.getElementById('coordBarcodeY').value = collegeConfig.barcodeY || 0;
-            document.getElementById('coordBarcodeS').value = collegeConfig.barcodeS || 1.0;
+            document.getElementById('coordBarcodeW').value = collegeConfig.barcodeW || 150; document.getElementById('coordBarcodeH').value = collegeConfig.barcodeH || 40;
 
             const fieldsDiv = document.getElementById('textFieldsSettings'); fieldsDiv.innerHTML = '';
             dynamicFields.forEach(field => {
@@ -767,7 +777,7 @@
             
             collegeConfig.enableBarcode = document.getElementById('enableBarcode').checked;
             collegeConfig.barcodeX = parseInt(document.getElementById('coordBarcodeX').value); collegeConfig.barcodeY = parseInt(document.getElementById('coordBarcodeY').value);
-            collegeConfig.barcodeS = parseFloat(document.getElementById('coordBarcodeS').value) || 1.0;
+            collegeConfig.barcodeW = parseInt(document.getElementById('coordBarcodeW').value); collegeConfig.barcodeH = parseInt(document.getElementById('coordBarcodeH').value);
             
             collegeConfig.fields = {};
             dynamicFields.forEach(field => {
@@ -784,7 +794,7 @@
             await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true}); alert("Configuration Saved!");
         });
 
-        // ================= BUGFIX: BULLETPROOF EXPORT ENGINE =================
+        // ================= BULLETPROOF EXPORT ENGINE =================
         async function renderCardOnCanvas(student, config, addWatermark = false) {
             return new Promise(async (resolve) => {
                 const canvas = document.getElementById('idCanvas'); const ctx = canvas.getContext('2d');
@@ -802,16 +812,14 @@
                     });
                 }
                 
-                // BARCODE - Undistorted Scaling
                 if(config.enableBarcode !== false) {
                     const nameKey = Object.keys(student).find(k => k.toLowerCase().includes('name')) || 'Name';
                     const phoneKey = Object.keys(student).find(k => k.toLowerCase().includes('contact') || k.toLowerCase().includes('phone') || k.toLowerCase().includes('mobile')) || 'Contact No.';
                     const barcodeData = `${student[nameKey]||'NA'}-${student[phoneKey]||'NA'}`.substring(0, 40);
                     const barcodeImg = await createBarcode(barcodeData);
-                    const bScale = config.barcodeS || 1.0;
                     if(barcodeImg) { 
-                        ctx.imageSmoothingEnabled = false; // Keeps lines sharp
-                        ctx.drawImage(barcodeImg, config.barcodeX||0, config.barcodeY||0, barcodeImg.width * bScale, barcodeImg.height * bScale); 
+                        ctx.imageSmoothingEnabled = false; // Keeps lines extremely sharp
+                        ctx.drawImage(barcodeImg, config.barcodeX||0, config.barcodeY||0, config.barcodeW||150, config.barcodeH||40); 
                         ctx.imageSmoothingEnabled = true;
                     }
                 }
@@ -823,7 +831,6 @@
                     ctx.restore();
                 }
 
-                // NEVER-SKIP PHOTO BOX (try-catch prevents the export from crashing)
                 if(config.enablePhoto !== false) {
                     try {
                         const photoImg = await loadCachedImage(student['Photo Link']);
