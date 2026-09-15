@@ -161,11 +161,12 @@
                                 <input type="checkbox" id="enableBarcode" checked class="w-4 h-4 text-green-600" onchange="drawLivePreview()">
                             </div>
                             <p class="text-[10px] text-gray-500 mb-2 leading-tight">Barcode automatically encodes the Student's Name.</p>
-                            <div class="grid grid-cols-4 gap-2">
+                            <div class="grid grid-cols-5 gap-2">
                                 <div><label class="text-[10px] text-gray-500 uppercase">X</label><input type="number" id="coordBarcodeX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Y</label><input type="number" id="coordBarcodeY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Width</label><input type="number" id="coordBarcodeW" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Height</label><input type="number" id="coordBarcodeH" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
+                                <div><label class="text-[10px] text-gray-500 uppercase">Scale</label><input type="number" id="coordBarcodeS" class="border p-1.5 rounded text-sm w-full" title="Bar Width (1=Small, 2=Normal)" oninput="drawLivePreview()"></div>
                             </div>
                         </div>
 
@@ -558,58 +559,24 @@
             } catch(e) { alert("Upload Failed. Check internet."); closePhotoModal(); }
         };
 
-        // ================= BARCODE GENERATOR (RESIZABLE & SCANNABLE) =================
-        // IMPORTANT: a barcode can't be resized like a normal photo. Shrinking a finished
-        // barcode IMAGE with ctx.drawImage() blurs (anti-aliases) the bar edges together,
-        // which is exactly what makes a scaled-down barcode unscannable.
-        // The correct way to resize a barcode is to REGENERATE it with JsBarcode at an
-        // integer bar (module) width that fits your target size, so every bar stays a
-        // crisp, whole number of pixels wide - no blur, at any size.
-        //
-        // How it works:
-        // 1) We first render the text once at the minimum module width (1px) purely to
-        //    measure how many pixels wide this specific text needs at that resolution.
-        // 2) We then pick the LARGEST integer module width that still fits your target
-        //    box width, and regenerate the real barcode at that width. That's the actual
-        //    "resize" - an integer bar width, never a fractional/blurred scale.
-        // 3) There's a hard physical floor: module width can't go below 1px, or bars
-        //    merge and no scanner can read it. If your box is narrower than that, the
-        //    barcode will render at its minimum scannable width (1px bars) instead of
-        //    shrinking further and breaking - a bit bigger than your box beats unreadable.
-        function measureModuleWidth1(safeText) {
-            const measureCanvas = document.createElement('canvas');
-            JsBarcode(measureCanvas, safeText, {
-                format: "CODE128", displayValue: false, margin: 10,
-                background: "#ffffff", lineColor: "#000000", width: 1, height: 10
-            });
-            return measureCanvas.width; // total width in px if every bar were 1px wide
-        }
-
-        function createBarcode(text, targetW, targetH) {
+        // ================= BARCODE GENERATOR (FIXED) =================
+        function createBarcode(text, targetW, targetH, scale) {
             return new Promise((resolve) => {
                 if(!text || !text.toString().trim()) return resolve(null);
                 // Sanitize: CODE128 safe characters only (printable ASCII 32-126)
                 const safeText = text.toString().replace(/[^\x20-\x7E]/g, '').trim().substring(0, 40);
                 if(!safeText) return resolve(null);
+                const canvas = document.createElement('canvas');
                 try {
-                    const naturalWidthAt1 = measureModuleWidth1(safeText);
-                    // Pick the largest whole-pixel module width that fits targetW.
-                    // Minimum 1 (the physical scanning floor) - never smaller, never fractional.
-                    let moduleWidth = 2;
-                    if(targetW && naturalWidthAt1 > 0) {
-                        moduleWidth = Math.max(1, Math.floor(targetW / naturalWidthAt1));
-                    }
-                    const barH = Math.max(Math.round(targetH) || 40, 15); // keep bars tall enough to scan
-
-                    const canvas = document.createElement('canvas');
+                    const barWeight = scale || 2; 
                     JsBarcode(canvas, safeText, {
                         format: "CODE128",
                         displayValue: false,
-                        margin: 10,             // quiet zone preserved - required for scanning
+                        margin: 12,           
                         background: "#ffffff",
                         lineColor: "#000000",
-                        width: moduleWidth,     // integer bar width -> always pixel-sharp
-                        height: barH
+                        width: barWeight, 
+                        height: targetH || 40 // Removed the forced 60px minimum
                     });
                     const img = new Image();
                     img.onload = () => { img._naturalBarcodeW = canvas.width; img._naturalBarcodeH = canvas.height; resolve(img); };
@@ -618,19 +585,7 @@
             });
         }
 
-        // Draw the (already correctly-sized, pixel-sharp) barcode centered in the box.
-        // No further scaling happens here - that's the whole point, it's drawn 1:1.
-        function getContainedBarcodeRect(img, boxX, boxY, boxW, boxH) {
-            const natW = img._naturalBarcodeW || boxW || 1;
-            const natH = img._naturalBarcodeH || boxH || 1;
-            return {
-                drawX: boxX + (boxW - natW) / 2,
-                drawY: boxY + (boxH - natH) / 2,
-                drawW: natW, drawH: natH
-            };
-        }
-
-        // ================= BUGFIX: BULLETPROOF ADDRESS WRAPPING =================
+        // ================= BULLETPROOF ADDRESS WRAPPING =================
         function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
             if (!text) return;
             text = text.toString();
@@ -638,7 +593,6 @@
             let lines = [];
             let currentLine = '';
 
-            // ABSOLUTE FAILSAFE: Prevents browser from hanging if user types 0 or 1 into MaxWidth
             let safeMaxWidth = Math.max(maxWidth, 40);
 
             for (let i = 0; i < words.length; i++) {
@@ -757,16 +711,28 @@
             
             // DRAW REAL BARCODE ON PREVIEW
             if(document.getElementById('enableBarcode').checked) {
-                const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
-                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
+                const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; 
+                const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
+                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; 
+                const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
+                const bs = parseInt(document.getElementById('coordBarcodeS').value)||2;
                 
-                // Encode student Name in barcode
                 const barcodeData = getDummyValue('name');
-                const barcodeImg = await createBarcode(barcodeData.toString(), bw, bh);
+                const barcodeImg = await createBarcode(barcodeData.toString(), bw, bh, bs);
+                
                 if(barcodeImg) {
-                    // Regenerated at an integer bar width for this box, drawn 1:1 (no scaling) - stays scannable at any size
-                    const rect = getContainedBarcodeRect(barcodeImg, bx, by, bw, bh);
-                    liveCtx.drawImage(barcodeImg, rect.drawX, rect.drawY, rect.drawW, rect.drawH);
+                    liveCtx.imageSmoothingEnabled = false; 
+                    
+                    // CRITICAL FIX: Get the true generated width of the barcode.
+                    // This prevents the canvas from squishing the bars horizontally!
+                    const trueWidth = barcodeImg._naturalBarcodeW || barcodeImg.width;
+                    const trueHeight = barcodeImg._naturalBarcodeH || barcodeImg.height;
+                    
+                    // Center the true-sized barcode inside your preferred 'Width' box
+                    const drawX = bx + Math.max(0, (bw - trueWidth) / 2);
+                    
+                    liveCtx.drawImage(barcodeImg, drawX, by, trueWidth, trueHeight);
+                    liveCtx.imageSmoothingEnabled = true; 
                 }
             }
 
@@ -798,6 +764,7 @@
             document.getElementById('enableBarcode').checked = collegeConfig.enableBarcode !== false;
             document.getElementById('coordBarcodeX').value = collegeConfig.barcodeX || 0; document.getElementById('coordBarcodeY').value = collegeConfig.barcodeY || 0;
             document.getElementById('coordBarcodeW').value = collegeConfig.barcodeW || 150; document.getElementById('coordBarcodeH').value = collegeConfig.barcodeH || 40;
+            document.getElementById('coordBarcodeS').value = collegeConfig.barcodeS || 2;
 
             const fieldsDiv = document.getElementById('textFieldsSettings'); fieldsDiv.innerHTML = '';
             dynamicFields.forEach(field => {
@@ -840,6 +807,7 @@
             collegeConfig.enableBarcode = document.getElementById('enableBarcode').checked;
             collegeConfig.barcodeX = parseInt(document.getElementById('coordBarcodeX').value); collegeConfig.barcodeY = parseInt(document.getElementById('coordBarcodeY').value);
             collegeConfig.barcodeW = parseInt(document.getElementById('coordBarcodeW').value); collegeConfig.barcodeH = parseInt(document.getElementById('coordBarcodeH').value);
+            collegeConfig.barcodeS = parseInt(document.getElementById('coordBarcodeS').value) || 2;
             
             collegeConfig.fields = {};
             dynamicFields.forEach(field => {
@@ -856,13 +824,13 @@
             await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true}); alert("Configuration Saved!");
         });
 
-        // ================= BUGFIX: PERFECT EXPORT ENGINE =================
+        // ================= EXPORT ENGINE =================
         async function renderCardOnCanvas(student, config, addWatermark = false) {
             return new Promise(async (resolve) => {
                 const canvas = document.getElementById('idCanvas'); const ctx = canvas.getContext('2d');
                 const bgImg = await loadCachedImage(config.bgUrl); canvas.width = bgImg.width; canvas.height = bgImg.height; ctx.drawImage(bgImg, 0, 0);
 
-                // DRAW WATERMARK *BEFORE* BARCODE SO IT DOESN'T RUIN THE SCANNER
+                // DRAW WATERMARK
                 if(addWatermark) {
                     ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-Math.PI / 4);
                     ctx.font = "bold 60px Arial"; ctx.fillStyle = "rgba(255, 0, 0, 0.15)"; ctx.textAlign = "center"; ctx.textBaseline = 'middle'; 
@@ -882,20 +850,26 @@
                     });
                 }
                 
-                // BARCODE - encodes the student's Name
+                // BARCODE - EXPORT LOGIC FIXED
                 if(config.enableBarcode !== false) {
                     const nameKey = Object.keys(student).find(k => k.toLowerCase().includes('name')) || 'Name';
                     const barcodeValue = (student[nameKey] || 'UNKNOWN');
-                    const bx = config.barcodeX || 0;
-                    const by = config.barcodeY || 0;
-                    const bw = config.barcodeW || 200;
-                    const bh = config.barcodeH || 60;
-                    // Regenerated at an integer bar width sized for this exact box -
-                    // matches the live preview exactly, and stays scannable at any size.
-                    const barcodeImg = await createBarcode(barcodeValue.toString(), bw, bh);
+                    const bs = config.barcodeS || 2; 
+                    
+                    const barcodeImg = await createBarcode(barcodeValue.toString(), config.barcodeW||150, config.barcodeH||40, bs);
+                    
                     if(barcodeImg) {
-                        const rect = getContainedBarcodeRect(barcodeImg, bx, by, bw, bh);
-                        ctx.drawImage(barcodeImg, rect.drawX, rect.drawY, rect.drawW, rect.drawH);
+                        ctx.imageSmoothingEnabled = false;
+                        
+                        // CRITICAL FIX: Draw at natural un-squished width
+                        const trueWidth = barcodeImg._naturalBarcodeW || barcodeImg.width;
+                        const trueHeight = barcodeImg._naturalBarcodeH || barcodeImg.height;
+                        const bx = config.barcodeX || 0;
+                        const bw = config.barcodeW || 150;
+                        const drawX = bx + Math.max(0, (bw - trueWidth) / 2);
+                        
+                        ctx.drawImage(barcodeImg, drawX, config.barcodeY||0, trueWidth, trueHeight);
+                        ctx.imageSmoothingEnabled = true;
                     }
                 }
 
