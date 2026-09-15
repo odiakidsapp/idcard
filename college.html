@@ -14,6 +14,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- jsPDF for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- JsBarcode for Barcode Generation -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
     <style>
         .camera-overlay {
@@ -24,9 +26,12 @@
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 240px; height: 320px; border: 2px dashed rgba(255,255,255,0.7); border-radius: 50% 50% 40% 40%; z-index: 11;
         }
-        /* Custom scrollbar for settings */
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Drag pointer for the canvas */
+        #livePreviewCanvas { cursor: grab; }
+        #livePreviewCanvas:active { cursor: grabbing; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans min-h-screen">
@@ -97,7 +102,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow overflow-hidden">
                 
                 <!-- Left Panel: Settings Inputs -->
-                <div class="bg-white p-6 rounded-lg shadow-sm flex flex-col h-full overflow-hidden border border-gray-200">
+                <div class="bg-white p-6 rounded-lg shadow-sm flex flex-col h-full overflow-hidden border border-gray-200 relative">
                     <div class="flex justify-between items-center mb-4 flex-shrink-0 border-b pb-2">
                         <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-sliders text-blue-600"></i> Settings & Coordinates</h3>
                         <button id="btnSaveConfig" class="bg-green-600 text-white px-4 py-1.5 rounded-md hover:bg-green-700 font-bold text-sm shadow-sm">Save Config</button>
@@ -111,8 +116,11 @@
                         </div>
 
                         <!-- Photo Coordinates -->
-                        <div class="bg-gray-50 p-3 rounded border">
-                            <h4 class="font-bold mb-2 text-blue-800 text-sm">2. Photo Box Coordinates (px)</h4>
+                        <div class="bg-gray-50 p-3 rounded border border-blue-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-bold text-blue-800 text-sm"><i class="fa-solid fa-image mr-1"></i> 2. Photo Coordinates (px)</h4>
+                                <input type="checkbox" id="enablePhoto" checked class="w-4 h-4 text-blue-600" onchange="drawLivePreview()">
+                            </div>
                             <div class="grid grid-cols-4 gap-2">
                                 <div><label class="text-xs text-gray-500">X</label><input type="number" id="coordPhotoX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-xs text-gray-500">Y</label><input type="number" id="coordPhotoY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
@@ -121,9 +129,25 @@
                             </div>
                         </div>
 
+                        <!-- Barcode Coordinates -->
+                        <div class="bg-gray-50 p-3 rounded border border-green-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-bold text-green-700 text-sm"><i class="fa-solid fa-barcode mr-1"></i> 3. Barcode Coordinates (px)</h4>
+                                <input type="checkbox" id="enableBarcode" checked class="w-4 h-4 text-green-600" onchange="drawLivePreview()">
+                            </div>
+                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Barcode automatically encodes Student Name & Mobile Number.</p>
+                            <div class="grid grid-cols-4 gap-2">
+                                <div><label class="text-xs text-gray-500">X</label><input type="number" id="coordBarcodeX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
+                                <div><label class="text-xs text-gray-500">Y</label><input type="number" id="coordBarcodeY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
+                                <div><label class="text-xs text-gray-500">Width</label><input type="number" id="coordBarcodeW" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
+                                <div><label class="text-xs text-gray-500">Height</label><input type="number" id="coordBarcodeH" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
+                            </div>
+                        </div>
+
                         <!-- Dynamic Text Coordinates -->
-                        <div class="bg-gray-50 p-3 rounded border" id="textFieldsSettingsContainer">
-                            <h4 class="font-bold mb-2 text-blue-800 text-sm">3. Text Coordinates (px)</h4>
+                        <div class="bg-gray-50 p-3 rounded border border-gray-300" id="textFieldsSettingsContainer">
+                            <h4 class="font-bold mb-2 text-gray-700 text-sm"><i class="fa-solid fa-font mr-1"></i> 4. Text Coordinates (px)</h4>
+                            <p class="text-xs text-gray-500 mb-2">Check the box to print the field. Uncheck to hide it.</p>
                             <div id="textFieldsSettings" class="space-y-2">
                                 <!-- Dynamic coordinate inputs injected here -->
                             </div>
@@ -136,9 +160,9 @@
                     
                     <!-- Live Preview Canvas Box -->
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-grow flex flex-col p-4 relative overflow-hidden">
-                        <h3 class="text-lg font-bold text-gray-800 mb-2 flex-shrink-0 flex justify-between">
-                            <span><i class="fa-solid fa-eye text-purple-600"></i> Live Interactive Preview</span>
-                            <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded border">Red dots indicate exact X,Y anchor points</span>
+                        <h3 class="text-lg font-bold text-gray-800 mb-2 flex-shrink-0 flex justify-between items-center">
+                            <span><i class="fa-solid fa-eye text-purple-600"></i> Interactive Canvas</span>
+                            <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner"><i class="fa-solid fa-hand-pointer mr-1"></i> Click & Drag elements to position them</span>
                         </h3>
                         <div class="flex-grow bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center p-2 overflow-hidden relative">
                             <!-- Visual scaling canvas, doesn't break actual high res exports -->
@@ -218,33 +242,34 @@
         let collegeConfig = {};
         let dynamicFields = [];
         let targetStudentId = null, targetStudentRoll = null;
+        
+        // --- Dummy Data Generator for Realistic Live Preview ---
+        const dummyDataGen = {
+            'name': 'John Doe', 'student': 'Jane Smith', 'contact': '9876543210', 'phone': '9876543210', 'mobile': '9876543210',
+            'roll': '101', 'class': '12th Grade', 'stream': 'Science', 'blood': 'O+', 'dob': '15-Aug-2005', 'session': '2025-2026', 'father': 'Robert Doe', 'address': '123 Fake Street, City'
+        };
+        function getDummyValue(key) {
+            const k = key.toLowerCase();
+            for(let d in dummyDataGen) { if(k.includes(d)) return dummyDataGen[d]; }
+            return `Sample ${key}`; // fallback
+        }
 
-        // Image Cache for Live Preview to prevent flickering
         const imageCache = {};
         async function loadCachedImage(url) {
-            if (!url) return null;
-            if (imageCache[url]) return imageCache[url];
+            if (!url) return null; if (imageCache[url]) return imageCache[url];
             return new Promise((resolve) => {
                 const img = new Image(); img.crossOrigin = "anonymous";
-                img.onload = () => { imageCache[url] = img; resolve(img); };
-                img.onerror = () => resolve(null);
-                img.src = url;
+                img.onload = () => { imageCache[url] = img; resolve(img); }; img.onerror = () => resolve(null); img.src = url;
             });
         }
 
-        // Navigation
         const views = { dashboard: document.getElementById('viewDashboard'), college: document.getElementById('viewCollege'), designer: document.getElementById('viewDesigner') };
         function showView(viewName) { Object.values(views).forEach(v => v.classList.add('hidden')); views[viewName].classList.remove('hidden'); }
         
         document.getElementById('navDashboard').addEventListener('click', () => { showView('dashboard'); loadColleges(); });
         document.getElementById('btnBackToCollege').addEventListener('click', () => showView('college'));
-        
-        document.getElementById('btnOpenDesigner').addEventListener('click', () => { 
-            showView('designer'); 
-            loadDesignerSettings(); 
-        });
+        document.getElementById('btnOpenDesigner').addEventListener('click', () => { showView('designer'); loadDesignerSettings(); });
 
-        // ================= AI VISION ENGINE (MEDIAPIPE) =================
         let FaceDetector = null, FilesetResolver = null, faceDetector = null, aiEngineReady = false;
         async function initAI() {
             try {
@@ -257,50 +282,35 @@
                 });
                 aiEngineReady = true;
                 document.getElementById('aiStatusBadge').innerHTML = "✅ AI Ready"; document.getElementById('aiStatusBadge').classList.replace('bg-blue-800', 'bg-green-700');
-            } catch(e) {
-                document.getElementById('aiStatusBadge').innerHTML = "⚠️ AI Failed";
-            }
+            } catch(e) { document.getElementById('aiStatusBadge').innerHTML = "⚠️ AI Failed"; }
         }
         initAI();
 
-        // ================= DASHBOARD & IMPORT (WITH SOURCE ISOLATION) =================
         document.getElementById('btnAddCollege').addEventListener('click', async () => {
             const name = document.getElementById('newCollegeName').value.trim();
             if(!name) return alert("Enter college name");
             const collegeId = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-            
-            // ISOLATION: Add source tag to ensure only this app queries it
             await setDoc(doc(db, "schools", collegeId), { name: name, config: {}, source: "admin_id_portal" });
-            document.getElementById('newCollegeName').value = "";
-            loadColleges();
+            document.getElementById('newCollegeName').value = ""; loadColleges();
         });
 
         async function loadColleges() {
-            // ISOLATION: Query ONLY schools created by this specific admin portal website
             const q = query(collection(db, "schools"), where("source", "==", "admin_id_portal"));
             const snapshot = await getDocs(q);
             const list = document.getElementById('collegesList'); list.innerHTML = "";
             snapshot.forEach(docSnap => {
-                const data = docSnap.data();
-                const card = document.createElement('div');
+                const data = docSnap.data(); const card = document.createElement('div');
                 card.className = "bg-white p-6 rounded-lg shadow border-l-4 border-blue-600 hover:shadow-md cursor-pointer transition";
                 card.innerHTML = `<h3 class="font-bold text-lg text-gray-800">${data.name}</h3><p class="text-xs text-gray-500 mt-1">ID: ${docSnap.id}</p>`;
-                card.onclick = () => {
-                    currentCollegeId = docSnap.id;
-                    document.getElementById('currentCollegeTitle').innerText = data.name;
-                    showView('college'); loadStudents();
-                };
+                card.onclick = () => { currentCollegeId = docSnap.id; document.getElementById('currentCollegeTitle').innerText = data.name; showView('college'); loadStudents(); };
                 list.appendChild(card);
             });
         }
 
         document.getElementById('excelUpload').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
+            const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
             reader.onload = async (event) => {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
+                const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, {type: 'array'});
                 const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                 alert(`Found ${rows.length} records. Uploading...`);
                 for (let row of rows) {
@@ -320,8 +330,7 @@
             const list = document.getElementById('studentsList'); list.innerHTML = "";
 
             snapshot.forEach(docSnap => {
-                const student = docSnap.data(); student.docId = docSnap.id;
-                currentStudents.push(student);
+                const student = docSnap.data(); student.docId = docSnap.id; currentStudents.push(student);
                 Object.keys(student).forEach(k => { if(k !== 'collegeId' && k !== 'docId' && k !== 'Photo Link') dynamicFields.add(k); });
 
                 const div = document.createElement('div');
@@ -341,9 +350,7 @@
                     <img src="${photoSrc}" class="w-24 h-32 object-cover border-2 border-white rounded shadow mb-3" />
                     <button onclick="openPhotoModal('${docSnap.id}', '${student['Roll No.'] || docSnap.id}')" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-xs font-bold w-full"><i class="fa-solid fa-camera mr-1"></i> Add / Edit</button>
                 </div>`;
-
-                div.innerHTML = detailsHTML;
-                list.appendChild(div);
+                div.innerHTML = detailsHTML; list.appendChild(div);
             });
             document.getElementById('stat-total').innerText = currentStudents.length;
             dynamicFields = Array.from(dynamicFields);
@@ -351,7 +358,6 @@
 
         window.updateStudentField = async (docId, field, value) => { await setDoc(doc(db, "portal_students", docId), { [field]: value }, {merge: true}); };
 
-        // ================= WEBCAM CROPPER (UNCHANGED) =================
         let videoStream = null;
         window.openPhotoModal = (docId, rollNo) => {
             targetStudentId = docId; targetStudentRoll = rollNo;
@@ -365,8 +371,7 @@
             document.getElementById('uploadContainer').classList.add('hidden'); document.getElementById('cameraContainer').classList.remove('hidden');
             document.getElementById('btnStartCamera').classList.add('hidden'); document.getElementById('btnUploadFile').classList.add('hidden');
             document.getElementById('btnCapturePhoto').classList.remove('hidden'); document.getElementById('btnCapturePhoto').classList.add('flex');
-            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            document.getElementById('webcamVideo').srcObject = videoStream;
+            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }); document.getElementById('webcamVideo').srcObject = videoStream;
         };
         window.capturePhoto = () => {
             const video = document.getElementById('webcamVideo'); const canvas = document.createElement('canvas');
@@ -399,155 +404,221 @@
                     else { sw = img.width; sh = img.width / t; sx = 0; sy = img.height * 0.1; }
                 }
                 const pCanvas = document.getElementById('processingCanvas'); const sc = Math.min(1, 600 / sw);
-                pCanvas.width = sw * sc; pCanvas.height = sh * sc;
-                pCanvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, pCanvas.width, pCanvas.height);
+                pCanvas.width = sw * sc; pCanvas.height = sh * sc; pCanvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, pCanvas.width, pCanvas.height);
                 const finalBase64 = pCanvas.toDataURL('image/jpeg', 0.85); preview.src = finalBase64;
                 status.classList.replace('bg-yellow-100', 'bg-blue-100'); status.classList.replace('text-yellow-800', 'text-blue-800'); status.innerText = "Uploading...";
                 
                 const storageRef = ref(storage, `student_photos/${targetStudentRoll}_${Date.now()}.jpg`);
                 await uploadString(storageRef, finalBase64, 'data_url');
-                const downloadUrl = await getDownloadURL(storageRef);
-                await setDoc(doc(db, "portal_students", targetStudentId), { "Photo Link": downloadUrl }, {merge: true});
+                await setDoc(doc(db, "portal_students", targetStudentId), { "Photo Link": await getDownloadURL(storageRef) }, {merge: true});
                 closePhotoModal(); loadStudents();
             } catch(e) { status.innerText = "Error. Try Again."; status.classList.replace('bg-yellow-100', 'bg-red-100'); }
         }
 
-        // ================= LIVE DESIGNER & EXPORT LOGIC =================
-        
-        // Make drawLivePreview globally accessible for inline oninput handlers
+        function createBarcode(text) {
+            return new Promise((resolve) => {
+                if(!text) return resolve(null);
+                const canvas = document.createElement('canvas');
+                try { JsBarcode(canvas, text, { format: "CODE128", displayValue: false, margin: 0, width: 2, height: 50 }); const img = new Image(); img.onload = () => resolve(img); img.src = canvas.toDataURL("image/png"); } 
+                catch(e) { resolve(null); }
+            });
+        }
+
+        // ================= DRAG AND DROP & LIVE DESIGNER =================
+        let isDragging = false, dragItem = null, dragOffsetX = 0, dragOffsetY = 0;
+        const liveCanvas = document.getElementById('livePreviewCanvas');
+        const liveCtx = liveCanvas.getContext('2d');
+
+        function getMousePos(evt) {
+            const rect = liveCanvas.getBoundingClientRect();
+            const scaleX = liveCanvas.width / rect.width;
+            const scaleY = liveCanvas.height / rect.height;
+            return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
+        }
+
+        function hitTest(x, y) {
+            // Check Photo
+            if(document.getElementById('enablePhoto').checked) {
+                const px = parseInt(document.getElementById('coordPhotoX').value) || 0; const py = parseInt(document.getElementById('coordPhotoY').value) || 0;
+                const pw = parseInt(document.getElementById('coordPhotoW').value) || 150; const ph = parseInt(document.getElementById('coordPhotoH').value) || 200;
+                if(x >= px && x <= px + pw && y >= py && y <= py + ph) return { type: 'photo', id: 'coordPhoto' };
+            }
+            // Check Barcode
+            if(document.getElementById('enableBarcode').checked) {
+                const bx = parseInt(document.getElementById('coordBarcodeX').value) || 0; const by = parseInt(document.getElementById('coordBarcodeY').value) || 0;
+                const bw = parseInt(document.getElementById('coordBarcodeW').value) || 150; const bh = parseInt(document.getElementById('coordBarcodeH').value) || 40;
+                if(x >= bx && x <= bx + bw && y >= by && y <= by + bh) return { type: 'barcode', id: 'coordBarcode' };
+            }
+            // Check Text Fields
+            for(let field of dynamicFields) {
+                if(document.getElementById(`enable_${field}`)?.checked) {
+                    const tx = parseInt(document.getElementById(`fX_${field}`).value); const ty = parseInt(document.getElementById(`fY_${field}`).value);
+                    const tSize = parseInt(document.getElementById(`fS_${field}`).value) || 24;
+                    if(!isNaN(tx) && !isNaN(ty)) {
+                        liveCtx.font = `bold ${tSize}px Arial`; const tw = liveCtx.measureText(getDummyValue(field)).width;
+                        if(x >= tx && x <= tx + tw && y >= ty - tSize && y <= ty) return { type: 'text', id: field };
+                    }
+                }
+            }
+            return null;
+        }
+
+        liveCanvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e); const hit = hitTest(pos.x, pos.y);
+            if(hit) {
+                isDragging = true; dragItem = hit;
+                if(hit.type === 'photo' || hit.type === 'barcode') {
+                    dragOffsetX = pos.x - parseInt(document.getElementById(`${hit.id}X`).value);
+                    dragOffsetY = pos.y - parseInt(document.getElementById(`${hit.id}Y`).value);
+                } else if(hit.type === 'text') {
+                    dragOffsetX = pos.x - parseInt(document.getElementById(`fX_${hit.id}`).value);
+                    dragOffsetY = pos.y - parseInt(document.getElementById(`fY_${hit.id}`).value);
+                }
+            }
+        });
+
+        liveCanvas.addEventListener('mousemove', (e) => {
+            if(!isDragging || !dragItem) return;
+            const pos = getMousePos(e);
+            if(dragItem.type === 'photo' || dragItem.type === 'barcode') {
+                document.getElementById(`${dragItem.id}X`).value = Math.round(pos.x - dragOffsetX);
+                document.getElementById(`${dragItem.id}Y`).value = Math.round(pos.y - dragOffsetY);
+            } else if(dragItem.type === 'text') {
+                document.getElementById(`fX_${dragItem.id}`).value = Math.round(pos.x - dragOffsetX);
+                document.getElementById(`fY_${dragItem.id}`).value = Math.round(pos.y - dragOffsetY);
+            }
+            window.drawLivePreview();
+        });
+
+        liveCanvas.addEventListener('mouseup', () => { isDragging = false; dragItem = null; });
+        liveCanvas.addEventListener('mouseleave', () => { isDragging = false; dragItem = null; });
+
         window.drawLivePreview = async () => {
-            const canvas = document.getElementById('livePreviewCanvas');
-            if(!canvas) return;
-            const ctx = canvas.getContext('2d');
-            
-            // 1. Get Live Inputs
+            if(!liveCanvas) return;
             const bgUrl = collegeConfig.bgUrl;
             if(!bgUrl) {
-                canvas.width = 600; canvas.height = 400;
-                ctx.fillStyle = "#e5e7eb"; ctx.fillRect(0,0,600,400);
-                ctx.fillStyle = "#9ca3af"; ctx.font = "20px Arial"; ctx.textAlign="center";
-                ctx.fillText("Upload background to see preview", 300, 200);
-                return;
+                liveCanvas.width = 600; liveCanvas.height = 400; liveCtx.fillStyle = "#e5e7eb"; liveCtx.fillRect(0,0,600,400);
+                liveCtx.fillStyle = "#9ca3af"; liveCtx.font = "20px Arial"; liveCtx.textAlign="center"; liveCtx.fillText("Upload background to see preview", 300, 200); return;
+            }
+            const bgImg = await loadCachedImage(bgUrl); if(!bgImg) return;
+            liveCanvas.width = bgImg.width; liveCanvas.height = bgImg.height; liveCtx.drawImage(bgImg, 0, 0);
+
+            // Dummy Photo Box
+            if(document.getElementById('enablePhoto').checked) {
+                const px = parseInt(document.getElementById('coordPhotoX').value) || 0; const py = parseInt(document.getElementById('coordPhotoY').value) || 0;
+                const pw = parseInt(document.getElementById('coordPhotoW').value) || 150; const ph = parseInt(document.getElementById('coordPhotoH').value) || 200;
+                liveCtx.fillStyle = 'rgba(59, 130, 246, 0.3)'; liveCtx.fillRect(px, py, pw, ph); liveCtx.strokeStyle = '#3b82f6'; liveCtx.lineWidth = 3; liveCtx.strokeRect(px, py, pw, ph);
+                liveCtx.fillStyle = '#1e3a8a'; liveCtx.font = 'bold 20px Arial'; liveCtx.textAlign = 'center'; liveCtx.textBaseline = 'middle'; liveCtx.fillText('PHOTO ZONE', px + pw/2, py + ph/2);
             }
 
-            const bgImg = await loadCachedImage(bgUrl);
-            if(!bgImg) return;
-            
-            // Set canvas real dimensions to template dimensions
-            canvas.width = bgImg.width; canvas.height = bgImg.height;
-            ctx.drawImage(bgImg, 0, 0);
+            // Dummy Barcode Box
+            if(document.getElementById('enableBarcode').checked) {
+                const bx = parseInt(document.getElementById('coordBarcodeX').value) || 0; const by = parseInt(document.getElementById('coordBarcodeY').value) || 0;
+                const bw = parseInt(document.getElementById('coordBarcodeW').value) || 150; const bh = parseInt(document.getElementById('coordBarcodeH').value) || 40;
+                if(bw > 0 && bh > 0) {
+                    liveCtx.fillStyle = 'rgba(16, 185, 129, 0.3)'; liveCtx.fillRect(bx, by, bw, bh); liveCtx.strokeStyle = '#10b981'; liveCtx.lineWidth = 3; liveCtx.strokeRect(bx, by, bw, bh);
+                    liveCtx.fillStyle = '#065f46'; liveCtx.font = 'bold 16px Arial'; liveCtx.textAlign = 'center'; liveCtx.textBaseline = 'middle'; liveCtx.fillText('||| BARCODE |||', bx + bw/2, by + bh/2);
+                }
+            }
 
-            // 2. Draw Dummy Photo Box
-            const px = parseInt(document.getElementById('coordPhotoX').value) || 0;
-            const py = parseInt(document.getElementById('coordPhotoY').value) || 0;
-            const pw = parseInt(document.getElementById('coordPhotoW').value) || 150;
-            const ph = parseInt(document.getElementById('coordPhotoH').value) || 200;
-            
-            ctx.fillStyle = 'rgba(59, 130, 246, 0.3)'; // Transparent Blue Box
-            ctx.fillRect(px, py, pw, ph);
-            ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.strokeRect(px, py, pw, ph);
-            ctx.fillStyle = '#1e3a8a'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('STUDENT', px + pw/2, py + ph/2);
-
-            // 3. Draw Dynamic Text & Anchor Dots
-            const dummyStudent = currentStudents.length > 0 ? currentStudents[0] : {};
-            ctx.fillStyle = '#000000'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-            
+            // Dynamic Text
+            liveCtx.fillStyle = '#000000'; liveCtx.textAlign = 'left'; liveCtx.textBaseline = 'alphabetic';
             dynamicFields.forEach(field => {
-                const x = parseInt(document.getElementById(`fX_${field}`)?.value);
-                const y = parseInt(document.getElementById(`fY_${field}`)?.value);
-                const size = parseInt(document.getElementById(`fS_${field}`)?.value) || 24;
-                
-                if(!isNaN(x) && !isNaN(y)) {
-                    // Draw Text
-                    ctx.font = `bold ${size}px Arial`;
-                    const text = dummyStudent[field] || `[${field}]`;
-                    ctx.fillText(text, x, y);
-                    
-                    // Draw Red Anchor Dot to show exactly where X,Y starts
-                    ctx.fillStyle = 'red';
-                    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#000000'; // Reset for next text
+                if(document.getElementById(`enable_${field}`)?.checked) {
+                    const x = parseInt(document.getElementById(`fX_${field}`)?.value); const y = parseInt(document.getElementById(`fY_${field}`)?.value);
+                    const size = parseInt(document.getElementById(`fS_${field}`)?.value) || 24;
+                    if(!isNaN(x) && !isNaN(y)) {
+                        liveCtx.font = `bold ${size}px Arial`; liveCtx.fillText(getDummyValue(field), x, y);
+                        liveCtx.fillStyle = 'red'; liveCtx.beginPath(); liveCtx.arc(x, y, 5, 0, Math.PI*2); liveCtx.fill(); liveCtx.fillStyle = '#000000'; // Red anchor dot
+                    }
                 }
             });
         };
 
         async function loadDesignerSettings() {
-            const docSnap = await getDoc(doc(db, "schools", currentCollegeId));
-            collegeConfig = docSnap.data()?.config || {};
-            collegeConfig.bgUrl = collegeConfig.bgUrl || null;
+            const docSnap = await getDoc(doc(db, "schools", currentCollegeId)); collegeConfig = docSnap.data()?.config || {}; collegeConfig.bgUrl = collegeConfig.bgUrl || null;
             
-            document.getElementById('coordPhotoX').value = collegeConfig.photoX || 0;
-            document.getElementById('coordPhotoY').value = collegeConfig.photoY || 0;
-            document.getElementById('coordPhotoW').value = collegeConfig.photoW || 200;
-            document.getElementById('coordPhotoH').value = collegeConfig.photoH || 250;
+            document.getElementById('enablePhoto').checked = collegeConfig.enablePhoto !== false;
+            document.getElementById('coordPhotoX').value = collegeConfig.photoX || 0; document.getElementById('coordPhotoY').value = collegeConfig.photoY || 0;
+            document.getElementById('coordPhotoW').value = collegeConfig.photoW || 200; document.getElementById('coordPhotoH').value = collegeConfig.photoH || 250;
+            
+            document.getElementById('enableBarcode').checked = collegeConfig.enableBarcode !== false;
+            document.getElementById('coordBarcodeX').value = collegeConfig.barcodeX || 0; document.getElementById('coordBarcodeY').value = collegeConfig.barcodeY || 0;
+            document.getElementById('coordBarcodeW').value = collegeConfig.barcodeW || 150; document.getElementById('coordBarcodeH').value = collegeConfig.barcodeH || 40;
 
-            const fieldsDiv = document.getElementById('textFieldsSettings');
-            fieldsDiv.innerHTML = '';
-            
+            const fieldsDiv = document.getElementById('textFieldsSettings'); fieldsDiv.innerHTML = '';
             dynamicFields.forEach(field => {
                 const conf = collegeConfig.fields ? collegeConfig.fields[field] : {};
+                const isChecked = conf?.enabled !== false;
                 fieldsDiv.innerHTML += `
-                    <div class="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 shadow-sm">
-                        <span class="font-bold text-xs text-gray-600 w-1/3 truncate" title="${field}">${field}</span>
+                    <div class="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 shadow-sm transition hover:bg-gray-50">
+                        <input type="checkbox" id="enable_${field}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-blue-600 cursor-pointer" onchange="drawLivePreview()">
+                        <span class="font-bold text-xs text-gray-700 w-1/4 truncate cursor-move" title="${field}">${field}</span>
                         <input type="number" id="fX_${field}" placeholder="X" value="${conf?.x || ''}" class="border p-1 w-16 text-sm rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
                         <input type="number" id="fY_${field}" placeholder="Y" value="${conf?.y || ''}" class="border p-1 w-16 text-sm rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
                         <input type="number" id="fS_${field}" placeholder="Size" value="${conf?.size || 24}" class="border p-1 w-16 text-sm rounded bg-gray-50 focus:bg-white" oninput="drawLivePreview()">
                     </div>
                 `;
             });
-            window.drawLivePreview();
+            setTimeout(window.drawLivePreview, 100);
         }
 
         document.getElementById('bgUpload').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if(!file || file.size > 2097152) return alert("Background must be less than 2MB.");
-            const reader = new FileReader();
+            const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
             reader.onload = async (ev) => {
                 const storageRef = ref(storage, `private_templates/${currentCollegeId}_bg.jpg`);
                 await uploadString(storageRef, ev.target.result, 'data_url');
-                collegeConfig.bgUrl = await getDownloadURL(storageRef);
-                alert("Background uploaded successfully!");
-                window.drawLivePreview();
+                collegeConfig.bgUrl = await getDownloadURL(storageRef); alert("Background uploaded!"); window.drawLivePreview();
             };
             reader.readAsDataURL(file);
         });
 
         document.getElementById('btnSaveConfig').addEventListener('click', async () => {
-            collegeConfig.photoX = parseInt(document.getElementById('coordPhotoX').value);
-            collegeConfig.photoY = parseInt(document.getElementById('coordPhotoY').value);
-            collegeConfig.photoW = parseInt(document.getElementById('coordPhotoW').value);
-            collegeConfig.photoH = parseInt(document.getElementById('coordPhotoH').value);
+            collegeConfig.enablePhoto = document.getElementById('enablePhoto').checked;
+            collegeConfig.photoX = parseInt(document.getElementById('coordPhotoX').value); collegeConfig.photoY = parseInt(document.getElementById('coordPhotoY').value);
+            collegeConfig.photoW = parseInt(document.getElementById('coordPhotoW').value); collegeConfig.photoH = parseInt(document.getElementById('coordPhotoH').value);
+            
+            collegeConfig.enableBarcode = document.getElementById('enableBarcode').checked;
+            collegeConfig.barcodeX = parseInt(document.getElementById('coordBarcodeX').value); collegeConfig.barcodeY = parseInt(document.getElementById('coordBarcodeY').value);
+            collegeConfig.barcodeW = parseInt(document.getElementById('coordBarcodeW').value); collegeConfig.barcodeH = parseInt(document.getElementById('coordBarcodeH').value);
+            
             collegeConfig.fields = {};
             dynamicFields.forEach(field => {
+                const enabled = document.getElementById(`enable_${field}`).checked;
                 const x = document.getElementById(`fX_${field}`).value; const y = document.getElementById(`fY_${field}`).value;
-                if(x && y) { collegeConfig.fields[field] = { x: parseInt(x), y: parseInt(y), size: parseInt(document.getElementById(`fS_${field}`).value) }; }
+                if(x && y) { collegeConfig.fields[field] = { enabled: enabled, x: parseInt(x), y: parseInt(y), size: parseInt(document.getElementById(`fS_${field}`).value) }; }
             });
-            await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true});
-            alert("Configuration Saved!");
+            await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true}); alert("Configuration Saved!");
         });
 
-        // HIDDEN RENDERER FOR ZIP/PDF
+        // ================= EXPORT LOGIC =================
         async function renderCardOnCanvas(student, config, addWatermark = false) {
             return new Promise(async (resolve) => {
                 const canvas = document.getElementById('idCanvas'); const ctx = canvas.getContext('2d');
-                const bgImg = await loadCachedImage(config.bgUrl);
-                canvas.width = bgImg.width; canvas.height = bgImg.height; ctx.drawImage(bgImg, 0, 0);
+                const bgImg = await loadCachedImage(config.bgUrl); canvas.width = bgImg.width; canvas.height = bgImg.height; ctx.drawImage(bgImg, 0, 0);
 
-                ctx.fillStyle = "#000000";
+                ctx.fillStyle = "#000000"; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
                 if(config.fields) {
                     Object.keys(config.fields).forEach(key => {
                         const fConf = config.fields[key];
-                        if(student[key] && fConf.x && fConf.y) {
-                            ctx.font = `bold ${fConf.size}px Arial`; ctx.fillText(student[key], fConf.x, fConf.y);
-                        }
+                        if(fConf.enabled !== false && student[key] && fConf.x && fConf.y) { ctx.font = `bold ${fConf.size}px Arial`; ctx.fillText(student[key], fConf.x, fConf.y); }
                     });
                 }
+                
+                if(config.enableBarcode !== false) {
+                    const nameKey = Object.keys(student).find(k => k.toLowerCase().includes('name')) || 'Name';
+                    const phoneKey = Object.keys(student).find(k => k.toLowerCase().includes('contact') || k.toLowerCase().includes('phone') || k.toLowerCase().includes('mobile')) || 'Contact No.';
+                    const barcodeData = `${student[nameKey]||'NA'}-${student[phoneKey]||'NA'}`.substring(0, 40);
+                    const barcodeImg = await createBarcode(barcodeData);
+                    if(barcodeImg && config.barcodeW > 0 && config.barcodeH > 0) { ctx.drawImage(barcodeImg, config.barcodeX||0, config.barcodeY||0, config.barcodeW||150, config.barcodeH||40); }
+                }
+
                 if(addWatermark) {
                     ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-Math.PI / 4);
-                    ctx.font = "bold 80px Arial"; ctx.fillStyle = "rgba(255, 0, 0, 0.3)"; ctx.textAlign = "center"; ctx.fillText("VERIFIED", 0, 0); ctx.restore();
+                    ctx.font = "bold 80px Arial"; ctx.fillStyle = "rgba(255, 0, 0, 0.3)"; ctx.textAlign = "center"; ctx.textBaseline = 'middle'; ctx.fillText("VERIFIED", 0, 0); ctx.restore();
                 }
-                if(student['Photo Link'] && student['Photo Link'] !== "No Photo Link") {
+
+                if(config.enablePhoto !== false && student['Photo Link'] && student['Photo Link'] !== "No Photo Link") {
                     const photoImg = await loadCachedImage(student['Photo Link']);
                     if(photoImg) ctx.drawImage(photoImg, config.photoX||0, config.photoY||0, config.photoW||150, config.photoH||200);
                 }
