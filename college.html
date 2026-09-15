@@ -160,11 +160,11 @@
                                 <h4 class="font-bold text-green-700 text-sm"><i class="fa-solid fa-barcode mr-1"></i> 3. Barcode Properties</h4>
                                 <input type="checkbox" id="enableBarcode" checked class="w-4 h-4 text-green-600" onchange="drawLivePreview()">
                             </div>
-                            <div class="grid grid-cols-4 gap-2">
+                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Scale multiplier keeps barcode scannable without distortion.</p>
+                            <div class="grid grid-cols-3 gap-2">
                                 <div><label class="text-[10px] text-gray-500 uppercase">X</label><input type="number" id="coordBarcodeX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Y</label><input type="number" id="coordBarcodeY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
-                                <div><label class="text-[10px] text-gray-500 uppercase">Width</label><input type="number" id="coordBarcodeW" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
-                                <div><label class="text-[10px] text-gray-500 uppercase">Height</label><input type="number" id="coordBarcodeH" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
+                                <div><label class="text-[10px] text-gray-500 uppercase">Size / Scale</label><input type="number" id="coordBarcodeS" value="1.0" step="0.1" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                             </div>
                         </div>
 
@@ -558,18 +558,17 @@
         };
 
         // ================= BARCODE GENERATOR =================
-        // Generates the raw barcode perfectly to avoid line distortion
         function createBarcode(text) {
             return new Promise((resolve) => {
                 if(!text) return resolve(null); const canvas = document.createElement('canvas');
                 try { 
-                    JsBarcode(canvas, text, { format: "CODE128", displayValue: false, margin: 0, width: 2, height: 60 }); 
+                    JsBarcode(canvas, text, { format: "CODE128", displayValue: false, margin: 10, background: "#ffffff", width: 2, height: 60 }); 
                     const img = new Image(); img.onload = () => resolve(img); img.src = canvas.toDataURL("image/png"); 
                 } catch(e) { resolve(null); }
             });
         }
 
-        // ================= BUGFIX 1: BULLETPROOF ADDRESS WRAPPING =================
+        // ================= BUGFIX: BULLETPROOF ADDRESS WRAPPING =================
         function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
             if (!text) return;
             text = text.toString();
@@ -577,20 +576,19 @@
             let lines = [];
             let currentLine = '';
 
-            if (maxWidth <= 0) maxWidth = 10; // Failsafe to completely prevent infinite loop hang
+            let safeMaxWidth = Math.max(maxWidth, 40); // Failsafe to prevent zero-width crash
 
             for (let i = 0; i < words.length; i++) {
                 let word = words[i];
                 
-                // Force break if a single massive string (like village name) is wider than max width
-                while(ctx.measureText(word).width > maxWidth) {
+                while(ctx.measureText(word).width > safeMaxWidth) {
                     let fitStr = '';
                     let charIndex = 0;
-                    while(charIndex < word.length && ctx.measureText(fitStr + word[charIndex]).width <= maxWidth) {
+                    while(charIndex < word.length && ctx.measureText(fitStr + word[charIndex]).width <= safeMaxWidth) {
                         fitStr += word[charIndex];
                         charIndex++;
                     }
-                    if (charIndex === 0) { fitStr = word[0]; charIndex = 1; } // Failsafe to force at least 1 character
+                    if (charIndex === 0) { fitStr = word[0]; charIndex = 1; } 
                     
                     if(currentLine) { lines.push(currentLine); currentLine = ''; }
                     lines.push(fitStr);
@@ -598,7 +596,7 @@
                 }
 
                 const testLine = currentLine + (currentLine ? ' ' : '') + word;
-                if (ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
+                if (ctx.measureText(testLine).width > safeMaxWidth && currentLine !== '') {
                     lines.push(currentLine);
                     currentLine = word;
                 } else {
@@ -638,8 +636,7 @@
             }
             if(document.getElementById('enableBarcode').checked) {
                 const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
-                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
-                if(x >= bx && x <= bx + bw && y >= by && y <= by + bh) return { type: 'barcode', id: 'coordBarcode' };
+                if(x >= bx && x <= bx + 150 && y >= by && y <= by + 50) return { type: 'barcode', id: 'coordBarcode' };
             }
             for(let field of dynamicFields) {
                 if(document.getElementById(`enable_${field}`)?.checked) {
@@ -694,16 +691,17 @@
                 liveCtx.restore();
             }
             
-            // BUGFIX 2: REAL BARCODE PREVIEW SO IT MATCHES EXPORT
+            // DRAW REAL BARCODE ON PREVIEW
             if(document.getElementById('enableBarcode').checked) {
                 const bx = parseInt(document.getElementById('coordBarcodeX').value)||0; const by = parseInt(document.getElementById('coordBarcodeY').value)||0;
-                const bw = parseInt(document.getElementById('coordBarcodeW').value)||150; const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
+                const bScale = parseFloat(document.getElementById('coordBarcodeS').value)||1.0;
                 
-                const barcodeData = `${getDummyValue('name')}-${getDummyValue('contact')}`.substring(0, 40);
+                // BARCODE BUGFIX: Only encode Name!
+                const barcodeData = getDummyValue('name').toString().substring(0, 40);
                 const barcodeImg = await createBarcode(barcodeData);
                 if(barcodeImg) { 
-                    liveCtx.imageSmoothingEnabled = false; // Keeps lines sharp and scannable
-                    liveCtx.drawImage(barcodeImg, bx, by, bw, bh); 
+                    liveCtx.imageSmoothingEnabled = false; 
+                    liveCtx.drawImage(barcodeImg, bx, by, barcodeImg.width * bScale, barcodeImg.height * bScale); 
                     liveCtx.imageSmoothingEnabled = true;
                 }
             }
@@ -735,7 +733,7 @@
             
             document.getElementById('enableBarcode').checked = collegeConfig.enableBarcode !== false;
             document.getElementById('coordBarcodeX').value = collegeConfig.barcodeX || 0; document.getElementById('coordBarcodeY').value = collegeConfig.barcodeY || 0;
-            document.getElementById('coordBarcodeW').value = collegeConfig.barcodeW || 150; document.getElementById('coordBarcodeH').value = collegeConfig.barcodeH || 40;
+            document.getElementById('coordBarcodeS').value = collegeConfig.barcodeS || 1.0;
 
             const fieldsDiv = document.getElementById('textFieldsSettings'); fieldsDiv.innerHTML = '';
             dynamicFields.forEach(field => {
@@ -777,7 +775,7 @@
             
             collegeConfig.enableBarcode = document.getElementById('enableBarcode').checked;
             collegeConfig.barcodeX = parseInt(document.getElementById('coordBarcodeX').value); collegeConfig.barcodeY = parseInt(document.getElementById('coordBarcodeY').value);
-            collegeConfig.barcodeW = parseInt(document.getElementById('coordBarcodeW').value); collegeConfig.barcodeH = parseInt(document.getElementById('coordBarcodeH').value);
+            collegeConfig.barcodeS = parseFloat(document.getElementById('coordBarcodeS').value) || 1.0;
             
             collegeConfig.fields = {};
             dynamicFields.forEach(field => {
@@ -794,11 +792,19 @@
             await setDoc(doc(db, "schools", currentCollegeId), { config: collegeConfig }, {merge: true}); alert("Configuration Saved!");
         });
 
-        // ================= BULLETPROOF EXPORT ENGINE =================
+        // ================= BUGFIX: PERFECT EXPORT ENGINE =================
         async function renderCardOnCanvas(student, config, addWatermark = false) {
             return new Promise(async (resolve) => {
                 const canvas = document.getElementById('idCanvas'); const ctx = canvas.getContext('2d');
                 const bgImg = await loadCachedImage(config.bgUrl); canvas.width = bgImg.width; canvas.height = bgImg.height; ctx.drawImage(bgImg, 0, 0);
+
+                // DRAW WATERMARK *BEFORE* BARCODE SO IT DOESN'T RUIN THE SCANNER
+                if(addWatermark) {
+                    ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-Math.PI / 4);
+                    ctx.font = "bold 60px Arial"; ctx.fillStyle = "rgba(255, 0, 0, 0.20)"; ctx.textAlign = "center"; ctx.textBaseline = 'middle'; 
+                    ctx.fillText("ONLY FOR VERIFICATION", 0, 0); ctx.fillText("ONLY FOR VERIFICATION", 0, -250); ctx.fillText("ONLY FOR VERIFICATION", 0, 250);
+                    ctx.restore();
+                }
 
                 ctx.textBaseline = 'alphabetic';
                 if(config.fields) {
@@ -812,23 +818,17 @@
                     });
                 }
                 
+                // BARCODE - Encodes only the NAME
                 if(config.enableBarcode !== false) {
                     const nameKey = Object.keys(student).find(k => k.toLowerCase().includes('name')) || 'Name';
-                    const phoneKey = Object.keys(student).find(k => k.toLowerCase().includes('contact') || k.toLowerCase().includes('phone') || k.toLowerCase().includes('mobile')) || 'Contact No.';
-                    const barcodeData = `${student[nameKey]||'NA'}-${student[phoneKey]||'NA'}`.substring(0, 40);
+                    const barcodeData = (student[nameKey] || 'Unknown').toString().substring(0, 40);
                     const barcodeImg = await createBarcode(barcodeData);
                     if(barcodeImg) { 
-                        ctx.imageSmoothingEnabled = false; // Keeps lines extremely sharp
-                        ctx.drawImage(barcodeImg, config.barcodeX||0, config.barcodeY||0, config.barcodeW||150, config.barcodeH||40); 
+                        const bScale = config.barcodeS || 1.0;
+                        ctx.imageSmoothingEnabled = false; 
+                        ctx.drawImage(barcodeImg, config.barcodeX||0, config.barcodeY||0, barcodeImg.width * bScale, barcodeImg.height * bScale); 
                         ctx.imageSmoothingEnabled = true;
                     }
-                }
-
-                if(addWatermark) {
-                    ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-Math.PI / 4);
-                    ctx.font = "bold 60px Arial"; ctx.fillStyle = "rgba(255, 0, 0, 0.25)"; ctx.textAlign = "center"; ctx.textBaseline = 'middle'; 
-                    ctx.fillText("ONLY FOR VERIFICATION", 0, 0); ctx.fillText("ONLY FOR VERIFICATION", 0, -250); ctx.fillText("ONLY FOR VERIFICATION", 0, 250);
-                    ctx.restore();
                 }
 
                 if(config.enablePhoto !== false) {
