@@ -31,7 +31,7 @@
         .silhouette-head { width: 90px; height: 110px; border: 2px solid rgba(255,255,255,0.4); border-radius: 50%; margin-bottom: 5px; }
         .silhouette-shoulders { width: 160px; height: 80px; border: 2px solid rgba(255,255,255,0.4); border-radius: 50% 50% 0 0; border-bottom: none; }
         .custom-scroll::-webkit-scrollbar { width: 6px; } .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        #livePreviewCanvas { cursor: grab; } #livePreviewCanvas:active { cursor: grabbing; }
+        #livePreviewCanvas { cursor: grab; touch-action: none; } #livePreviewCanvas:active { cursor: grabbing; }
         .cropper-container { width: 100%; max-height: 400px; background: #000; display: flex; justify-content: center; }
         #cropperImage { max-width: 100%; max-height: 400px; display: block; }
     </style>
@@ -122,17 +122,17 @@
         </section>
 
         <!-- LIVE ID CARD DESIGNER VIEW -->
-        <section id="viewDesigner" class="hidden space-y-4 h-[calc(100vh-100px)] flex flex-col">
+        <section id="viewDesigner" class="hidden space-y-4 min-h-screen lg:h-[calc(100vh-100px)] flex flex-col">
             <div class="flex-shrink-0">
                 <button id="btnBackToCollege" class="text-blue-600 hover:underline mb-2 font-medium">&larr; Back to College</button>
             </div>
             
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow overflow-hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow lg:overflow-hidden">
                 <!-- Settings Panel -->
-                <div class="bg-white p-6 rounded-lg shadow-sm flex flex-col h-full overflow-hidden border border-gray-200 relative">
+                <div class="bg-white p-6 rounded-lg shadow-sm flex flex-col h-full lg:overflow-hidden border border-gray-200 relative">
                     <div class="flex justify-between items-center mb-4 flex-shrink-0 border-b pb-2">
-                        <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-sliders text-blue-600"></i> Settings & Coordinates</h3>
-                        <button id="btnSaveConfig" class="bg-green-600 text-white px-4 py-1.5 rounded-md hover:bg-green-700 font-bold text-sm shadow-sm">Save Config</button>
+                        <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-sliders text-blue-600"></i> Layout & Coordinates</h3>
+                        <button id="btnSaveConfig" class="bg-green-600 text-white px-4 py-1.5 rounded-md hover:bg-green-700 font-bold text-sm shadow-sm">Save</button>
                     </div>
                     
                     <div class="overflow-y-auto custom-scroll pr-2 space-y-4 flex-grow">
@@ -143,10 +143,10 @@
 
                         <div class="bg-gray-50 p-3 rounded border border-blue-200">
                             <div class="flex items-center justify-between mb-2">
-                                <h4 class="font-bold text-blue-800 text-sm"><i class="fa-solid fa-image mr-1"></i> 2. Photo Coordinates (px)</h4>
+                                <h4 class="font-bold text-blue-800 text-sm"><i class="fa-solid fa-image mr-1"></i> 2. Photo Area (px)</h4>
                                 <input type="checkbox" id="enablePhoto" checked class="w-4 h-4 text-blue-600" onchange="drawLivePreview()">
                             </div>
-                            <div class="grid grid-cols-5 gap-2">
+                            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
                                 <div><label class="text-[10px] text-gray-500 uppercase">X</label><input type="number" id="coordPhotoX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Y</label><input type="number" id="coordPhotoY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Width</label><input type="number" id="coordPhotoW" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
@@ -160,8 +160,8 @@
                                 <h4 class="font-bold text-green-700 text-sm"><i class="fa-solid fa-barcode mr-1"></i> 3. Barcode Properties</h4>
                                 <input type="checkbox" id="enableBarcode" checked class="w-4 h-4 text-green-600" onchange="drawLivePreview()">
                             </div>
-                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Barcode automatically encodes the Student's Name.</p>
-                            <div class="grid grid-cols-5 gap-2">
+                            <p class="text-[10px] text-gray-500 mb-2 leading-tight">Barcode automatically encodes the Mobile Number.</p>
+                            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
                                 <div><label class="text-[10px] text-gray-500 uppercase">X</label><input type="number" id="coordBarcodeX" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Y</label><input type="number" id="coordBarcodeY" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
                                 <div><label class="text-[10px] text-gray-500 uppercase">Width</label><input type="number" id="coordBarcodeW" class="border p-1.5 rounded text-sm w-full" oninput="drawLivePreview()"></div>
@@ -179,17 +179,17 @@
                 </div>
 
                 <!-- Right Panel: Live Preview & Export -->
-                <div class="flex flex-col gap-4 h-full overflow-hidden">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-grow flex flex-col p-4 relative overflow-hidden">
+                <div class="flex flex-col gap-4 h-full lg:overflow-hidden">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-grow flex flex-col p-4 relative overflow-hidden min-h-[400px]">
                         <h3 class="text-lg font-bold text-gray-800 mb-2 flex-shrink-0 flex justify-between items-center">
                             <span><i class="fa-solid fa-eye text-purple-600"></i> Interactive Canvas</span>
-                            <span class="text-[10px] font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner"><i class="fa-solid fa-hand-pointer mr-1"></i> Click & Drag to position</span>
+                            <span class="text-[10px] font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner"><i class="fa-solid fa-hand-pointer mr-1"></i> Drag to position</span>
                         </h3>
                         <div class="flex-grow bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center p-2 overflow-hidden relative">
                             <canvas id="livePreviewCanvas" class="max-w-full max-h-full object-contain shadow-lg bg-white border border-gray-400"></canvas>
                         </div>
                     </div>
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex-shrink-0 grid grid-cols-2 gap-4">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <button id="btnGenerateZip" class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 font-bold shadow flex flex-col items-center justify-center transition">
                             <i class="fa-solid fa-file-zipper text-lg mb-1"></i> Download ZIP Cards
                         </button>
@@ -384,7 +384,6 @@
             });
         }
 
-
         const views = { dashboard: document.getElementById('viewDashboard'), college: document.getElementById('viewCollege'), designer: document.getElementById('viewDesigner') };
         function showView(viewName) { Object.values(views).forEach(v => v.classList.add('hidden')); views[viewName].classList.remove('hidden'); }
         
@@ -563,7 +562,6 @@
         function createBarcode(text, targetW, targetH, scale) {
             return new Promise((resolve) => {
                 if(!text || !text.toString().trim()) return resolve(null);
-                // Sanitize: CODE128 safe characters only (printable ASCII 32-126)
                 const safeText = text.toString().replace(/[^\x20-\x7E]/g, '').trim().substring(0, 40);
                 if(!safeText) return resolve(null);
                 const canvas = document.createElement('canvas');
@@ -576,7 +574,7 @@
                         background: "#ffffff",
                         lineColor: "#000000",
                         width: barWeight, 
-                        height: targetH || 40 // Removed the forced 60px minimum
+                        height: targetH || 40
                     });
                     const img = new Image();
                     img.onload = () => { img._naturalBarcodeW = canvas.width; img._naturalBarcodeH = canvas.height; resolve(img); };
@@ -592,40 +590,25 @@
             let words = text.split(' ');
             let lines = [];
             let currentLine = '';
-
             let safeMaxWidth = Math.max(maxWidth, 40);
 
             for (let i = 0; i < words.length; i++) {
                 let word = words[i];
-                
                 while(ctx.measureText(word).width > safeMaxWidth) {
-                    let fitStr = '';
-                    let charIndex = 0;
-                    while(charIndex < word.length && ctx.measureText(fitStr + word[charIndex]).width <= safeMaxWidth) {
-                        fitStr += word[charIndex];
-                        charIndex++;
-                    }
+                    let fitStr = ''; let charIndex = 0;
+                    while(charIndex < word.length && ctx.measureText(fitStr + word[charIndex]).width <= safeMaxWidth) { fitStr += word[charIndex]; charIndex++; }
                     if (charIndex === 0) { fitStr = word[0]; charIndex = 1; } 
-                    
                     if(currentLine) { lines.push(currentLine); currentLine = ''; }
-                    lines.push(fitStr);
-                    word = word.substring(charIndex);
+                    lines.push(fitStr); word = word.substring(charIndex);
                 }
-
                 const testLine = currentLine + (currentLine ? ' ' : '') + word;
-                if (ctx.measureText(testLine).width > safeMaxWidth && currentLine !== '') {
-                    lines.push(currentLine);
-                    currentLine = word;
-                } else {
-                    currentLine = testLine;
-                }
+                if (ctx.measureText(testLine).width > safeMaxWidth && currentLine !== '') { lines.push(currentLine); currentLine = word; } 
+                else { currentLine = testLine; }
             }
             if (currentLine) lines.push(currentLine);
 
             ctx.textAlign = align;
-            for(let j = 0; j < lines.length; j++) {
-                ctx.fillText(lines[j], x, y + (j * lineHeight));
-            }
+            for(let j = 0; j < lines.length; j++) { ctx.fillText(lines[j], x, y + (j * lineHeight)); }
         }
 
         function drawRoundedRect(ctx, x, y, w, h, r) {
@@ -636,13 +619,25 @@
             }
         }
 
-        // ================= DRAG AND DROP & LIVE DESIGNER =================
+        // ================= MOBILE-READY DRAG AND DROP & LIVE DESIGNER =================
         let isDragging = false, dragItem = null, dragOffsetX = 0, dragOffsetY = 0;
         const liveCanvas = document.getElementById('livePreviewCanvas'); const liveCtx = liveCanvas.getContext('2d');
 
         function getMousePos(evt) {
-            const rect = liveCanvas.getBoundingClientRect(); const scaleX = liveCanvas.width / rect.width; const scaleY = liveCanvas.height / rect.height;
-            return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
+            const rect = liveCanvas.getBoundingClientRect(); 
+            const scaleX = liveCanvas.width / rect.width; 
+            const scaleY = liveCanvas.height / rect.height;
+            
+            let clientX = evt.clientX;
+            let clientY = evt.clientY;
+            
+            // Support Touch Events for Mobile
+            if(evt.touches && evt.touches.length > 0) {
+                clientX = evt.touches[0].clientX;
+                clientY = evt.touches[0].clientY;
+            }
+            
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
         }
 
         function hitTest(x, y) {
@@ -670,25 +665,43 @@
             return null;
         }
 
-        liveCanvas.addEventListener('mousedown', (e) => {
+        function handleDragStart(e) {
             const pos = getMousePos(e); const hit = hitTest(pos.x, pos.y);
             if(hit) {
                 isDragging = true; dragItem = hit;
                 if(hit.type === 'photo' || hit.type === 'barcode') { dragOffsetX = pos.x - parseInt(document.getElementById(`${hit.id}X`).value); dragOffsetY = pos.y - parseInt(document.getElementById(`${hit.id}Y`).value); } 
                 else if(hit.type === 'text') { dragOffsetX = pos.x - parseInt(document.getElementById(`fX_${hit.id}`).value); dragOffsetY = pos.y - parseInt(document.getElementById(`fY_${hit.id}`).value); }
+                
+                if (e.type.includes('touch')) e.preventDefault(); // Stop mobile page scroll while dragging item
             }
-        });
-        liveCanvas.addEventListener('mousemove', (e) => {
-            if(!isDragging || !dragItem) return; const pos = getMousePos(e);
+        }
+
+        function handleDragMove(e) {
+            if(!isDragging || !dragItem) return; 
+            const pos = getMousePos(e);
+            
+            if (e.type.includes('touch')) e.preventDefault(); // Stop mobile page scroll while dragging item
+
             if(dragItem.type === 'photo' || dragItem.type === 'barcode') {
                 document.getElementById(`${dragItem.id}X`).value = Math.round(pos.x - dragOffsetX); document.getElementById(`${dragItem.id}Y`).value = Math.round(pos.y - dragOffsetY);
             } else if(dragItem.type === 'text') {
                 document.getElementById(`fX_${dragItem.id}`).value = Math.round(pos.x - dragOffsetX); document.getElementById(`fY_${dragItem.id}`).value = Math.round(pos.y - dragOffsetY);
             }
             window.drawLivePreview();
-        });
-        liveCanvas.addEventListener('mouseup', () => { isDragging = false; dragItem = null; });
-        liveCanvas.addEventListener('mouseleave', () => { isDragging = false; dragItem = null; });
+        }
+
+        function handleDragEnd() { isDragging = false; dragItem = null; }
+
+        // Mouse Events
+        liveCanvas.addEventListener('mousedown', handleDragStart);
+        liveCanvas.addEventListener('mousemove', handleDragMove);
+        liveCanvas.addEventListener('mouseup', handleDragEnd);
+        liveCanvas.addEventListener('mouseleave', handleDragEnd);
+
+        // Touch Events for Mobile
+        liveCanvas.addEventListener('touchstart', handleDragStart, {passive: false});
+        liveCanvas.addEventListener('touchmove', handleDragMove, {passive: false});
+        liveCanvas.addEventListener('touchend', handleDragEnd);
 
         window.drawLivePreview = async () => {
             if(!liveCanvas) return; const bgUrl = collegeConfig.bgUrl;
@@ -717,18 +730,16 @@
                 const bh = parseInt(document.getElementById('coordBarcodeH').value)||40;
                 const bs = parseInt(document.getElementById('coordBarcodeS').value)||2;
                 
-                const barcodeData = getDummyValue('name');
+                // FIXED: Use mobile number to prevent giant stretched barcode
+                const barcodeData = getDummyValue('mobile');
                 const barcodeImg = await createBarcode(barcodeData.toString(), bw, bh, bs);
                 
                 if(barcodeImg) {
                     liveCtx.imageSmoothingEnabled = false; 
                     
-                    // CRITICAL FIX: Get the true generated width of the barcode.
-                    // This prevents the canvas from squishing the bars horizontally!
+                    // FIXED: Natural squish-free dimension mapping
                     const trueWidth = barcodeImg._naturalBarcodeW || barcodeImg.width;
                     const trueHeight = barcodeImg._naturalBarcodeH || barcodeImg.height;
-                    
-                    // Center the true-sized barcode inside your preferred 'Width' box
                     const drawX = bx + Math.max(0, (bw - trueWidth) / 2);
                     
                     liveCtx.drawImage(barcodeImg, drawX, by, trueWidth, trueHeight);
@@ -770,7 +781,7 @@
             dynamicFields.forEach(field => {
                 const conf = collegeConfig.fields ? collegeConfig.fields[field] : {}; const isChecked = conf?.enabled !== false;
                 fieldsDiv.innerHTML += `
-                    <div class="flex items-center gap-1.5 p-2 bg-white rounded border border-gray-200 shadow-sm transition hover:bg-gray-50 overflow-x-auto">
+                    <div class="flex items-center gap-1.5 p-2 bg-white rounded border border-gray-200 shadow-sm transition hover:bg-gray-50 flex-wrap sm:flex-nowrap">
                         <input type="checkbox" id="enable_${field}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-blue-600 cursor-pointer" onchange="drawLivePreview()">
                         <span class="font-bold text-xs text-gray-700 w-20 truncate cursor-move" title="${field}">${field}</span>
                         <input type="color" id="fC_${field}" value="${conf?.color || '#000000'}" class="w-6 h-6 p-0 border-0 rounded cursor-pointer" oninput="drawLivePreview()" title="Text Color">
@@ -852,8 +863,9 @@
                 
                 // BARCODE - EXPORT LOGIC FIXED
                 if(config.enableBarcode !== false) {
-                    const nameKey = Object.keys(student).find(k => k.toLowerCase().includes('name')) || 'Name';
-                    const barcodeValue = (student[nameKey] || 'UNKNOWN');
+                    // FIXED: Dynamic lookup for Mobile/Contact/Phone
+                    const mobKey = Object.keys(student).find(k => k.toLowerCase().includes('mob') || k.toLowerCase().includes('phone') || k.toLowerCase().includes('contact')) || 'Mobile';
+                    const barcodeValue = (student[mobKey] || '0000000000');
                     const bs = config.barcodeS || 2; 
                     
                     const barcodeImg = await createBarcode(barcodeValue.toString(), config.barcodeW||150, config.barcodeH||40, bs);
@@ -861,7 +873,7 @@
                     if(barcodeImg) {
                         ctx.imageSmoothingEnabled = false;
                         
-                        // CRITICAL FIX: Draw at natural un-squished width
+                        // FIXED: Draw at natural un-squished width
                         const trueWidth = barcodeImg._naturalBarcodeW || barcodeImg.width;
                         const trueHeight = barcodeImg._naturalBarcodeH || barcodeImg.height;
                         const bx = config.barcodeX || 0;
