@@ -1312,6 +1312,16 @@ async function drawPrivateCard(s, sm) {
                 
                 let val = s[field] || s[field === 'phone' ? 'mobile' : field] || '';
                 
+                // AUTOMATIC DATE FORMATTER FOR YYYY-MM-DD to DD/MM/YYYY
+                if (field === 'dob' && val) {
+                    try { 
+                        const parts = val.split(/[-/]/); 
+                        if(parts.length === 3 && parts[0].length === 4) { 
+                            val = `${parts[2]}/${parts[1]}/${parts[0]}`; 
+                        }
+                    } catch(e){}
+                }
+
                 if (l.showLabel) {
                      let label = field.toUpperCase();
                      if(field === 'dob') label = "D.O.B.";
@@ -1365,6 +1375,17 @@ async function drawPrivateCard(s, sm) {
 
         for (const field of fields) {
             let val = s[field] || s[field === 'phone' ? 'mobile' : field] || '-';
+            
+            // AUTOMATIC DATE FORMATTER FOR YYYY-MM-DD to DD/MM/YYYY
+            if (field === 'dob' && val !== '-') {
+                try { 
+                    const parts = val.split(/[-/]/); 
+                    if(parts.length === 3 && parts[0].length === 4) { 
+                        val = `${parts[2]}/${parts[1]}/${parts[0]}`; 
+                    }
+                } catch(e){}
+            }
+
             if (field === 'name') {
                 ctx.font = 'bold 36px Arial';
                 ctx.fillText(`Name: ${val}`, 40, startY);
