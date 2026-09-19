@@ -113,9 +113,17 @@
             </div>
 
             <div class="bg-white p-6 rounded-lg shadow-sm">
-                <div class="flex justify-between mb-4">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
                     <h3 class="text-lg font-bold">2. Student Records & Photos</h3>
-                    <div class="text-sm font-medium text-gray-500">Total: <span id="stat-total" class="text-blue-600 font-bold">0</span></div>
+                    <div class="flex items-center gap-4">
+                        <!-- New Stream/Class Filter -->
+                        <select id="streamFilter" onchange="loadStudents()" class="border border-gray-300 rounded px-3 py-1.5 text-sm focus:ring-blue-500">
+                            <option value="All">All Students</option>
+                            <option value="1 st yr">1st Year</option>
+                            <option value="2 nd yr">2nd Year</option>
+                        </select>
+                        <div class="text-sm font-medium text-gray-500">Total: <span id="stat-total" class="text-blue-600 font-bold">0</span></div>
+                    </div>
                 </div>
                 <div id="studentsList" class="space-y-4"></div>
             </div>
@@ -236,6 +244,23 @@
             <div id="modalStatus" class="bg-blue-100 text-blue-800 text-sm text-center py-3 hidden font-bold">Uploading to Database...</div>
         </div>
     </div>
+    
+    <!-- EDIT STUDENT MODAL -->
+    <div id="editStudentModal" class="fixed inset-0 bg-gray-900 bg-opacity-90 z-[60] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg text-gray-800">Edit Student Profile</h3>
+                <button onclick="closeEditStudent()" class="text-gray-500 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-4 overflow-y-auto custom-scroll" id="editStudentFields">
+                <!-- Dynamic fields will be injected here -->
+            </div>
+            <div class="p-4 border-t bg-gray-50 flex justify-end">
+                <button id="editStudentSaveBtn" class="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 shadow">Update</button>
+            </div>
+        </div>
+    </div>
+
     <canvas id="processingCanvas" class="hidden"></canvas>
 
     <!-- FIREBASE & APP LOGIC -->
@@ -452,41 +477,115 @@
         
         window.openCollegeAdmin = (id, name) => { currentCollegeId = id; document.getElementById('currentCollegeTitle').innerText = name; showView('college'); loadStudents(); }
 
-        async function loadStudents() {
+        window.loadStudents = async () => {
             const snapshot = await getDocs(query(collection(db, "portal_students"), where("collegeId", "==", currentCollegeId)));
             currentStudents = []; dynamicFields = new Set();
             const list = document.getElementById('studentsList'); list.innerHTML = "";
+            
+            // Get current filter value
+            let filterEl = document.getElementById('streamFilter');
+            let filterValue = filterEl ? filterEl.value : 'All';
 
             snapshot.forEach(docSnap => {
-                const student = docSnap.data(); student.docId = docSnap.id; currentStudents.push(student);
+                const student = docSnap.data(); student.docId = docSnap.id;
+                
                 Object.keys(student).forEach(k => { if(k !== 'collegeId' && k !== 'docId' && k !== 'Photo Link' && k !== 'Photo_File') dynamicFields.add(k); });
 
-                const div = document.createElement('div');
-                div.className = "border rounded-lg p-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-center bg-gray-50 hover:bg-white transition";
+                // Apply Stream/Class filter by checking all student fields
+                const studentValuesStr = Object.values(student).join(' ').toLowerCase();
+                if (filterValue !== 'All' && !studentValuesStr.includes(filterValue.toLowerCase())) {
+                    return; // Skip student if they don't match the selected filter
+                }
                 
-                let detailsHTML = `<div class="md:col-span-3 text-sm space-y-2 grid grid-cols-2 gap-x-4">`;
-                Object.keys(student).forEach(k => {
-                    if(k !== 'collegeId' && k !== 'docId' && k !== 'Photo Link' && k !== 'Photo_File') {
-                        detailsHTML += `<div class="flex flex-col"><span class="font-bold text-gray-500 text-xs uppercase tracking-wider">${k}</span> 
-                        <input type="text" class="border bg-white rounded px-2 py-1 focus:ring-1 focus:outline-none" value="${student[k] || ''}" onchange="updateStudentField('${docSnap.id}', '${k}', this.value)"></div>`;
-                    }
-                });
-                detailsHTML += `</div>`;
+                currentStudents.push(student);
+
+                const div = document.createElement('div');
+                div.className = "border rounded-lg p-4 flex items-center justify-between bg-gray-50 hover:bg-white transition shadow-sm";
                 
                 let photoSrc = student['Photo Link'];
                 if(!photoSrc || photoSrc === "No Photo Link") { photoSrc = "https://placehold.co/150x150/e2e8f0/64748b?text=No+Photo"; }
+                
+                // Extract basic info for the compact view
+                const sName = student['name'] || student['Name'] || student['Student Name'] || 'Unknown';
+                const sDetails = student['class'] || student['stream'] || student['Class'] || '';
 
-                detailsHTML += `<div class="flex flex-col items-center justify-center border-l border-gray-200 pl-4">
-                    <img src="${photoSrc}" onerror="this.src='https://placehold.co/150x150/fca5a5/7f1d1d?text=Error'" class="w-24 h-24 object-cover border-2 border-white rounded shadow mb-3" />
-                    <button onclick="openPhotoModal('${docSnap.id}', '${student['Roll No.'] || docSnap.id}')" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-xs font-bold w-full"><i class="fa-solid fa-crop-simple mr-1"></i> Add / Edit</button>
-                </div>`;
-                div.innerHTML = detailsHTML; list.appendChild(div);
+                div.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="relative cursor-pointer" onclick="openPhotoModal('${docSnap.id}', '${student['Roll No.'] || docSnap.id}')" title="Update Photo">
+                            <img src="${photoSrc}" onerror="this.src='https://placehold.co/150x150/fca5a5/7f1d1d?text=Error'" class="w-16 h-16 object-cover border border-gray-300 rounded-full shadow-sm hover:opacity-80 transition" />
+                            <div class="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 text-[10px]"><i class="fa-solid fa-camera"></i></div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-lg">${sName}</h4>
+                            <p class="text-xs text-gray-500">${sDetails}</p>
+                        </div>
+                    </div>
+                    <button onclick="openEditStudent('${docSnap.id}')" class="bg-gray-100 hover:bg-blue-100 text-blue-600 w-10 h-10 flex items-center justify-center rounded-full border shadow-sm transition" title="Edit Profile">
+                        <i class="fa-solid fa-pencil"></i>
+                    </button>
+                `;
+                list.appendChild(div);
             });
             document.getElementById('stat-total').innerText = currentStudents.length;
             dynamicFields = Array.from(dynamicFields);
-        }
+        };
 
-        window.updateStudentField = async (docId, field, value) => { await setDoc(doc(db, "portal_students", docId), { [field]: value }, {merge: true}); };
+        // ---------------- Modal Control Functions ----------------
+        window.openEditStudent = (docId) => {
+            const student = currentStudents.find(s => s.docId === docId);
+            if(!student) return;
+            
+            const container = document.getElementById('editStudentFields');
+            container.innerHTML = '';
+            document.getElementById('editStudentModal').classList.remove('hidden');
+            document.getElementById('editStudentModal').classList.add('flex');
+            
+            document.getElementById('editStudentSaveBtn').onclick = () => saveStudentProfile(docId);
+
+            Object.keys(student).forEach(k => {
+                if(k !== 'collegeId' && k !== 'docId' && k !== 'Photo Link' && k !== 'Photo_File') {
+                    container.innerHTML += `
+                        <div class="mb-3">
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">${k}</label>
+                            <input type="text" id="edit_input_${k}" class="w-full border border-gray-300 bg-white rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" value="${student[k] || ''}">
+                        </div>
+                    `;
+                }
+            });
+        };
+
+        window.closeEditStudent = () => {
+            document.getElementById('editStudentModal').classList.add('hidden');
+            document.getElementById('editStudentModal').classList.remove('flex');
+        };
+
+        window.saveStudentProfile = async (docId) => {
+            const student = currentStudents.find(s => s.docId === docId);
+            let updates = {};
+            
+            Object.keys(student).forEach(k => {
+                if(k !== 'collegeId' && k !== 'docId' && k !== 'Photo Link' && k !== 'Photo_File') {
+                    const input = document.getElementById(`edit_input_${k}`);
+                    if(input) updates[k] = input.value;
+                }
+            });
+
+            const btn = document.getElementById('editStudentSaveBtn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...';
+            btn.disabled = true;
+
+            try {
+                await setDoc(doc(db, "portal_students", docId), updates, {merge: true});
+                Object.assign(student, updates); // Update locally for instant render
+                closeEditStudent();
+                loadStudents();
+            } catch(e) {
+                alert("Error updating student profile.");
+            } finally {
+                btn.innerHTML = 'Update';
+                btn.disabled = false;
+            }
+        };
 
         // ================= INTERACTIVE CROPPER =================
         let videoStream = null; let currentFacingMode = "user"; let cropper = null;
