@@ -595,7 +595,9 @@
         };
 
         // ================= INTERACTIVE CROPPER =================
-        let videoStream = null; let currentFacingMode = "user"; let cropper = null;
+        let videoStream = null; 
+        let currentFacingMode = "environment"; // CHANGED: Default to back camera
+        let cropper = null;
 
         window.openPhotoModal = (docId, rollNo) => {
             targetStudentId = docId; targetStudentRoll = rollNo;
@@ -655,7 +657,8 @@
 
             try {
                 const canvas = cropper.getCroppedCanvas({ width: 600, height: 600, imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
-                const finalBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                // CHANGED: Increased JPEG quality from 0.85 to 0.95 to maintain a high-quality ID card photo
+                const finalBase64 = canvas.toDataURL('image/jpeg', 0.95);
                 
                 const storageRef = ref(storage, `student_photos/${targetStudentRoll}_${Date.now()}.jpg`);
                 await uploadString(storageRef, finalBase64, 'data_url');
