@@ -116,11 +116,11 @@
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
                     <h3 class="text-lg font-bold">2. Student Records & Photos</h3>
                     <div class="flex items-center gap-4">
-                        <!-- New Stream/Class Filter -->
+                        <!-- Combo Stream & Class Filter -->
                         <select id="streamFilter" onchange="loadStudents()" class="border border-gray-300 rounded px-3 py-1.5 text-sm focus:ring-blue-500">
                             <option value="All">All Students</option>
-                            <option value="1 st yr">1st Year</option>
-                            <option value="2 nd yr">2nd Year</option>
+                            <option value="Science, 1st yr">Science, 1st yr</option>
+                            <option value="Science, 2nd yr">Science, 2nd yr</option>
                         </select>
                         <div class="text-sm font-medium text-gray-500">Total: <span id="stat-total" class="text-blue-600 font-bold">0</span></div>
                     </div>
@@ -491,10 +491,17 @@
                 
                 Object.keys(student).forEach(k => { if(k !== 'collegeId' && k !== 'docId' && k !== 'Photo Link' && k !== 'Photo_File') dynamicFields.add(k); });
 
-                // Apply Stream/Class filter by checking all student fields
+                // Multi-term filtering logic fixed: splits by comma and checks if ALL terms exist in the student record
                 const studentValuesStr = Object.values(student).join(' ').toLowerCase();
-                if (filterValue !== 'All' && !studentValuesStr.includes(filterValue.toLowerCase())) {
-                    return; // Skip student if they don't match the selected filter
+                
+                if (filterValue !== 'All') {
+                    // Split "Science, 1st yr" into ["science", "1st yr"]
+                    const filterParts = filterValue.toLowerCase().split(',').map(part => part.trim());
+                    
+                    // Check if EVERY part of the filter is found in the student's data
+                    const matchesAll = filterParts.every(part => studentValuesStr.includes(part));
+                    
+                    if (!matchesAll) return; // Skip if they don't have BOTH terms
                 }
                 
                 currentStudents.push(student);
