@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free QR & Barcode Generator</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- QRCode and JsBarcode Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+        }
+        
+        /* Custom hide class for transitions */
+        .hidden-el {
+            display: none !important;
+        }
+
+        /* Container for generated outputs to center them nicely */
+        #output-container {
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        /* Ensures the barcode canvas fits nicely on mobile */
+        #barcodeCanvas {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <main class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-gray-100">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-center text-white">
+            <h1 class="text-2xl font-bold flex justify-center items-center gap-2 text-white">
+                <i class="fa-solid fa-qrcode"></i> QR & Barcode Gen
+            </h1>
+            <p class="text-blue-100 text-sm mt-2">Generate codes instantly for free.</p>
+        </header>
+
+        <div class="p-6">
+            <!-- Tabs -->
+            <div class="flex bg-gray-100 rounded-lg p-1 mb-6">
+                <button id="tab-qr" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-white text-blue-600 shadow-sm" onclick="switchMode('qr')">
+                    <i class="fa-solid fa-qrcode mr-2"></i> QR Code
+                </button>
+                <button id="tab-barcode" class="flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all duration-200" onclick="switchMode('barcode')">
+                    <i class="fa-solid fa-barcode mr-2"></i> Barcode
+                </button>
+            </div>
+
+            <!-- Input Area -->
+            <div class="mb-5">
+                <label for="dataInput" class="block text-sm font-semibold text-gray-700 mb-2" id="inputLabel">
+                    Content (URL, Text, etc.)
+                </label>
+                <textarea 
+                    id="dataInput" 
+                    rows="3" 
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                    placeholder="Enter your website URL or text here..."
+                ></textarea>
+                <p id="errorMessage" class="text-red-500 text-sm mt-2 hidden-el">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> <span id="errorText">Please enter some content.</span>
+                </p>
+            </div>
+
+            <!-- Action Button -->
+            <button 
+                onclick="generateCode()" 
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98]"
+            >
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+            </button>
+
+            <!-- Output Area -->
+            <div class="mt-8 border-t border-gray-100 pt-6">
+                <div id="output-container" class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 relative p-4 transition-all">
+                    
+                    <!-- Placeholder state -->
+                    <div id="placeholder" class="text-gray-400 text-center flex flex-col items-center">
+                        <i class="fa-solid fa-image text-4xl mb-3 opacity-50"></i>
+                        <p class="text-sm">Your generated code will appear here</p>
+                    </div>
+
+                    <!-- QR Code Container -->
+                    <div id="qrcode" class="hidden-el flex justify-center bg-white p-2 rounded-lg shadow-sm"></div>
+
+                    <!-- Barcode Container -->
+                    <canvas id="barcodeCanvas" class="hidden-el bg-white p-2 rounded-lg shadow-sm"></canvas>
+
+                </div>
+                
+                <!-- Download Button (Hidden initially) -->
+                <button 
+                    id="downloadBtn" 
+                    onclick="downloadCode()" 
+                    class="hidden-el mt-4 w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                    <i class="fa-solid fa-download"></i> Download Image
+                </button>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="bg-gray-50 p-4 text-center text-xs text-gray-500 border-t border-gray-200">
+            Supports Standard URLs, Text, and Code 128 (Barcodes)
+        </footer>
+    </main>
+
+    <script>
+        let currentMode = 'qr'; // 'qr' or 'barcode'
+        let qrCodeInstance = null;
+        
+        // DOM Elements
+        const tabQr = document.getElementById('tab-qr');
+        const tabBarcode = document.getElementById('tab-barcode');
+        const inputLabel = document.getElementById('inputLabel');
+        const dataInput = document.getElementById('dataInput');
+        const placeholder = document.getElementById('placeholder');
+        const qrContainer = document.getElementById('qrcode');
+        const barcodeCanvas = document.getElementById('barcodeCanvas');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Reset UI states
+            resetOutput();
+            hideError();
+
+            // Update Tab Styling
+            if (mode === 'qr') {
+                // Active QR styling
+                tabQr.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-white text-blue-600 shadow-sm';
+                tabBarcode.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all duration-200 bg-transparent';
+                
+                inputLabel.textContent = 'Content (URL, Text, WiFi, etc.)';
+                dataInput.placeholder = 'Enter your website URL or text here...';
+            } else {
+                // Active Barcode styling
+                tabBarcode.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-white text-blue-600 shadow-sm';
+                tabQr.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all duration-200 bg-transparent';
+                
+                inputLabel.textContent = 'Content (Numbers, Product Codes, Text)';
+                dataInput.placeholder = 'e.g., 123456789012 or ITEM-45';
+            }
+        }
+
+        function generateCode() {
+            const inputData = dataInput.value.trim();
+            
+            // Validation
+            if (!inputData) {
+                showError("Please enter some content to generate a code.");
+                return;
+            }
+            
+            hideError();
+            resetOutput(false); // Clear previous visual outputs, hide placeholder
+
+            if (currentMode === 'qr') {
+                generateQRCode(inputData);
+            } else {
+                generateBarcode(inputData);
+            }
+        }
+
+        function generateQRCode(data) {
+            placeholder.classList.add('hidden-el');
+            qrContainer.classList.remove('hidden-el');
+            downloadBtn.classList.remove('hidden-el');
+
+            // Clear previous QR code if it exists
+            qrContainer.innerHTML = ''; 
+
+            try {
+                qrCodeInstance = new QRCode(qrContainer, {
+                    text: data,
+                    width: 200,
+                    height: 200,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            } catch (err) {
+                showError("Failed to generate QR code. Try shorter text.");
+                resetOutput();
+            }
+        }
+
+        function generateBarcode(data) {
+            placeholder.classList.add('hidden-el');
+            barcodeCanvas.classList.remove('hidden-el');
+            downloadBtn.classList.remove('hidden-el');
+
+            try {
+                // JsBarcode configuration
+                JsBarcode("#barcodeCanvas", data, {
+                    format: "CODE128", // Highly versatile alphanumeric format
+                    lineColor: "#000000",
+                    width: 2,
+                    height: 80,
+                    displayValue: true,
+                    fontSize: 16,
+                    margin: 10,
+                    background: "#ffffff"
+                });
+            } catch (err) {
+                // Catch invalid formats (e.g. non-ASCII chars in Barcode)
+                showError("Invalid characters for barcode. Please use standard letters/numbers.");
+                resetOutput();
+            }
+        }
+
+        function downloadCode() {
+            let dataUrl = "";
+            let filename = `generated-${currentMode}-${Date.now()}.png`;
+
+            if (currentMode === 'qr') {
+                // qrcode.js generates a canvas and an img. We look for the image source or canvas data.
+                const imgElement = qrContainer.querySelector('img');
+                const canvasElement = qrContainer.querySelector('canvas');
+                
+                if (imgElement && imgElement.src) {
+                    dataUrl = imgElement.src;
+                } else if (canvasElement) {
+                    dataUrl = canvasElement.toDataURL("image/png");
+                }
+            } else if (currentMode === 'barcode') {
+                // JsBarcode draws directly to our canvas
+                dataUrl = barcodeCanvas.toDataURL("image/png");
+            }
+
+            if (!dataUrl) {
+                showError("Nothing to download yet.");
+                return;
+            }
+
+            // Create temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Utility Functions
+        function showError(msg) {
+            errorText.textContent = msg;
+            errorMessage.classList.remove('hidden-el');
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden-el');
+        }
+
+        function resetOutput(showPlaceholder = true) {
+            // Hide outputs
+            qrContainer.classList.add('hidden-el');
+            barcodeCanvas.classList.add('hidden-el');
+            downloadBtn.classList.add('hidden-el');
+            
+            // Clear content
+            qrContainer.innerHTML = '';
+            
+            if (showPlaceholder) {
+                placeholder.classList.remove('hidden-el');
+            }
+        }
+
+        // Initialize state on load
+        window.onload = () => {
+            switchMode('qr');
+        };
+    </script>
+</body>
+</html>
