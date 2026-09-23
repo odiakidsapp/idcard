@@ -17,6 +17,9 @@
     <!-- QRCode and JsBarcode Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    
+    <!-- Html5Qrcode Library for Scanning from Camera -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
         body {
@@ -62,62 +65,102 @@
                 <button id="tab-qr" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-white text-blue-600 shadow-sm" onclick="switchMode('qr')">
                     <i class="fa-solid fa-qrcode mr-2"></i> QR Code
                 </button>
-                <button id="tab-barcode" class="flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all duration-200" onclick="switchMode('barcode')">
+                <button id="tab-barcode" class="flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all duration-200 bg-transparent" onclick="switchMode('barcode')">
                     <i class="fa-solid fa-barcode mr-2"></i> Barcode
                 </button>
-            </div>
-
-            <!-- Input Area -->
-            <div class="mb-5">
-                <label for="dataInput" class="block text-sm font-semibold text-gray-700 mb-2" id="inputLabel">
-                    Content (URL, Text, etc.)
-                </label>
-                <textarea 
-                    id="dataInput" 
-                    rows="3" 
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                    placeholder="Enter your website URL or text here..."
-                ></textarea>
-                <p id="errorMessage" class="text-red-500 text-sm mt-2 hidden-el">
-                    <i class="fa-solid fa-circle-exclamation mr-1"></i> <span id="errorText">Please enter some content.</span>
-                </p>
-            </div>
-
-            <!-- Action Button -->
-            <button 
-                onclick="generateCode()" 
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98]"
-            >
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
-            </button>
-
-            <!-- Output Area -->
-            <div class="mt-8 border-t border-gray-100 pt-6">
-                <div id="output-container" class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 relative p-4 transition-all">
-                    
-                    <!-- Placeholder state -->
-                    <div id="placeholder" class="text-gray-400 text-center flex flex-col items-center">
-                        <i class="fa-solid fa-image text-4xl mb-3 opacity-50"></i>
-                        <p class="text-sm">Your generated code will appear here</p>
-                    </div>
-
-                    <!-- QR Code Container -->
-                    <div id="qrcode" class="hidden-el flex justify-center bg-white p-2 rounded-lg shadow-sm"></div>
-
-                    <!-- Barcode Container -->
-                    <canvas id="barcodeCanvas" class="hidden-el bg-white p-2 rounded-lg shadow-sm"></canvas>
-
-                </div>
-                
-                <!-- Download Button (Hidden initially) -->
-                <button 
-                    id="downloadBtn" 
-                    onclick="downloadCode()" 
-                    class="hidden-el mt-4 w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                    <i class="fa-solid fa-download"></i> Download Image
+                <button id="tab-scan" class="flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all duration-200 bg-transparent" onclick="switchMode('scan')">
+                    <i class="fa-solid fa-camera mr-2"></i> Scanner
                 </button>
             </div>
+
+            <!-- Generate Section -->
+            <div id="generateSection">
+                <!-- Input Area -->
+                <div class="mb-5">
+                    <label for="dataInput" class="block text-sm font-semibold text-gray-700 mb-2" id="inputLabel">
+                        Content (URL, Text, etc.)
+                    </label>
+                    <textarea 
+                        id="dataInput" 
+                        rows="3" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                        placeholder="Enter your website URL or text here..."
+                    ></textarea>
+                    <p id="errorMessage" class="text-red-500 text-sm mt-2 hidden-el">
+                        <i class="fa-solid fa-circle-exclamation mr-1"></i> <span id="errorText">Please enter some content.</span>
+                    </p>
+                </div>
+
+                <!-- Action Button -->
+                <button 
+                    onclick="generateCode()" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98]"
+                >
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                </button>
+
+                <!-- Output Area -->
+                <div class="mt-8 border-t border-gray-100 pt-6">
+                    <div id="output-container" class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 relative p-4 transition-all">
+                        
+                        <!-- Placeholder state -->
+                        <div id="placeholder" class="text-gray-400 text-center flex flex-col items-center">
+                            <i class="fa-solid fa-image text-4xl mb-3 opacity-50"></i>
+                            <p class="text-sm">Your generated code will appear here</p>
+                        </div>
+
+                        <!-- QR Code Container -->
+                        <div id="qrcode" class="hidden-el flex justify-center bg-white p-2 rounded-lg shadow-sm"></div>
+
+                        <!-- Barcode Container -->
+                        <canvas id="barcodeCanvas" class="hidden-el bg-white p-2 rounded-lg shadow-sm"></canvas>
+
+                    </div>
+                    
+                    <!-- Download Button (Hidden initially) -->
+                    <button 
+                        id="downloadBtn" 
+                        onclick="downloadCode()" 
+                        class="hidden-el mt-4 w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                        <i class="fa-solid fa-download"></i> Download Image
+                    </button>
+                </div>
+            </div> <!-- End Generate Section -->
+
+            <!-- Scan Section -->
+            <div id="scanSection" class="hidden-el">
+                <div class="bg-gray-900 rounded-xl overflow-hidden relative shadow-inner min-h-[300px] flex items-center justify-center border-2 border-gray-800">
+                    <div id="scanPlaceholder" class="text-gray-400 flex flex-col items-center absolute z-10">
+                        <i class="fa-solid fa-video text-4xl mb-3 opacity-50"></i>
+                        <p class="text-sm">Camera preview will appear here</p>
+                    </div>
+                    <!-- Reader div needed by html5-qrcode -->
+                    <div id="reader" class="w-full h-full relative z-20"></div>
+                </div>
+                
+                <!-- Scanner Controls -->
+                <div class="mt-4 flex gap-3">
+                    <button id="startScanBtn" onclick="startScanner()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md">
+                        <i class="fa-solid fa-camera"></i> Start Camera
+                    </button>
+                    <button id="stopScanBtn" onclick="stopScanner()" class="hidden-el flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md">
+                        <i class="fa-solid fa-stop"></i> Stop Camera
+                    </button>
+                </div>
+
+                <!-- Scanner Results -->
+                <div id="scanResultContainer" class="hidden-el mt-6 bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm transition-all duration-300">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-bold text-green-800"><i class="fa-solid fa-check-circle mr-1"></i> Scan Successful</h3>
+                        <button id="copyBtn" onclick="copyScanResult()" class="text-xs bg-white border border-green-300 text-green-700 hover:bg-green-100 px-3 py-1.5 rounded transition-colors flex items-center gap-1 font-medium shadow-sm">
+                            <i class="fa-regular fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <p id="scanResultText" class="text-gray-800 break-all bg-white p-3 rounded border border-green-100 font-mono text-sm"></p>
+                </div>
+            </div> <!-- End Scan Section -->
+
         </div>
         
         <!-- Footer -->
@@ -129,44 +172,156 @@
     <script>
         let currentMode = 'qr'; // 'qr' or 'barcode'
         let qrCodeInstance = null;
+        let html5QrCode = null; // Scanner instance
         
         // DOM Elements
         const tabQr = document.getElementById('tab-qr');
         const tabBarcode = document.getElementById('tab-barcode');
+        const tabScan = document.getElementById('tab-scan');
+        
+        const generateSection = document.getElementById('generateSection');
+        const scanSection = document.getElementById('scanSection');
+        
         const inputLabel = document.getElementById('inputLabel');
         const dataInput = document.getElementById('dataInput');
         const placeholder = document.getElementById('placeholder');
         const qrContainer = document.getElementById('qrcode');
         const barcodeCanvas = document.getElementById('barcodeCanvas');
         const downloadBtn = document.getElementById('downloadBtn');
+        
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
+        
+        const scanPlaceholder = document.getElementById('scanPlaceholder');
+        const startScanBtn = document.getElementById('startScanBtn');
+        const stopScanBtn = document.getElementById('stopScanBtn');
+        const scanResultContainer = document.getElementById('scanResultContainer');
+        const scanResultText = document.getElementById('scanResultText');
 
         function switchMode(mode) {
+            // Stop scanner if navigating away from scan tab to save battery/turn off camera
+            if (currentMode === 'scan' && mode !== 'scan') {
+                stopScanner();
+            }
+
             currentMode = mode;
             
             // Reset UI states
             resetOutput();
             hideError();
 
-            // Update Tab Styling
+            // Classes for tab styling
+            const inactiveClass = 'flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all duration-200 bg-transparent';
+            const activeClass = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-white text-blue-600 shadow-sm';
+
+            // Reset all tabs
+            tabQr.className = inactiveClass;
+            tabBarcode.className = inactiveClass;
+            tabScan.className = inactiveClass;
+
+            // Hide all main sections
+            generateSection.classList.add('hidden-el');
+            scanSection.classList.add('hidden-el');
+
+            // Apply specific active states
             if (mode === 'qr') {
-                // Active QR styling
-                tabQr.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-white text-blue-600 shadow-sm';
-                tabBarcode.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all duration-200 bg-transparent';
-                
+                tabQr.className = activeClass;
+                generateSection.classList.remove('hidden-el');
                 inputLabel.textContent = 'Content (URL, Text, WiFi, etc.)';
                 dataInput.placeholder = 'Enter your website URL or text here...';
-            } else {
-                // Active Barcode styling
-                tabBarcode.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 bg-white text-blue-600 shadow-sm';
-                tabQr.className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-all duration-200 bg-transparent';
-                
+            } else if (mode === 'barcode') {
+                tabBarcode.className = activeClass;
+                generateSection.classList.remove('hidden-el');
                 inputLabel.textContent = 'Content (Numbers, Product Codes, Text)';
                 dataInput.placeholder = 'e.g., 123456789012 or ITEM-45';
+            } else if (mode === 'scan') {
+                tabScan.className = activeClass;
+                scanSection.classList.remove('hidden-el');
             }
         }
 
+        // --- Scanner Logic ---
+        function initScannerObj() {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+        }
+
+        function startScanner() {
+            hideError();
+            initScannerObj();
+            
+            // Update UI for scanning state
+            startScanBtn.classList.add('hidden-el');
+            stopScanBtn.classList.remove('hidden-el');
+            scanPlaceholder.classList.add('hidden-el');
+            scanResultContainer.classList.add('hidden-el');
+            
+            // Start the camera facing the environment (back camera on mobile)
+            html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                (decodedText, decodedResult) => {
+                    // On Successful Scan
+                    scanResultContainer.classList.remove('hidden-el');
+                    scanResultText.textContent = decodedText;
+                    
+                    // Brief flash effect for visual feedback
+                    scanResultContainer.classList.add('bg-green-100');
+                    setTimeout(() => scanResultContainer.classList.remove('bg-green-100'), 300);
+                },
+                (errorMessage) => {
+                    // Ignore background scan errors (happens constantly when searching for a code)
+                }
+            ).catch((err) => {
+                showError("Could not access camera. Please allow camera permissions in your browser.");
+                stopScannerUI();
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    stopScannerUI();
+                }).catch(err => console.error("Error stopping scanner", err));
+            } else {
+                stopScannerUI();
+            }
+        }
+
+        function stopScannerUI() {
+            startScanBtn.classList.remove('hidden-el');
+            stopScanBtn.classList.add('hidden-el');
+            scanPlaceholder.classList.remove('hidden-el');
+        }
+
+        function copyScanResult() {
+            const text = scanResultText.textContent;
+            
+            // Fallback clipboard method using a temporary textarea
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            // Button feedback
+            const copyBtn = document.getElementById('copyBtn');
+            const originalHTML = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+            copyBtn.classList.add('bg-green-100', 'border-green-400');
+            
+            setTimeout(() => { 
+                copyBtn.innerHTML = originalHTML; 
+                copyBtn.classList.remove('bg-green-100', 'border-green-400');
+            }, 2000);
+        }
+
+        // --- Generation Logic ---
         function generateCode() {
             const inputData = dataInput.value.trim();
             
