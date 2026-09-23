@@ -153,9 +153,14 @@
                 <div id="scanResultContainer" class="hidden-el mt-6 bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm transition-all duration-300">
                     <div class="flex items-center justify-between mb-2">
                         <h3 class="text-sm font-bold text-green-800"><i class="fa-solid fa-check-circle mr-1"></i> Scan Successful</h3>
-                        <button id="copyBtn" onclick="copyScanResult()" class="text-xs bg-white border border-green-300 text-green-700 hover:bg-green-100 px-3 py-1.5 rounded transition-colors flex items-center gap-1 font-medium shadow-sm">
-                            <i class="fa-regular fa-copy"></i> Copy
-                        </button>
+                        <div class="flex gap-2">
+                            <button id="copyBtn" onclick="copyScanResult()" class="text-xs bg-white border border-green-300 text-green-700 hover:bg-green-100 px-3 py-1.5 rounded transition-colors flex items-center gap-1 font-medium shadow-sm">
+                                <i class="fa-regular fa-copy"></i> Copy
+                            </button>
+                            <button onclick="resetAndScanAgain()" class="text-xs bg-green-600 border border-transparent text-white hover:bg-green-700 px-3 py-1.5 rounded transition-colors flex items-center gap-1 font-medium shadow-sm">
+                                <i class="fa-solid fa-rotate-right"></i> Scan Again
+                            </button>
+                        </div>
                     </div>
                     <p id="scanResultText" class="text-gray-800 break-all bg-white p-3 rounded border border-green-100 font-mono text-sm"></p>
                 </div>
@@ -266,12 +271,21 @@
                 },
                 (decodedText, decodedResult) => {
                     // On Successful Scan
+                    
+                    // Stop the camera automatically
+                    stopScanner();
+                    
                     scanResultContainer.classList.remove('hidden-el');
                     scanResultText.textContent = decodedText;
                     
                     // Brief flash effect for visual feedback
                     scanResultContainer.classList.add('bg-green-100');
                     setTimeout(() => scanResultContainer.classList.remove('bg-green-100'), 300);
+
+                    // Auto-open if it's a URL
+                    if (isValidURL(decodedText)) {
+                        window.open(decodedText, '_blank');
+                    }
                 },
                 (errorMessage) => {
                     // Ignore background scan errors (happens constantly when searching for a code)
@@ -319,6 +333,22 @@
                 copyBtn.innerHTML = originalHTML; 
                 copyBtn.classList.remove('bg-green-100', 'border-green-400');
             }, 2000);
+        }
+
+        // --- New Helper Functions for Scanner ---
+        function isValidURL(string) {
+            try {
+                const url = new URL(string);
+                return url.protocol === "http:" || url.protocol === "https:";
+            } catch (_) {
+                return false;  
+            }
+        }
+
+        function resetAndScanAgain() {
+            scanResultContainer.classList.add('hidden-el');
+            scanResultText.textContent = '';
+            startScanner();
         }
 
         // --- Generation Logic ---
