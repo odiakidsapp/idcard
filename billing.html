@@ -307,7 +307,6 @@
             opacity: 0.9; transform: rotate(-10deg); 
         }
 
-        /* NEW: Top Right Info QR Code */
         .qr-top-right {
             position: absolute; top: 5mm; right: 5mm; z-index: 10;
             background: white; padding: 2px; border-radius: 4px;
@@ -411,10 +410,10 @@
             <div class="workspace-area">
                 <!-- PHYSICAL A5 INVOICE SHEET -->
                 <div id="invoice-sheet">
-                    <!-- Restored Stamp Image (Top Left) -->
+                    <!-- Top Left Stamp -->
                     <img src="stamp.png" alt="Stamp" class="stamp-top-left" onerror="this.style.display='none'">
                     
-                    <!-- Restored Info QR Code (Top Right) -->
+                    <!-- Top Right Info QR -->
                     <div id="info-qrcode" class="qr-top-right"></div>
                     
                     <div class="watermark">AN DIGITAL</div>
@@ -439,7 +438,6 @@
                                 <span class="info-label">Invoice Details</span>
                                 <div style="display:flex; gap: 5px; align-items: center; font-size: 12px; font-weight: 600;">INV # <input type="text" id="invoiceNo" value="001" style="width: 70px; text-align: right;" oninput="updateQR()"></div>
                                 <div style="display:flex; gap: 5px; align-items: center; font-size: 12px;">Date: <input type="text" id="datePicker" placeholder="DD/MM/YYYY" style="width: 85px; text-align: right;" onchange="updateQR()"></div>
-                                <!-- Professional Barcode -->
                                 <svg id="barcode" style="margin-top: 6px;"></svg>
                             </div>
                         </div>
@@ -492,12 +490,11 @@
 
                         <div class="footer">
                             <div class="signature-area">
-                                <!-- Dynamic UPI QR Code for Payments -->
+                                <!-- Dynamic UPI QR -->
                                 <div id="qrcode"></div>
-                                <div style="margin-top: 5px; font-size: 9px; font-weight: 700; color: var(--text-main); letter-spacing: 0.5px;">SCAN TO PAY YOUR BILL</div>
+                                <div style="margin-top: 5px; font-size: 9px; font-weight: 700; color: var(--text-main); letter-spacing: 0.5px;">SCAN TO PAY</div>
                             </div>
                             <div class="signature-area" style="justify-content: flex-end;">
-                                <!-- Signature Image -->
                                 <img src="signature.png" alt="Signature" class="signature-img" onerror="this.style.display='none'">
                                 <div class="signature-line">Authorized Signature</div>
                             </div>
@@ -510,7 +507,6 @@
         <!-- DASHBOARD & ANALYTICS VIEW -->
         <div id="view-dashboard" class="view-section">
             
-            <!-- Context Switcher for Analytics -->
             <div class="dash-tabs">
                 <div class="dash-tab active" onclick="window.setDashCategory('official', this)">🏢 Official Analytics</div>
                 <div class="dash-tab" onclick="window.setDashCategory('own', this)">🤝 Own Business Analytics</div>
@@ -534,7 +530,6 @@
                 </div>
             </div>
 
-            <!-- Chart -->
             <div class="charts-container">
                 <canvas id="revenueChart"></canvas>
             </div>
@@ -648,6 +643,18 @@
             alert(`Invoice #${invoiceNo} saved to ${category === 'official' ? 'Official' : 'Own Business'}!`);
         };
 
+        // NEW: Quick action to move an invoice between Official/Own directly from the table
+        window.moveInvoiceCategory = async function(id, newCategory) {
+            if (confirm(`Move Invoice #${id} to ${newCategory === 'official' ? 'Official' : 'Own Business'}?`)) {
+                try {
+                    await setDoc(doc(db, "invoices", id), { category: newCategory }, { merge: true });
+                } catch (e) {
+                    console.error("Error moving category:", e);
+                    alert("Failed to move invoice.");
+                }
+            }
+        };
+
         window.updateAnalytics = function() {
             let rev = 0, pend = 0, count = 0;
             let dateMap = {};
@@ -712,6 +719,10 @@
             filtered.sort((a, b) => String(b.invoiceNo).localeCompare(String(a.invoiceNo), undefined, {numeric: true}));
 
             filtered.forEach(inv => {
+                const invCat = inv.category || 'official';
+                const targetCat = invCat === 'official' ? 'own' : 'official';
+                const moveText = invCat === 'official' ? 'Move to Own' : 'Move to Official';
+
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>#${inv.invoiceNo}</strong></td>
@@ -719,7 +730,8 @@
                         <td>${inv.customerName}</td>
                         <td style="font-weight: 600;">₹${(inv.grandTotal||0).toFixed(2)}</td>
                         <td><span class="badge ${inv.status === 'PAID' ? 'badge-paid' : 'badge-pending'}">${inv.status}</span></td>
-                        <td style="text-align: right;">
+                        <td style="text-align: right; white-space: nowrap;">
+                            <a class="action-link" style="color: var(--warning);" onclick="moveInvoiceCategory('${inv.invoiceNo}', '${targetCat}')">${moveText}</a>
                             <a class="action-link" onclick="loadInvoiceToForm('${inv.invoiceNo}')">Edit</a>
                             <a class="action-link action-delete" onclick="deleteInvoice('${inv.invoiceNo}')">Delete</a>
                         </td>
@@ -866,7 +878,6 @@
             const t = document.getElementById('grandTotal').innerText;
             const c = document.getElementById('customerName').value || 'Guest';
             
-            // 1. Generate Top-Right Barcode
             try {
                 JsBarcode("#barcode", inv || "000", {
                     width: 1.2,
@@ -877,20 +888,18 @@
                 });
             } catch(e) {}
 
-            // 2. Generate Top-Right Info QR Code
             const infoQrText = `AN DIGITAL\nInv: ${inv}\nDate: ${d}\nCust: ${c}\nTotal: INR ${t}`;
             const infoQrContainer = document.getElementById('info-qrcode');
             infoQrContainer.innerHTML = '';
-            new QRCode(infoQrContainer, { text: infoQrText, width: 50, height: 50, correctLevel : QRCode.CorrectLevel.L });
+            new QRCode(infoQrContainer, { text: infoQrText, width: 45, height: 45, correctLevel : QRCode.CorrectLevel.L });
 
-            // 3. Generate Dynamic UPI QR Code for Payment (Bottom)
             const upiID = document.getElementById('bankUpiId').value || "andigital@ybl";
             const payeeName = "AN DIGITAL";
             const upiString = `upi://pay?pa=${upiID}&pn=${encodeURIComponent(payeeName)}&am=${t}&cu=INR`;
             
             const qr = document.getElementById('qrcode'); 
             qr.innerHTML = '';
-            new QRCode(qr, { text: upiString, width: 60, height: 60, correctLevel : QRCode.CorrectLevel.L });
+            new QRCode(qr, { text: upiString, width: 55, height: 55, correctLevel : QRCode.CorrectLevel.L });
         }
 
         window.shareInvoice = async function() {
