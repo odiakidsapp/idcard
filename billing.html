@@ -6,6 +6,8 @@
     <title>AN DIGITAL - Cloud Billing & Invoice Management</title>
     <!-- QR Code Generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- HTML to Canvas (For HD Image Export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* --- GENERAL RESET & BASE --- */
         * { box-sizing: border-box; }
@@ -91,7 +93,10 @@
             cursor: pointer;
         }
 
-        .btn-print { background-color: #8b5cf6; box-shadow: 0 0 10px rgba(139, 92, 246, 0.4); }
+        .btn-share { background-color: #ec4899; box-shadow: 0 0 10px rgba(236, 72, 153, 0.4); }
+        .btn-share:hover { background-color: #db2777; }
+
+        .btn-print { background-color: #8b5cf6; }
         .btn-print:hover { background-color: #7c3aed; }
 
         /* --- DASHBOARD DRAWER / MODAL --- */
@@ -510,6 +515,7 @@
                 📤 Import JSONs
                 <input type="file" id="jsonBulkInput" accept=".json" multiple onchange="importJsonToCloud(event)">
             </label>
+            <button class="btn btn-share" onclick="shareInvoice()">📲 Share Image</button>
             <button class="btn btn-print" onclick="autoFitAndPrint()">🖨️ Print (A5)</button>
         </div>
     </div>
@@ -650,7 +656,6 @@
             getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        // Your Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyD5pzI0pMVX5nKvXtu4YmSo0BPL4SIbe1E",
             authDomain: "mrbill-4e4af.firebaseapp.com",
@@ -673,6 +678,9 @@
             snapshot.forEach(docSnap => {
                 cachedInvoices.push({ id: docSnap.id, ...docSnap.data() });
             });
+            // Attach to window so standard script can use it for auto-updating Invoice Number
+            window.cachedInvoices = cachedInvoices; 
+            
             document.getElementById('totalBillsCount').innerText = cachedInvoices.length;
             renderDashboard();
         }, (error) => {
@@ -862,7 +870,23 @@
         };
 
         function resetInvoice() {
-            document.getElementById('invoiceNo').value = Math.floor(100 + Math.random() * 900);
+            // Find highest current invoice from cloud memory and increment it
+            let nextInvoice = 1;
+            if (window.cachedInvoices && window.cachedInvoices.length > 0) {
+                // Extract numbers from strings (e.g. "INV-102" becomes 102)
+                const maxInv = Math.max(...window.cachedInvoices.map(inv => {
+                    const parsed = parseInt(String(inv.invoiceNo).replace(/\D/g, ''));
+                    return isNaN(parsed) ? 0 : parsed;
+                }));
+                nextInvoice = maxInv + 1;
+            }
+
+            // Fallback to random if database is empty on first load
+            if(nextInvoice === 1) { 
+                nextInvoice = Math.floor(100 + Math.random() * 900); 
+            }
+
+            document.getElementById('invoiceNo').value = String(nextInvoice).padStart(3, '0');
             document.getElementById('datePicker').value = getTodayFormatted();
             document.getElementById('customerName').value = '';
             document.getElementById('customerAddress').value = '';
@@ -943,6 +967,68 @@
             const container = document.getElementById('qrcode');
             container.innerHTML = '';
             new QRCode(container, { text: qrText, width: 50, height: 50, correctLevel : QRCode.CorrectLevel.L });
+        }
+
+        // --- NEW SHARE FUNCTION ---
+        async function shareInvoice() {
+            const sheet = document.getElementById('invoice-sheet');
+            
+            // 1. Hide the little red 'x' delete buttons temporally so they don't show in the photo
+            const deleteBtns = document.querySelectorAll('.delete-btn');
+            deleteBtns.forEach(btn => btn.style.display = 'none');
+
+            // 2. Generate Canvas
+            try {
+                // If scaled via printing logic, reset transform before capturing
+                const wrapper = document.getElementById('content-wrapper');
+                const originalTransform = wrapper.style.transform;
+                wrapper.style.transform = 'none';
+
+                const canvas = await html2canvas(sheet, {
+                    scale: 3, // Multiplies resolution for HD quality
+                    useCORS: true, 
+                    backgroundColor: '#ffffff'
+                });
+
+                // Restore styles
+                wrapper.style.transform = originalTransform;
+                deleteBtns.forEach(btn => btn.style.display = 'flex');
+
+                // 3. Convert Canvas to Blob Image
+                canvas.toBlob(async (blob) => {
+                    const invNo = document.getElementById('invoiceNo').value || 'Bill';
+                    const customer = document.getElementById('customerName').value || 'Customer';
+                    const fileName = `AN_DIGITAL_Invoice_${invNo}.png`;
+                    const file = new File([blob], fileName, { type: 'image/png' });
+
+                    // 4. Try native Web Share API (Mobile / Modern Browsers)
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: `Invoice #${invNo}`,
+                                text: `Hello ${customer}, here is your invoice from AN DIGITAL.`
+                            });
+                        } catch (err) {
+                            console.log("User cancelled share or error:", err);
+                        }
+                    } else {
+                        // 5. Fallback: Automatically download the image for unsupported browsers
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        alert("Your browser doesn't support direct sharing. The HD Image has been downloaded instead!");
+                    }
+                }, 'image/png');
+
+            } catch (error) {
+                console.error("Error generating image:", error);
+                alert("Failed to generate image.");
+                deleteBtns.forEach(btn => btn.style.display = 'flex');
+            }
         }
 
         function autoFitAndPrint() {
