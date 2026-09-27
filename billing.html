@@ -307,9 +307,16 @@
             opacity: 0.9; transform: rotate(-10deg); 
         }
 
+        /* UPDATED: Info QR Code slightly bigger and moved a bit down/left from the extreme edge */
         .qr-top-right {
-            position: absolute; top: 5mm; right: 5mm; z-index: 10;
-            background: white; padding: 2px; border-radius: 4px;
+            position: absolute; 
+            top: 12mm; 
+            right: 12mm; 
+            z-index: 10;
+            background: white; 
+            padding: 3px; 
+            border-radius: 4px;
+            border: 1px solid #f1f5f9;
         }
 
         .signature-img {
@@ -643,7 +650,6 @@
             alert(`Invoice #${invoiceNo} saved to ${category === 'official' ? 'Official' : 'Own Business'}!`);
         };
 
-        // NEW: Quick action to move an invoice between Official/Own directly from the table
         window.moveInvoiceCategory = async function(id, newCategory) {
             if (confirm(`Move Invoice #${id} to ${newCategory === 'official' ? 'Official' : 'Own Business'}?`)) {
                 try {
@@ -872,6 +878,7 @@
             el.style.color = bal > 0 ? "var(--danger)" : "var(--success)";
         }
 
+        // --- UPDATED QR & BARCODE LOGIC ---
         window.updateQR = function() {
             const inv = document.getElementById('invoiceNo').value;
             const d = document.getElementById('datePicker').value;
@@ -888,10 +895,12 @@
                 });
             } catch(e) {}
 
-            const infoQrText = `AN DIGITAL\nInv: ${inv}\nDate: ${d}\nCust: ${c}\nTotal: INR ${t}`;
+            // BIGGER & MORE DETAILED INFO QR
+            const infoQrText = `Biller: AN DIGITAL\nContact: 7855800205\nInv No: ${inv}\nDate: ${d}\nCustomer: ${c}\nTotal Amount: INR ${t}`;
             const infoQrContainer = document.getElementById('info-qrcode');
             infoQrContainer.innerHTML = '';
-            new QRCode(infoQrContainer, { text: infoQrText, width: 45, height: 45, correctLevel : QRCode.CorrectLevel.L });
+            // Increased to 75x75 and set CorrectLevel to M (Medium) for better scanning of larger text
+            new QRCode(infoQrContainer, { text: infoQrText, width: 75, height: 75, correctLevel : QRCode.CorrectLevel.M });
 
             const upiID = document.getElementById('bankUpiId').value || "andigital@ybl";
             const payeeName = "AN DIGITAL";
