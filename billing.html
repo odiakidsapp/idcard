@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- QR Code Generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Barcode Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
     <!-- HTML to Canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Chart.js for Analytics -->
@@ -113,6 +115,29 @@
         .topbar-title {
             font-size: 18px;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .category-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-color);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .category-selector select {
+            font-weight: 700;
+            border: none;
+            background: transparent;
+            outline: none;
+            cursor: pointer;
+            color: var(--primary);
+            font-size: 14px;
         }
 
         .btn-group { display: flex; gap: 10px; }
@@ -150,6 +175,32 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* --- ANALYTICS DASHBOARD --- */
+        .dash-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .dash-tab {
+            padding: 12px 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .dash-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -244,7 +295,6 @@
             border-radius: 2px;
         }
 
-        /* Invoice Internals */
         #content-wrapper { width: 100%; display: flex; flex-direction: column; transform-origin: top center; }
         
         .watermark {
@@ -252,14 +302,23 @@
             font-size: 75px; color: rgba(0,0,0,0.02); white-space: nowrap; pointer-events: none; z-index: 0; font-weight: 900;
         }
 
+        .stamp-top-left {
+            position: absolute; top: 5mm; left: 5mm; width: 70px; height: auto; z-index: 10;
+            opacity: 0.9; transform: rotate(-10deg); 
+        }
+
+        .signature-img {
+            max-width: 120px; max-height: 50px; display: block; margin: 0 auto -5px auto;
+        }
+
         .header { text-align: center; border-bottom: 2px solid var(--text-main); padding-bottom: 12px; margin-bottom: 12px; position: relative; z-index: 1; }
         .shop-name { font-size: 24px; font-weight: 800; color: var(--text-main); margin: 0; letter-spacing: 1px; }
         
-        input, select {
+        input, select.internal-select {
             border: 1px solid transparent; padding: 4px; font-family: inherit; font-size: 12px; 
             background: transparent; transition: all 0.2s; border-radius: 4px;
         }
-        input:hover, input:focus, select:hover, select:focus {
+        input:hover, input:focus, select.internal-select:hover, select.internal-select:focus {
             background-color: #f8fafc; border: 1px solid #cbd5e1; outline: none;
         }
 
@@ -281,8 +340,8 @@
         .grand-total { font-size: 18px; font-weight: 800; color: var(--text-main); border-top: 2px solid var(--text-main); padding-top: 8px; margin-top: 8px; }
 
         .footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10px; color: var(--text-muted); position: relative; z-index: 1; }
-        .signature-area { text-align: center; width: 130px; }
-        .signature-line { border-top: 1px solid var(--text-main); padding-top: 4px; color: var(--text-main); font-weight: 600;}
+        .signature-area { text-align: center; width: 130px; display: flex; flex-direction: column; align-items: center;}
+        .signature-line { border-top: 1px solid var(--text-main); padding-top: 4px; color: var(--text-main); font-weight: 600; width: 100%;}
 
         .delete-btn { background: #fee2e2; color: var(--danger); border: none; width: 20px; height: 20px; font-size: 14px; border-radius: 4px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: auto; transition: 0.2s;}
         .delete-btn:hover { background: var(--danger); color: white; }
@@ -296,7 +355,7 @@
             .view-section { padding: 0; display: block !important; overflow: visible; }
             #invoice-sheet { box-shadow: none; margin: 0; border: none; }
             button, .delete-btn { display: none !important; }
-            input, select { border: none !important; background: transparent !important; }
+            input, select.internal-select { border: none !important; background: transparent !important; }
             #view-dashboard { display: none !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
@@ -320,15 +379,24 @@
     <!-- MAIN CONTENT -->
     <main class="main-wrapper">
         
-        <!-- WORKSPACE VIEW (Active by default) -->
+        <!-- WORKSPACE VIEW -->
         <div id="view-workspace" class="view-section active">
             <!-- Workspace Topbar -->
             <div class="topbar" style="margin: -30px -30px 30px -30px; border-radius: 0;">
-                <div class="topbar-title">Create Invoice</div>
+                <div class="topbar-title">
+                    Create Invoice
+                    <div class="category-selector">
+                        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Context:</span>
+                        <select id="invoiceCategory">
+                            <option value="official">🏢 Official</option>
+                            <option value="own">🤝 Own Business</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="btn-group">
                     <button class="btn" onclick="window.resetInvoice()">Reset</button>
                     <button class="btn" onclick="addNewRow()">+ Add Item</button>
-                    <button class="btn btn-primary" onclick="shareInvoice()">Share via WhatsApp</button>
+                    <button class="btn btn-primary" onclick="shareInvoice()">Share Image</button>
                     <button class="btn btn-primary" onclick="autoFitAndPrint()">Print A5</button>
                     <button class="btn btn-success" onclick="saveToCloud()">Save to Cloud</button>
                 </div>
@@ -337,6 +405,9 @@
             <div class="workspace-area">
                 <!-- PHYSICAL A5 INVOICE SHEET -->
                 <div id="invoice-sheet">
+                    <!-- Restored Stamp Image -->
+                    <img src="stamp.png" alt="Stamp" class="stamp-top-left" onerror="this.style.display='none'">
+                    
                     <div class="watermark">AN DIGITAL</div>
                     <div id="content-wrapper">
                         <div class="header">
@@ -359,6 +430,8 @@
                                 <span class="info-label">Invoice Details</span>
                                 <div style="display:flex; gap: 5px; align-items: center; font-size: 12px; font-weight: 600;">INV # <input type="text" id="invoiceNo" value="001" style="width: 70px; text-align: right;" oninput="updateQR()"></div>
                                 <div style="display:flex; gap: 5px; align-items: center; font-size: 12px;">Date: <input type="text" id="datePicker" placeholder="DD/MM/YYYY" style="width: 85px; text-align: right;" onchange="updateQR()"></div>
+                                <!-- NEW PROFESSIONAL BARCODE -->
+                                <svg id="barcode" style="margin-top: 6px;"></svg>
                             </div>
                         </div>
 
@@ -380,7 +453,7 @@
                             <div class="payment-details">
                                 <strong style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Bank Details</strong><br>
                                 <div style="margin-top: 4px; display: grid; grid-template-columns: 60px 1fr; gap: 2px;">
-                                    <span>UPI ID:</span> <input type="text" value="andigital@ybl" style="padding:0;">
+                                    <span>UPI ID:</span> <input type="text" id="bankUpiId" value="andigital@ybl" style="padding:0;" onchange="updateQR()">
                                     <span>Bank:</span> <input type="text" value="SBI Bank" style="padding:0;">
                                     <span>A/C No:</span> <input type="text" value="39169020482" style="padding:0;">
                                     <span>IFSC:</span> <input type="text" value="SBIN0009986" style="padding:0;">
@@ -392,7 +465,7 @@
                                 <div style="margin-top: 8px; font-size: 12px;">
                                     <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                         <span style="color: var(--text-muted);">Mode:</span>
-                                        <select id="paymentMode" style="width: 80px; text-align: right; font-weight: 600;">
+                                        <select id="paymentMode" class="internal-select" style="width: 80px; text-align: right; font-weight: 600;">
                                             <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Card">Card</option><option value="Credit">Credit</option>
                                         </select>
                                     </div>
@@ -409,11 +482,14 @@
                         </div>
 
                         <div class="footer">
-                            <div class="signature-area" style="text-align: left;">
+                            <div class="signature-area">
+                                <!-- UPDATED DYNAMIC UPI QR CODE -->
                                 <div id="qrcode"></div>
-                                <div style="margin-top: 4px;">Scan to Pay/Verify</div>
+                                <div style="margin-top: 5px; font-size: 9px; font-weight: 700; color: var(--text-main); letter-spacing: 0.5px;">SCAN TO PAY YOUR BILL</div>
                             </div>
-                            <div class="signature-area" style="margin-bottom: 10px;">
+                            <div class="signature-area" style="justify-content: flex-end;">
+                                <!-- Restored Signature Image -->
+                                <img src="signature.png" alt="Signature" class="signature-img" onerror="this.style.display='none'">
                                 <div class="signature-line">Authorized Signature</div>
                             </div>
                         </div>
@@ -424,6 +500,13 @@
 
         <!-- DASHBOARD & ANALYTICS VIEW -->
         <div id="view-dashboard" class="view-section">
+            
+            <!-- Context Switcher for Analytics -->
+            <div class="dash-tabs">
+                <div class="dash-tab active" onclick="window.setDashCategory('official', this)">🏢 Official Analytics</div>
+                <div class="dash-tab" onclick="window.setDashCategory('own', this)">🤝 Own Business Analytics</div>
+            </div>
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-title">Total Revenue</div>
@@ -450,9 +533,9 @@
             <!-- Ledger Table -->
             <div class="data-card">
                 <div class="data-header">
-                    <h3 style="font-size: 16px; font-weight: 600;">Recent Invoices</h3>
+                    <h3 style="font-size: 16px; font-weight: 600;" id="table-title">Recent Invoices (Official)</h3>
                     <div class="btn-group">
-                        <input type="text" id="searchInput" class="search-box" placeholder="Search customer or INV #..." oninput="renderTable()">
+                        <input type="text" id="searchInput" class="search-box" placeholder="Search customer or INV #..." oninput="window.renderTable()">
                         <label class="btn" style="margin: 0; background: var(--bg-color);">
                             Import JSON
                             <input type="file" style="display:none;" accept=".json" multiple onchange="importJsonToCloud(event)">
@@ -499,26 +582,37 @@
 
         let cachedInvoices = [];
         let chartInstance = null;
-        
-        // Target: Only auto-update the ID on the initial Firebase load, not every time a new bill is saved
         let isFirstLoad = true;
+        
+        window.currentDashCategory = 'official';
 
-        // Sync Data
         onSnapshot(invoicesCol, (snapshot) => {
             cachedInvoices = [];
             snapshot.forEach(docSnap => cachedInvoices.push({ id: docSnap.id, ...docSnap.data() }));
             window.cachedInvoices = cachedInvoices; 
-            updateAnalytics();
-            renderTable();
+            
+            window.updateAnalytics();
+            window.renderTable();
 
-            // TRIGGER AUTOMATIC INVOICE NUMBERING ON INITIAL OPEN
             if (isFirstLoad && window.resetInvoice) {
                 window.resetInvoice();
                 isFirstLoad = false;
             }
         });
 
-        // Save Function
+        window.setDashCategory = function(category, element) {
+            document.querySelectorAll('.dash-tab').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            window.currentDashCategory = category;
+            
+            document.getElementById('table-title').innerText = category === 'official' 
+                ? 'Recent Invoices (Official)' 
+                : 'Recent Invoices (Own Business)';
+                
+            window.updateAnalytics();
+            window.renderTable();
+        };
+
         window.saveToCloud = async function() {
             const invoiceNo = document.getElementById('invoiceNo').value.trim();
             if (!invoiceNo) return alert("Invoice Number required.");
@@ -526,40 +620,47 @@
             const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
             const balance = total - paid;
             
+            const category = document.getElementById('invoiceCategory').value;
+
             const items = Array.from(document.querySelectorAll('#invoiceItems tr')).map(row => {
                 const inputs = row.querySelectorAll('input');
                 return { name: inputs[0].value, qty: parseFloat(inputs[1].value) || 0, rate: parseFloat(inputs[2].value) || 0 };
             });
 
             await setDoc(doc(db, "invoices", invoiceNo), {
-                invoiceNo, date: document.getElementById('datePicker').value,
+                invoiceNo, 
+                category,
+                date: document.getElementById('datePicker').value,
                 customerName: document.getElementById('customerName').value || 'Guest',
                 paymentMode: document.getElementById('paymentMode').value,
                 grandTotal: total, amountPaid: paid, balance: balance,
                 status: balance <= 0 ? "PAID" : "PENDING", items, updatedAt: serverTimestamp()
             });
-            alert(`Invoice #${invoiceNo} saved!`);
+            alert(`Invoice #${invoiceNo} saved to ${category === 'official' ? 'Official' : 'Own Business'}!`);
         };
 
-        // Analytics Update
-        function updateAnalytics() {
-            let rev = 0, pend = 0;
+        window.updateAnalytics = function() {
+            let rev = 0, pend = 0, count = 0;
             let dateMap = {};
 
-            cachedInvoices.forEach(inv => {
+            const filteredInvoices = cachedInvoices.filter(inv => {
+                const invCat = inv.category || 'official';
+                return invCat === window.currentDashCategory;
+            });
+
+            filteredInvoices.forEach(inv => {
                 rev += (inv.grandTotal || 0);
                 if (inv.status === 'PENDING') pend += (inv.balance || 0);
+                count++;
                 
-                // Aggregate for chart
                 const d = inv.date || window.getTodayFormatted();
                 dateMap[d] = (dateMap[d] || 0) + (inv.grandTotal || 0);
             });
 
             document.getElementById('dash-revenue').innerText = '₹' + rev.toFixed(2);
             document.getElementById('dash-pending').innerText = '₹' + pend.toFixed(2);
-            document.getElementById('dash-count').innerText = cachedInvoices.length;
+            document.getElementById('dash-count').innerText = count;
 
-            // Sort dates DD/MM/YYYY
             const sortedDates = Object.keys(dateMap).sort((a,b) => {
                 let [d1,m1,y1] = a.split('/'); let [d2,m2,y2] = b.split('/');
                 return new Date(y1, m1-1, d1) - new Date(y2, m2-1, d2);
@@ -567,7 +668,6 @@
             
             const data = sortedDates.map(d => dateMap[d]);
 
-            // Update Chart.js
             const ctx = document.getElementById('revenueChart').getContext('2d');
             if(chartInstance) chartInstance.destroy();
             chartInstance = new Chart(ctx, {
@@ -575,7 +675,7 @@
                 data: {
                     labels: sortedDates,
                     datasets: [{
-                        label: 'Daily Revenue (₹)',
+                        label: `Daily Revenue (₹) - ${window.currentDashCategory.toUpperCase()}`,
                         data: data,
                         borderColor: '#4f46e5',
                         backgroundColor: 'rgba(79, 70, 229, 0.1)',
@@ -587,18 +687,19 @@
             });
         }
 
-        // Render Data Table
         window.renderTable = function() {
             const tbody = document.getElementById('dataTableBody');
             const search = document.getElementById('searchInput').value.toLowerCase();
             tbody.innerHTML = '';
 
-            const filtered = cachedInvoices.filter(inv => 
-                (inv.customerName || '').toLowerCase().includes(search) || 
-                (inv.invoiceNo || '').toLowerCase().includes(search)
-            );
+            const filtered = cachedInvoices.filter(inv => {
+                const invCat = inv.category || 'official';
+                if (invCat !== window.currentDashCategory) return false;
+                
+                return (inv.customerName || '').toLowerCase().includes(search) || 
+                       (inv.invoiceNo || '').toLowerCase().includes(search);
+            });
 
-            // Sort newest first based on string length/value loosely (assuming incremental INV numbers)
             filtered.sort((a, b) => String(b.invoiceNo).localeCompare(String(a.invoiceNo), undefined, {numeric: true}));
 
             filtered.forEach(inv => {
@@ -621,6 +722,8 @@
         window.loadInvoiceToForm = function(id) {
             const data = cachedInvoices.find(i => i.invoiceNo === id);
             if (!data) return;
+            
+            document.getElementById('invoiceCategory').value = data.category || 'official';
             document.getElementById('invoiceNo').value = data.invoiceNo;
             document.getElementById('datePicker').value = data.date;
             document.getElementById('customerName').value = data.customerName;
@@ -648,7 +751,9 @@
                     const total = (data.items || []).reduce((s, it) => s + (it.qty * it.rate), 0);
                     const paid = parseFloat(data.amountPaid) || 0;
                     await setDoc(doc(db, "invoices", invNo), {
-                        invoiceNo: invNo, date: data.date || window.getTodayFormatted(),
+                        invoiceNo: invNo, 
+                        category: data.category || 'official',
+                        date: data.date || window.getTodayFormatted(),
                         customerName: data.customerName || 'Guest', paymentMode: data.paymentMode || 'Cash',
                         grandTotal: total, amountPaid: paid, balance: total - paid,
                         status: (total - paid) <= 0 ? "PAID" : "PENDING", items: data.items || [], updatedAt: serverTimestamp()
@@ -666,7 +771,6 @@
             return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
         }
 
-        // Tab Switcher
         window.switchTab = function(tabId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -675,14 +779,12 @@
             event.currentTarget.classList.add('active');
         }
 
-        // On physical load, initialize empty row. Firebase will quickly overwrite this with the correct Invoice Number once loaded.
         window.onload = () => { 
             document.getElementById('datePicker').value = window.getTodayFormatted(); 
             window.addNewRow(); 
             setTimeout(window.updateQR, 100); 
         };
 
-        // Calculates the next max invoice number and cleans the slate
         window.resetInvoice = function() {
             let nextInv = 1;
             if (window.cachedInvoices && window.cachedInvoices.length > 0) {
@@ -749,14 +851,31 @@
             el.style.color = bal > 0 ? "var(--danger)" : "var(--success)";
         }
 
+        // --- CORE UPDATE FOR QR AND BARCODE ---
         window.updateQR = function() {
             const inv = document.getElementById('invoiceNo').value;
-            const d = document.getElementById('datePicker').value;
             const t = document.getElementById('grandTotal').innerText;
-            const c = document.getElementById('customerName').value || 'Guest';
-            const qrText = `AN DIGITAL\nInv: ${inv}\nDate: ${d}\nCust: ${c}\nTotal: INR ${t}`;
-            const qr = document.getElementById('qrcode'); qr.innerHTML = '';
-            new QRCode(qr, { text: qrText, width: 45, height: 45, correctLevel : QRCode.CorrectLevel.L });
+            
+            // 1. Generate Top-Right Barcode
+            try {
+                JsBarcode("#barcode", inv || "000", {
+                    width: 1.2,
+                    height: 25,
+                    displayValue: false,
+                    margin: 0,
+                    lineColor: "#0f172a"
+                });
+            } catch(e) {}
+
+            // 2. Generate Dynamic UPI QR Code for Payment
+            const upiID = document.getElementById('bankUpiId').value || "andigital@ybl";
+            const payeeName = "AN DIGITAL";
+            // UPI Format URL automatically pre-fills the amount in GPay/PhonePe when scanned
+            const upiString = `upi://pay?pa=${upiID}&pn=${encodeURIComponent(payeeName)}&am=${t}&cu=INR`;
+            
+            const qr = document.getElementById('qrcode'); 
+            qr.innerHTML = '';
+            new QRCode(qr, { text: upiString, width: 60, height: 60, correctLevel : QRCode.CorrectLevel.L });
         }
 
         window.shareInvoice = async function() {
