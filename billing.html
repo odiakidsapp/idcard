@@ -307,6 +307,12 @@
             opacity: 0.9; transform: rotate(-10deg); 
         }
 
+        /* NEW: Top Right Info QR Code */
+        .qr-top-right {
+            position: absolute; top: 5mm; right: 5mm; z-index: 10;
+            background: white; padding: 2px; border-radius: 4px;
+        }
+
         .signature-img {
             max-width: 120px; max-height: 50px; display: block; margin: 0 auto -5px auto;
         }
@@ -405,8 +411,11 @@
             <div class="workspace-area">
                 <!-- PHYSICAL A5 INVOICE SHEET -->
                 <div id="invoice-sheet">
-                    <!-- Restored Stamp Image -->
+                    <!-- Restored Stamp Image (Top Left) -->
                     <img src="stamp.png" alt="Stamp" class="stamp-top-left" onerror="this.style.display='none'">
+                    
+                    <!-- Restored Info QR Code (Top Right) -->
+                    <div id="info-qrcode" class="qr-top-right"></div>
                     
                     <div class="watermark">AN DIGITAL</div>
                     <div id="content-wrapper">
@@ -430,7 +439,7 @@
                                 <span class="info-label">Invoice Details</span>
                                 <div style="display:flex; gap: 5px; align-items: center; font-size: 12px; font-weight: 600;">INV # <input type="text" id="invoiceNo" value="001" style="width: 70px; text-align: right;" oninput="updateQR()"></div>
                                 <div style="display:flex; gap: 5px; align-items: center; font-size: 12px;">Date: <input type="text" id="datePicker" placeholder="DD/MM/YYYY" style="width: 85px; text-align: right;" onchange="updateQR()"></div>
-                                <!-- NEW PROFESSIONAL BARCODE -->
+                                <!-- Professional Barcode -->
                                 <svg id="barcode" style="margin-top: 6px;"></svg>
                             </div>
                         </div>
@@ -483,12 +492,12 @@
 
                         <div class="footer">
                             <div class="signature-area">
-                                <!-- UPDATED DYNAMIC UPI QR CODE -->
+                                <!-- Dynamic UPI QR Code for Payments -->
                                 <div id="qrcode"></div>
                                 <div style="margin-top: 5px; font-size: 9px; font-weight: 700; color: var(--text-main); letter-spacing: 0.5px;">SCAN TO PAY YOUR BILL</div>
                             </div>
                             <div class="signature-area" style="justify-content: flex-end;">
-                                <!-- Restored Signature Image -->
+                                <!-- Signature Image -->
                                 <img src="signature.png" alt="Signature" class="signature-img" onerror="this.style.display='none'">
                                 <div class="signature-line">Authorized Signature</div>
                             </div>
@@ -851,10 +860,11 @@
             el.style.color = bal > 0 ? "var(--danger)" : "var(--success)";
         }
 
-        // --- CORE UPDATE FOR QR AND BARCODE ---
         window.updateQR = function() {
             const inv = document.getElementById('invoiceNo').value;
+            const d = document.getElementById('datePicker').value;
             const t = document.getElementById('grandTotal').innerText;
+            const c = document.getElementById('customerName').value || 'Guest';
             
             // 1. Generate Top-Right Barcode
             try {
@@ -867,10 +877,15 @@
                 });
             } catch(e) {}
 
-            // 2. Generate Dynamic UPI QR Code for Payment
+            // 2. Generate Top-Right Info QR Code
+            const infoQrText = `AN DIGITAL\nInv: ${inv}\nDate: ${d}\nCust: ${c}\nTotal: INR ${t}`;
+            const infoQrContainer = document.getElementById('info-qrcode');
+            infoQrContainer.innerHTML = '';
+            new QRCode(infoQrContainer, { text: infoQrText, width: 50, height: 50, correctLevel : QRCode.CorrectLevel.L });
+
+            // 3. Generate Dynamic UPI QR Code for Payment (Bottom)
             const upiID = document.getElementById('bankUpiId').value || "andigital@ybl";
             const payeeName = "AN DIGITAL";
-            // UPI Format URL automatically pre-fills the amount in GPay/PhonePe when scanned
             const upiString = `upi://pay?pa=${upiID}&pn=${encodeURIComponent(payeeName)}&am=${t}&cu=INR`;
             
             const qr = document.getElementById('qrcode'); 
