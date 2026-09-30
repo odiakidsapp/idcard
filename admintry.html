@@ -709,7 +709,7 @@ async function rebuildSchoolsMap() {
                     name: d.schoolName || 'Unknown School', completedCount: 0, pendingCount: 0,
                     block: d.block||'', district: d.district||'', pin: d.pin||'',
                     udise: udise, phone: d.hmPhone||d.mobile||'', signature: d.hmSignature||'',
-                    latestActivity: 0, sources: {}, rawNameCounts: {}, missingUdise: !d.udise,
+                    latestActivity: 0, firstActivity: Infinity, sources: {}, rawNameCounts: {}, missingUdise: !d.udise,
                     schoolType: 'govt', appPassword: '', udisePass: '', customFields: [], layoutSettings: null, privateTemplateUrl: null
                 };
             }
@@ -725,10 +725,15 @@ async function rebuildSchoolsMap() {
             if(d.finalised !== false) { newMap[udise].completedCount++; newMap[udise].sources[src].completed++; } 
             else { newMap[udise].pendingCount++; newMap[udise].sources[src].pending++; }
             
-            let docTime = Number(d.lastModified) || (d.createdAt?.toMillis ? d.createdAt.toMillis() : (typeof d.id === 'number' ? d.id : 0));
-            if (!isNaN(docTime)) {
+            let docTime = Number(d.lastModified) || (d.createdAt?.toMillis ? d.createdAt.toMillis() : (typeof d.id === 'number' ? d.id : Number(doc.id) || 0));
+            let createTime = (d.createdAt?.toMillis ? d.createdAt.toMillis() : (typeof d.id === 'number' ? d.id : Number(doc.id) || 0));
+            
+            if (!isNaN(docTime) && docTime > 0) {
                  newMap[udise].latestActivity = Math.max(newMap[udise].latestActivity, docTime);
                  maxId = Math.max(maxId, docTime);
+            }
+            if (!isNaN(createTime) && createTime > 0) {
+                 newMap[udise].firstActivity = Math.min(newMap[udise].firstActivity, createTime);
             }
         });
 
@@ -741,7 +746,7 @@ async function rebuildSchoolsMap() {
                 newMap[udise] = {
                     name: d.name || 'New Registration (0 Students)', completedCount: 0, pendingCount: 0,
                     block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
-                    latestActivity: d.lastModified || d.createdAt || 0, sources: {}, rawNameCounts: {}, missingUdise: false,
+                    latestActivity: d.lastModified || d.createdAt || 0, firstActivity: Infinity, sources: {}, rawNameCounts: {}, missingUdise: false,
                     schoolType: 'govt', appPassword: '', udisePass: '', customFields: [], layoutSettings: null, privateTemplateUrl: null
                 };
             }
@@ -763,7 +768,9 @@ async function rebuildSchoolsMap() {
             }
             
             let docTime = d.lastModified || d.createdAt || 0;
+            let createTime = d.createdAt || 0;
             if (docTime > maxId) maxId = docTime;
+            if (createTime > 0) newMap[udise].firstActivity = Math.min(newMap[udise].firstActivity, createTime);
         });
 
         Object.keys(newMap).forEach(k => {
@@ -771,6 +778,7 @@ async function rebuildSchoolsMap() {
              if(!sm.name && sm.rawNameCounts && Object.keys(sm.rawNameCounts).length > 0) {
                   sm.name = Object.keys(sm.rawNameCounts).sort((a,b)=>sm.rawNameCounts[b]-sm.rawNameCounts[a])[0];
              }
+             if(sm.firstActivity === Infinity) sm.firstActivity = sm.latestActivity || 0;
         });
 
         schoolsMap = newMap; lastSyncId = maxId;
@@ -794,7 +802,7 @@ async function quickSync() {
             const d = doc.data();
             let udise = doc.id;
             if(!schoolsMap[udise]) {
-                schoolsMap[udise] = { completedCount:0, pendingCount:0, sources:{}, rawNameCounts:{}, missingUdise:false, schoolType:'govt', appPassword:'', udisePass:'', customFields:[], layoutSettings: null, privateTemplateUrl: null };
+                schoolsMap[udise] = { completedCount:0, pendingCount:0, sources:{}, rawNameCounts:{}, missingUdise:false, schoolType:'govt', appPassword:'', udisePass:'', customFields:[], layoutSettings: null, privateTemplateUrl: null, latestActivity: 0, firstActivity: Infinity };
             }
             Object.assign(schoolsMap[udise], {
                 name: d.name, block: d.block, district: d.district, pin: d.pin,
@@ -806,6 +814,12 @@ async function quickSync() {
                 layoutSettings: d.layoutSettings || null,
                 privateTemplateUrl: d.privateTemplateUrl || null
             });
+            
+            let createTime = d.createdAt || 0;
+            if (createTime > 0) {
+                schoolsMap[udise].firstActivity = Math.min(schoolsMap[udise].firstActivity || Infinity, createTime);
+            }
+            
             hasChanges = true;
         });
 
@@ -826,7 +840,7 @@ async function quickSync() {
                     const udise = d.udise || (d.schoolName ? `NO_UDISE:${d.schoolName}` : 'UNKNOWN');
                     if(udise !== 'UNKNOWN') updatedUdises.add(udise);
                     
-                    let docTime = Number(d.lastModified) || (d.createdAt?.toMillis ? d.createdAt.toMillis() : (typeof d.id === 'number' ? d.id : 0));
+                    let docTime = Number(d.lastModified) || (d.createdAt?.toMillis ? d.createdAt.toMillis() : (typeof d.id === 'number' ? d.id : Number(doc.id) || 0));
                     if(!isNaN(docTime)) { maxId = Math.max(maxId, docTime); hasChanges = true; }
                 });
             }
@@ -839,6 +853,8 @@ async function quickSync() {
             
             let comp = 0, pend = 0; let vars = {}; let rawCounts = {};
             
+            if (schoolsMap[udise] && !schoolsMap[udise].firstActivity) schoolsMap[udise].firstActivity = Infinity;
+            
             snap.forEach(doc => { 
                 const d = doc.data(); const src = getStudentSource(d);
                 if(!vars[src]) vars[src] = { completed: 0, pending: 0 };
@@ -846,18 +862,24 @@ async function quickSync() {
                 rawCounts[rName] = (rawCounts[rName] || 0) + 1;
                 
                 if(d.finalised !== false) { comp++; vars[src].completed++; } else { pend++; vars[src].pending++; }
+                
+                let createTime = (d.createdAt?.toMillis ? d.createdAt.toMillis() : (typeof d.id === 'number' ? d.id : Number(doc.id) || 0));
+                if (createTime > 0 && schoolsMap[udise]) {
+                    schoolsMap[udise].firstActivity = Math.min(schoolsMap[udise].firstActivity || Infinity, createTime);
+                }
             });
             
             if(schoolsMap[udise]) {
                 schoolsMap[udise].completedCount = comp; schoolsMap[udise].pendingCount = pend;
                 schoolsMap[udise].sources = vars; schoolsMap[udise].rawNameCounts = rawCounts;
                 schoolsMap[udise].latestActivity = maxId;
+                if (schoolsMap[udise].firstActivity === Infinity) schoolsMap[udise].firstActivity = schoolsMap[udise].latestActivity || Date.now();
             } else if (comp > 0 || pend > 0) {
                 const best = Object.keys(rawCounts).sort((a,b)=>rawCounts[b]-rawCounts[a])[0];
                 schoolsMap[udise] = {
                     name: best, completedCount: comp, pendingCount: pend,
                     block: '', district: '', pin: '', udise: udise, phone: '', signature: '',
-                    latestActivity: maxId, sources: vars, rawNameCounts: rawCounts, missingUdise: field==='schoolName',
+                    latestActivity: maxId, firstActivity: maxId, sources: vars, rawNameCounts: rawCounts, missingUdise: field==='schoolName',
                     schoolType: 'govt', appPassword: '', udisePass: '', customFields: [], layoutSettings: null, privateTemplateUrl: null
                 };
             }
@@ -903,13 +925,17 @@ function renderDashboard(){
         const sA = schoolsMap[a], sB = schoolsMap[b];
         const totalA = (sA.completedCount || 0) + (sA.pendingCount || 0);
         const totalB = (sB.completedCount || 0) + (sB.pendingCount || 0);
+        
+        // Ensure firstActivity exists for old cached data
+        const firstA = sA.firstActivity || sA.latestActivity || 0;
+        const firstB = sB.firstActivity || sB.latestActivity || 0;
 
         if (sortMode === 'studentsHigh') return totalB - totalA;
         if (sortMode === 'studentsLow') return totalA - totalB;
-        if (sortMode === 'regOld') return (sA.latestActivity || 0) - (sB.latestActivity || 0);
-        if (sortMode === 'regNew' || sortMode === 'recent') return (sB.latestActivity || 0) - (sA.latestActivity || 0);
+        if (sortMode === 'regOld') return firstA - firstB; // Oldest registered first (smallest timestamp first)
+        if (sortMode === 'regNew') return firstB - firstA; // Newest registered first (largest timestamp first)
         
-        return (sB.latestActivity || 0) - (sA.latestActivity || 0); // Default
+        return (sB.latestActivity || 0) - (sA.latestActivity || 0); // Default: Recent activity
     });
     
     if(udises.length === 0){ 
@@ -1184,7 +1210,7 @@ function updateSelection(){
                 genBtn.innerHTML = `<i class="fas fa-print mr-1"></i> Generate <b>${n}</b> Cards`;
             } else {
                 genBtn.disabled = true; verifyBtn.disabled = true;
-                genBtn.innerHTML = `⚠️️ Load Assets First`;
+                genBtn.innerHTML = `⚠️ Load Assets First`;
             }
         }
     } else {
