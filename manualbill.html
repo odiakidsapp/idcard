@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Invoice Generator</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+
+        /* Styling for editable elements */
+        [contenteditable="true"] {
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            padding: 2px 4px;
+            border-radius: 4px;
+            min-width: 20px;
+            display: inline-block;
+            outline: none;
+        }
+
+        [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+            background-color: #fef3c7;
+            border: 1px dashed #d97706;
+        }
+
+        /* Custom Table Inputs */
+        .calc-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            text-align: right;
+            font-family: inherit;
+        }
+        .calc-input-left { text-align: left; }
+        .calc-input:hover, .calc-input:focus {
+            background-color: #fef3c7;
+            border-radius: 2px;
+        }
+
+        /* Print Styles - Crucial for hiding toggles and UI */
+        @media print {
+            body {
+                background-color: #ffffff;
+                padding: 0;
+                margin: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-container {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                border: none !important;
+            }
+            [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+                background-color: transparent;
+                border: 1px solid transparent;
+            }
+            [contenteditable="true"] {
+                padding: 0;
+            }
+            /* Force exact colors for printing */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        /* Toggle Checkbox Styling */
+        .toggle-cb {
+            accent-color: #2563eb;
+            width: 1rem;
+            height: 1rem;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .toggle-wrapper {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        /* When hovering over a wrapper, slightly highlight the checkbox to show it controls this section */
+        .toggle-wrapper:hover .toggle-cb {
+            outline: 2px solid #bfdbfe;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="py-10 px-4">
+
+    <!-- Floating Action Bar (Hidden on print) -->
+    <div class="no-print max-w-5xl mx-auto mb-6 bg-white p-4 rounded-lg shadow-md flex flex-col sm:flex-row justify-between items-center sticky top-4 z-50 border border-gray-200">
+        <div class="mb-4 sm:mb-0 text-center sm:text-left">
+            <h1 class="text-xl font-bold text-gray-800">Invoice Editor</h1>
+            <p class="text-sm text-gray-500">Uncheck boxes to hide elements from printing. Click text to edit.</p>
+        </div>
+        <div class="space-x-3 flex">
+            <button onclick="addRow()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition shadow-sm flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Add Item
+            </button>
+            <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-md font-medium transition shadow-sm flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                Print / PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Invoice Container -->
+    <div class="print-container max-w-5xl mx-auto bg-white p-8 md:p-12 shadow-xl border border-gray-200" id="invoice">
+        
+        <!-- Header: Company Details & Invoice Info -->
+        <div class="flex flex-col md:flex-row justify-between items-start border-b border-gray-300 pb-8 mb-8">
+            <!-- Left Side: Company Info -->
+            <div class="mb-6 md:mb-0 space-y-1">
+                <div class="toggle-wrapper items-center">
+                    <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleEl('block-biz-name', this.checked)" title="Toggle Company Name">
+                    <div id="block-biz-name" contenteditable="true" class="text-3xl font-bold text-gray-900 w-full leading-tight" id="business-name">YOUR COMPANY NAME</div>
+                </div>
+                
+                <div class="toggle-wrapper">
+                    <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-biz-addr', this.checked)" title="Toggle Address">
+                    <div id="block-biz-addr" contenteditable="true" class="text-gray-600">123 Business Avenue, Suite 100<br>New York, NY 10001</div>
+                </div>
+                
+                <div class="toggle-wrapper">
+                    <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-biz-phone', this.checked)" title="Toggle Phone">
+                    <div id="block-biz-phone" contenteditable="true" class="text-gray-600">Phone: (555) 123-4567</div>
+                </div>
+
+                <div class="toggle-wrapper">
+                    <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-biz-email', this.checked)" title="Toggle Email">
+                    <div id="block-biz-email" contenteditable="true" class="text-gray-600">Email: contact@yourcompany.com</div>
+                </div>
+
+                <div class="toggle-wrapper">
+                    <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-biz-tax', this.checked)" title="Toggle Tax ID">
+                    <div id="block-biz-tax" contenteditable="true" class="text-gray-600 font-medium">Tax ID: XX-XXXXXXX</div>
+                </div>
+            </div>
+
+            <!-- Right Side: Invoice Info -->
+            <div class="text-left md:text-right w-full md:w-auto bg-gray-50 p-4 rounded-lg">
+                <div class="toggle-wrapper md:justify-end mb-2">
+                    <input type="checkbox" checked class="no-print toggle-cb mt-2" onchange="toggleEl('block-inv-title', this.checked)" title="Toggle Invoice Title">
+                    <h2 id="block-inv-title" contenteditable="true" class="text-4xl font-black text-gray-800 tracking-wider">INVOICE</h2>
+                </div>
+                
+                <div class="grid grid-cols-[auto_1fr] md:grid-cols-[auto_auto] gap-x-4 gap-y-2 text-sm text-gray-600 mt-4 md:justify-end">
+                    <!-- Invoice No -->
+                    <div class="toggle-wrapper md:justify-end">
+                        <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-inv-num', this.checked)">
+                        <div id="block-inv-num" class="flex gap-2 w-full md:w-auto md:justify-end">
+                            <span contenteditable="true" class="font-bold text-gray-700">Invoice No:</span>
+                            <span contenteditable="true" id="invoice-number" class="font-semibold text-gray-900 text-right">#INV-2024-001</span>
+                        </div>
+                    </div>
+                    <!-- Empty div to force grid layout correctly if needed, or we just rely on the wrapper -->
+                    <div class="hidden md:block"></div> 
+
+                    <!-- Date -->
+                    <div class="toggle-wrapper md:justify-end">
+                        <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-inv-date', this.checked)">
+                        <div id="block-inv-date" class="flex gap-2 w-full md:w-auto md:justify-end">
+                            <span contenteditable="true" class="font-bold text-gray-700">Date:</span>
+                            <span contenteditable="true" class="text-right">Oct 24, 2024</span>
+                        </div>
+                    </div>
+                    <div class="hidden md:block"></div>
+
+                    <!-- Due Date -->
+                    <div class="toggle-wrapper md:justify-end">
+                        <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-inv-due', this.checked)">
+                        <div id="block-inv-due" class="flex gap-2 w-full md:w-auto md:justify-end">
+                            <span contenteditable="true" class="font-bold text-gray-700">Due Date:</span>
+                            <span contenteditable="true" class="text-right">Nov 24, 2024</span>
+                        </div>
+                    </div>
+                    <div class="hidden md:block"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Billing Info (Bill To) -->
+        <div class="flex flex-col mb-8">
+            <div class="toggle-wrapper items-start w-full">
+                <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-bill-to', this.checked)" title="Toggle Bill To Section">
+                <div id="block-bill-to" class="flex flex-col items-start w-full">
+                    <h3 contenteditable="true" class="text-gray-500 font-bold uppercase text-sm mb-1">Bill To:</h3>
+                    <div contenteditable="true" class="text-xl font-bold text-gray-900" id="customer-name">Client Name / Company</div>
+                    <div contenteditable="true" class="text-gray-600 mt-1 leading-relaxed">
+                        Client Address Line 1<br>
+                        City, State, Zip Code<br>
+                        Client Phone / Email
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="overflow-x-auto mb-8">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-800 text-white">
+                        <th class="py-3 px-2 font-semibold text-sm w-16 text-center rounded-tl-lg col-sr">
+                            <div class="flex items-center justify-center gap-1">
+                                <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleColumn('col-sr', this.checked)" title="Toggle Sr No Column">
+                                <span contenteditable="true">Sr.</span>
+                            </div>
+                        </th>
+                        <th class="py-3 px-4 font-semibold text-sm col-item">
+                            <div class="flex items-center gap-1">
+                                <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleColumn('col-item', this.checked)" title="Toggle Item Column">
+                                <span contenteditable="true">Item Description</span>
+                            </div>
+                        </th>
+                        <th class="py-3 px-2 font-semibold text-sm w-28 text-right col-qty">
+                            <div class="flex items-center justify-end gap-1">
+                                <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleColumn('col-qty', this.checked)" title="Toggle Quantity Column">
+                                <span contenteditable="true">Qty</span>
+                            </div>
+                        </th>
+                        <th class="py-3 px-2 font-semibold text-sm w-32 text-right col-rate">
+                            <div class="flex items-center justify-end gap-1">
+                                <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleColumn('col-rate', this.checked)" title="Toggle Rate Column">
+                                <span contenteditable="true">Rate ($)</span>
+                            </div>
+                        </th>
+                        <th class="py-3 px-2 font-semibold text-sm w-32 text-right rounded-tr-lg col-amt">
+                            <div class="flex items-center justify-end gap-1">
+                                <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleColumn('col-amt', this.checked)" title="Toggle Amount Column">
+                                <span contenteditable="true">Amount ($)</span>
+                            </div>
+                        </th>
+                        <th class="py-3 px-2 w-10 no-print"></th>
+                    </tr>
+                </thead>
+                <tbody id="invoice-items">
+                    <!-- Default Row -->
+                    <tr class="border-b border-gray-200 item-row hover:bg-gray-50">
+                        <td class="py-3 px-2 text-center text-gray-600 sr-no col-sr">1</td>
+                        <td class="py-3 px-4 col-item"><input type="text" class="calc-input calc-input-left text-gray-800 font-medium w-full" value="Web Design Services"></td>
+                        <td class="py-3 px-2 col-qty"><input type="number" class="calc-input qty text-gray-800" value="1" min="0" oninput="calculate()"></td>
+                        <td class="py-3 px-2 col-rate"><input type="number" class="calc-input rate text-gray-800" value="1500.00" min="0" step="0.01" oninput="calculate()"></td>
+                        <td class="py-3 px-2 text-right font-medium text-gray-900 row-amount col-amt">1500.00</td>
+                        <td class="py-3 px-2 text-center no-print">
+                            <button onclick="removeRow(this)" class="text-red-500 hover:text-red-700 focus:outline-none" title="Remove Item">
+                                <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totals & Summary -->
+        <div class="flex flex-col md:flex-row justify-between items-start">
+            
+            <!-- Left Side: QR Code -->
+            <div class="w-full md:w-1/2 mb-8 md:mb-0 flex flex-col justify-start h-full">
+                <div class="toggle-wrapper">
+                    <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-qr', this.checked)" title="Toggle QR Code Section">
+                    <div id="block-qr">
+                        <h4 contenteditable="true" class="text-gray-800 font-bold mb-2 text-sm">Scan to Pay / Verify:</h4>
+                        <div id="qrcode" class="p-2 bg-white border border-gray-200 inline-block rounded"></div>
+                        <p contenteditable="true" class="text-xs text-gray-400 mt-1">Generated automatically</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Calculations -->
+            <div class="w-full md:w-[45%] bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-3">
+                
+                <!-- Subtotal Toggle -->
+                <div class="toggle-wrapper items-center justify-between w-full">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleEl('calc-subtotal', this.checked)">
+                        <span contenteditable="true" class="text-gray-600 font-medium">Subtotal</span>
+                    </div>
+                    <span id="calc-subtotal" class="text-gray-900 font-semibold">$<span id="subtotal">1500.00</span></span>
+                </div>
+                
+                <!-- Tax Toggle -->
+                <div class="toggle-wrapper items-center justify-between w-full border-b border-gray-200 pb-3">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleEl('calc-tax', this.checked)">
+                        <span class="text-gray-600 font-medium flex items-center">
+                            <span contenteditable="true">Tax / VAT (</span>
+                            <span contenteditable="true" id="tax-rate" oninput="calculate()" class="mx-1 border-b border-gray-400 min-w-[20px] text-center">10</span>
+                            <span contenteditable="true">%)</span>
+                        </span>
+                    </div>
+                    <span id="calc-tax" class="text-gray-900 font-semibold">$<span id="tax-amount">150.00</span></span>
+                </div>
+
+                <!-- Grand Total Toggle -->
+                <div class="toggle-wrapper items-center justify-between w-full pt-1">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleEl('calc-grand', this.checked)">
+                        <span contenteditable="true" class="text-gray-800 font-bold text-lg">Grand Total</span>
+                    </div>
+                    <span id="calc-grand" class="text-gray-900 font-black text-xl">$<span id="grand-total">1650.00</span></span>
+                </div>
+
+                <!-- Amount Received Toggle -->
+                <div class="toggle-wrapper items-center justify-between w-full pt-3 border-t border-gray-200">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleEl('calc-received', this.checked)">
+                        <span contenteditable="true" class="text-gray-600 font-medium">Amount Received</span>
+                    </div>
+                    <span id="calc-received" class="text-green-600 font-semibold flex items-center">
+                        $ <input type="number" id="amt-received" class="calc-input ml-1 w-24 text-green-600 font-bold bg-white border border-gray-300 rounded px-1" value="0.00" min="0" step="0.01" oninput="calculate()">
+                    </span>
+                </div>
+
+                <!-- Amount Pending Toggle -->
+                <div class="toggle-wrapper items-center justify-between w-full bg-gray-800 text-white p-3 rounded-md mt-2">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" checked class="no-print toggle-cb" onchange="toggleEl('calc-pending', this.checked)">
+                        <span contenteditable="true" class="font-bold">Amount Pending</span>
+                    </div>
+                    <span id="calc-pending" class="font-bold text-lg">$<span id="amt-pending">1650.00</span></span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-16 pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-end">
+            <!-- Footer Message -->
+            <div class="w-full md:w-1/2 mb-4 md:mb-0 toggle-wrapper">
+                <input type="checkbox" checked class="no-print toggle-cb mt-1" onchange="toggleEl('block-footer-msg', this.checked)">
+                <div id="block-footer-msg" contenteditable="true" class="text-sm text-gray-500 w-full">
+                    Thank you for your business. For any queries regarding this invoice, please contact us.
+                </div>
+            </div>
+            
+            <!-- Signature -->
+            <div class="w-full md:w-64 flex justify-end">
+                <div class="toggle-wrapper flex-col items-center w-full">
+                    <input type="checkbox" checked class="no-print toggle-cb absolute -ml-6" onchange="toggleEl('block-signature', this.checked)">
+                    <div id="block-signature" class="w-full text-center">
+                        <div class="border-b-2 border-gray-400 mb-2 h-10"></div>
+                        <span contenteditable="true" class="text-gray-700 font-semibold">Authorized Signature</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let qrcode = null;
+
+        // Visibility Toggles
+        function toggleEl(elementId, isVisible) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.style.display = isVisible ? '' : 'none';
+            }
+        }
+
+        function toggleColumn(colClass, isVisible) {
+            const elements = document.querySelectorAll('.' + colClass);
+            elements.forEach(el => {
+                el.style.display = isVisible ? '' : 'none';
+            });
+        }
+
+        // Row Management
+        function updateSerialNumbers() {
+            const rows = document.querySelectorAll('.item-row');
+            rows.forEach((row, index) => {
+                row.querySelector('.sr-no').innerText = index + 1;
+            });
+        }
+
+        function formatMoney(amount) {
+            return parseFloat(amount).toFixed(2);
+        }
+
+        // Calculation Engine
+        function calculate() {
+            const rows = document.querySelectorAll('.item-row');
+            let subtotal = 0;
+
+            // Calculate Row Amounts
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.qty').value) || 0;
+                const rate = parseFloat(row.querySelector('.rate').value) || 0;
+                const amount = qty * rate;
+                
+                row.querySelector('.row-amount').innerText = formatMoney(amount);
+                subtotal += amount;
+            });
+
+            // Calculate Tax
+            const taxRateRaw = document.getElementById('tax-rate').innerText;
+            const taxRate = parseFloat(taxRateRaw.replace(/[^0-9.]/g, '')) || 0;
+            const taxAmount = subtotal * (taxRate / 100);
+            
+            // Calculate Totals
+            const grandTotal = subtotal + taxAmount;
+            const amtReceived = parseFloat(document.getElementById('amt-received').value) || 0;
+            const amtPending = grandTotal - amtReceived;
+
+            // Update DOM
+            document.getElementById('subtotal').innerText = formatMoney(subtotal);
+            document.getElementById('tax-amount').innerText = formatMoney(taxAmount);
+            document.getElementById('grand-total').innerText = formatMoney(grandTotal);
+            document.getElementById('amt-pending').innerText = formatMoney(Math.max(0, amtPending));
+            
+            // Update QR Code
+            generateQR(grandTotal, amtPending);
+        }
+
+        // Add Row
+        function addRow() {
+            const tbody = document.getElementById('invoice-items');
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-gray-200 item-row hover:bg-gray-50';
+            
+            // Get current column visibility states based on headers
+            const showSr = document.querySelector('th.col-sr input').checked ? '' : 'none';
+            const showItem = document.querySelector('th.col-item input').checked ? '' : 'none';
+            const showQty = document.querySelector('th.col-qty input').checked ? '' : 'none';
+            const showRate = document.querySelector('th.col-rate input').checked ? '' : 'none';
+            const showAmt = document.querySelector('th.col-amt input').checked ? '' : 'none';
+
+            tr.innerHTML = `
+                <td class="py-3 px-2 text-center text-gray-600 sr-no col-sr" style="display: ${showSr};"></td>
+                <td class="py-3 px-4 col-item" style="display: ${showItem};"><input type="text" class="calc-input calc-input-left text-gray-800 font-medium w-full" placeholder="Item Name"></td>
+                <td class="py-3 px-2 col-qty" style="display: ${showQty};"><input type="number" class="calc-input qty text-gray-800" value="1" min="0" oninput="calculate()"></td>
+                <td class="py-3 px-2 col-rate" style="display: ${showRate};"><input type="number" class="calc-input rate text-gray-800" value="0.00" min="0" step="0.01" oninput="calculate()"></td>
+                <td class="py-3 px-2 text-right font-medium text-gray-900 row-amount col-amt" style="display: ${showAmt};">0.00</td>
+                <td class="py-3 px-2 text-center no-print">
+                    <button onclick="removeRow(this)" class="text-red-500 hover:text-red-700 focus:outline-none" title="Remove Item">
+                        <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(tr);
+            updateSerialNumbers();
+            calculate();
+        }
+
+        // Remove Row
+        function removeRow(btn) {
+            const row = btn.closest('tr');
+            row.remove();
+            updateSerialNumbers();
+            calculate();
+        }
+
+        // QR Code Generation
+        function generateQR(grandTotal, pending) {
+            const bizNameEl = document.getElementById('block-biz-name');
+            const bizName = bizNameEl ? bizNameEl.innerText.trim() : '';
+            
+            const invNumEl = document.getElementById('invoice-number');
+            const invNum = invNumEl ? invNumEl.innerText.trim() : '';
+            
+            const customerEl = document.getElementById('customer-name');
+            const customer = customerEl ? customerEl.innerText.trim() : '';
+            
+            const qrData = `Invoice: ${invNum}\nBiller: ${bizName}\nClient: ${customer}\nTotal: $${formatMoney(grandTotal)}\nPending: $${formatMoney(pending)}`;
+
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = ''; 
+            
+            qrcode = new QRCode(qrContainer, {
+                text: qrData,
+                width: 90,
+                height: 90,
+                colorDark : "#1f2937",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.L
+            });
+        }
+
+        // Prevent rich text formatting on paste
+        document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+            el.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+                document.execCommand('insertText', false, text);
+            });
+        });
+
+        // Initialize calculations and QR on load
+        window.onload = () => {
+            calculate();
+            
+            // Add input listeners dynamically for contenteditable fields
+            const bizNameEl = document.getElementById('block-biz-name');
+            if (bizNameEl) bizNameEl.addEventListener('input', calculate);
+            
+            const invNumEl = document.getElementById('invoice-number');
+            if (invNumEl) invNumEl.addEventListener('input', calculate);
+            
+            const customerEl = document.getElementById('customer-name');
+            if (customerEl) customerEl.addEventListener('input', calculate);
+        };
+    </script>
+</body>
+</html>
