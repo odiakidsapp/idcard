@@ -8,7 +8,8 @@ firebase.initializeApp({
     appId: "1:331979663377:web:026e537a7fcaca813129b0"
 });
 
-const CACHE_NAME = 'student-data-v42-auto-load-update'; 
+// Bumped cache version to v43 to force users to get the new HTML updates
+const CACHE_NAME = 'student-data-v43-wrong-pass-update'; 
 
 const urlsToCache = [
   './',
