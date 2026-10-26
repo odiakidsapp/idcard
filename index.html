@@ -12,7 +12,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
-    <!-- Removed Messaging Script to disable notifications completely -->
 
     <!-- Cropper.js for Gallery Image Cropping -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
@@ -67,7 +66,6 @@
                 <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
                     <i class="fas fa-bars text-[18px]"></i>
                 </button>
-                <!-- Title is now always visible on mobile -->
                 <span class="font-bold text-[15px] tracking-wide ml-1 mr-1 truncate">ID Cards Pro</span>
                 <span id="liveIndicator" class="hidden bg-green-500/20 border border-green-400 text-green-100 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1 flex-shrink-0" title="Live Sync Active">
                     <i class="fas fa-circle text-[6px] text-green-400 animate-pulse"></i>LIVE
@@ -79,8 +77,6 @@
                 <button onclick="window.location.reload()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition" title="Refresh App">
                     <i class="fas fa-sync-alt text-sm"></i>
                 </button>
-                <!-- Removed Bell Icon completely -->
-                <!-- Install Button (Text + Icon) -->
                 <button id="headerInstallBtn" onclick="triggerInstall()" class="hidden bg-white/20 hover:bg-white/30 border border-white/40 text-white px-2.5 py-1.5 rounded-md text-[11px] font-bold flex items-center gap-1.5 transition" title="Install App">
                     <i class="fas fa-download"></i> INSTALL
                 </button>
@@ -224,6 +220,7 @@
         <!-- ================= ENTRY SECTION ================= -->
         <div id="entrySection" class="hidden">
 
+            <!-- Data Extraction in Progress Notice -->
             <div id="pendingImportCard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center mb-6 relative overflow-hidden">
                 <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 text-2xl animate-pulse">
                     <i class="fas fa-hourglass-half"></i>
@@ -240,6 +237,23 @@
 
             <div id="standardDashboardControls">
                 
+                <!-- NEW: Wrong Password Alert Banner -->
+                <div id="wrongPasswordBanner" class="hidden bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm mb-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-red-900 text-sm">UDISE Password Was Incorrect</h4>
+                            <p class="text-xs text-red-700 mt-1 leading-snug">The admin could not fetch your student records because the password was wrong. Please check and re-attempt below.</p>
+                            <button onclick="requestAutoLoad()" class="mt-3 bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm inline-flex items-center gap-1.5">
+                                <i class="fas fa-redo-alt text-[10px]"></i> Re-Enter UDISE Password
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Regular Auto-Load Promotion Banner -->
                 <div id="upgradeToAutoBanner" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-4 flex items-center justify-between">
                     <div>
                         <h4 class="font-bold text-blue-900 text-sm"><i class="fas fa-magic text-blue-500 mr-1"></i> Want your students list here automatically?</h4>
@@ -332,29 +346,38 @@
             <h3 class="text-xl font-bold text-blue-800 mb-2">Select Data Source</h3>
             <p class="text-sm text-gray-600 mb-5">This UDISE contains entries from different sources. Which batch would you like to manage?</p>
             
-            <div id="udiseSelectorList" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1 pb-4">
-                <!-- Dynamically populated -->
-            </div>
+            <div id="udiseSelectorList" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1 pb-4"></div>
             
             <button onclick="document.getElementById('udiseSelectorModal').classList.add('hidden')" class="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
         </div>
     </div>
 
+    <!-- UPGRADED AUTO LOAD MODAL WITH NON-EDITABLE UDISE AND DOUBLE-ENTRY PASSWORD -->
     <div id="upgradeAutoModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
-            <h3 class="text-xl font-bold text-blue-800 mb-2">Request Auto-Load</h3>
-            <p class="text-sm text-gray-600 mb-5">Provide your official UDISE password. We will extract and load your students within 24 hours.</p>
+            <h3 class="text-xl font-bold text-blue-800 mb-1">Request Auto-Load</h3>
+            <p class="text-xs text-gray-600 mb-4">Please confirm your official UDISE password twice below to avoid typos. We will extract and load your students within 24 hours.</p>
             
-            <input type="password" id="upgradeUdisePass" placeholder="UDISE Password" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+            <!-- 1. Non-editable UDISE Code Field -->
+            <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">1. UDISE Code (Verified)</label>
+            <input type="text" id="upgradeUdiseCode" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-100 text-gray-700 font-bold cursor-not-allowed select-none" disabled readonly>
+            
+            <!-- 2. Primary Password Entry -->
+            <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">2. Official UDISE Password *</label>
+            <input type="password" id="upgradeUdisePass" placeholder="Enter UDISE Password" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
+            
+            <!-- 3. Confirm Password Entry (Double Entry) -->
+            <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">3. Confirm UDISE Password *</label>
+            <input type="password" id="upgradeUdisePassConfirm" placeholder="Re-enter Password to Confirm" class="w-full p-3 mb-5 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
             
             <div class="flex gap-3">
-                <button onclick="document.getElementById('upgradeAutoModal').classList.add('hidden')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition">Cancel</button>
-                <button id="submitUpgradeBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition">Submit Request</button>
+                <button onclick="document.getElementById('upgradeAutoModal').classList.add('hidden')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition text-sm">Cancel</button>
+                <button id="submitUpgradeBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition text-sm shadow">Submit Request</button>
             </div>
         </div>
     </div>
 
-    <!-- Add/Edit Student Modal (With Dynamic Form Fields) -->
+    <!-- Add/Edit Student Modal -->
     <div id="addStudentModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
         <div class="bg-white rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl p-5 relative" id="addStudentFormContainer">
             
@@ -474,10 +497,9 @@
                 </div>
             </div>
             
-            <!-- NEW: Private School Field Rename Support -->
             <div id="privateRenameSection" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-100 mb-6">
                 <h4 class="font-bold text-purple-900 text-sm mb-1"><i class="fas fa-tags mr-1"></i> Rename Fields</h4>
-                <p class="text-xs text-purple-700 mb-3">Want to change a field name? (e.g. Change "Roll No" to "Address"). Contact Admin to set up custom labels.</p>
+                <p class="text-xs text-purple-700 mb-3">Want to change a field name? Contact Admin to set up custom labels.</p>
                 <button onclick="requestFieldRename()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg text-sm shadow transition flex items-center justify-center gap-2">
                     <i class="fab fa-whatsapp"></i> Message Admin to Rename
                 </button>
@@ -548,13 +570,9 @@
     <script>
         const WA_NUMBER = "917855800205"; // Admin WhatsApp Number
 
-        // ==========================================
-        // UI INTERACTION & HEADERS
-        // ==========================================
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
-            
             if (sidebar.classList.contains('-translate-x-full')) {
                 overlay.classList.remove('hidden');
                 setTimeout(() => {
@@ -564,15 +582,10 @@
             } else {
                 overlay.classList.add('opacity-0');
                 sidebar.classList.add('-translate-x-full');
-                setTimeout(() => {
-                    overlay.classList.add('hidden');
-                }, 300);
+                setTimeout(() => { overlay.classList.add('hidden'); }, 300);
             }
         }
 
-        // ==========================================
-        // SAAS AUTHENTICATION & REGISTRATION
-        // ==========================================
         function switchAuthTab(tab) {
             document.getElementById('tabLogin').className = 'flex-1 py-2.5 font-bold rounded-lg text-gray-500 transition';
             document.getElementById('tabRegister').className = 'flex-1 py-2.5 font-bold rounded-lg text-gray-500 transition';
@@ -599,7 +612,6 @@
             }
         }
 
-        // Limit Private checkboxes to 7 max
         document.querySelectorAll('.pvt-cb').forEach(cb => {
             cb.addEventListener('change', () => {
                 if(!cb.checked) return;
@@ -632,7 +644,6 @@
 
             try {
                 const schoolDoc = await firestore.collection('schools').doc(udise).get();
-                
                 if (!schoolDoc.exists) {
                     showToast("School not found! Please register.", "error");
                     btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Load Data';
@@ -641,7 +652,6 @@
                 }
                 
                 const sData = schoolDoc.data();
-                
                 if (!sData.appPassword) {
                     await showConfirm("Security Update: Your account needs a security update. Please contact the Admin to get an App Password.", "Account Locked", "Contact Admin").then(res => {
                         if(res) forgotPassword();
@@ -659,7 +669,6 @@
                 }
 
                 showToast("Login Success! Loading your data...", "success");
-                
                 const snapshot = await firestore.collection('students').where('udise', '==', udise).get();
                 
                 if (!snapshot.empty) {
@@ -751,7 +760,6 @@
             btn.disabled = true;
 
             try {
-                // Hijack Blocker
                 const existingDoc = await firestore.collection('schools').doc(udise).get();
                 if (existingDoc.exists) {
                     showToast("SECURITY ALERT: This ID is already registered! Please Login.", "error");
@@ -760,13 +768,11 @@
                     return;
                 }
 
-                // Determine custom fields
                 let customFields = ['name', 'class', 'roll', 'dob', 'blood', 'phone']; 
                 if(type === 'private') {
                     customFields = Array.from(document.querySelectorAll('.pvt-cb:checked')).map(cb => cb.value);
                 }
 
-                // Handle Signature Upload
                 let finalSignUrl = '';
                 if (signFile) {
                     btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Uploading Sign...";
@@ -792,10 +798,8 @@
                 };
                 
                 await firestore.collection('schools').doc(udise).set(schoolObj);
-
                 showToast("Registration Successful! Loading App...", "success");
                 
-                // Immediately enter the app after registration
                 const localId = `[Manual] ${schoolObj.name}_${udise}`;
                 const dbSchoolObj = {
                     name: localId,
@@ -825,10 +829,12 @@
         window.requestAutoLoad = async function() {
             if (!navigator.onLine) return showToast("Internet required to check/request Auto-Load.", "error");
             
-            const btn = document.querySelector('#upgradeToAutoBanner button');
-            const origTxt = btn.innerHTML;
-            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>";
-            btn.disabled = true;
+            const btn = document.querySelector('#upgradeToAutoBanner button') || document.querySelector('#wrongPasswordBanner button');
+            const origTxt = btn ? btn.innerHTML : "Auto-Load";
+            if (btn) {
+                btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>";
+                btn.disabled = true;
+            }
 
             try {
                 const snap = await firestore.collection('students')
@@ -853,17 +859,19 @@
                     return;
                 }
 
-                if (currentSchoolData.udisePass) {
-                    await startAutoLoadProcess(currentSchoolData.udisePass);
-                } else {
-                    document.getElementById('upgradeUdisePass').value = '';
-                    document.getElementById('upgradeAutoModal').classList.remove('hidden');
-                }
+                // Populate disabled UDISE and reset password fields
+                document.getElementById('upgradeUdiseCode').value = currentSchoolData.udise || '';
+                document.getElementById('upgradeUdisePass').value = '';
+                document.getElementById('upgradeUdisePassConfirm').value = '';
+                document.getElementById('upgradeAutoModal').classList.remove('hidden');
+
             } catch (err) {
                 showToast("Error checking data: " + err.message, "error");
             } finally {
-                btn.innerHTML = origTxt;
-                btn.disabled = false;
+                if (btn) {
+                    btn.innerHTML = origTxt;
+                    btn.disabled = false;
+                }
             }
         };
 
@@ -891,9 +899,14 @@
             }
         }
 
+        // DOUBLE-ENTRY PASSWORD VALIDATION
         document.getElementById('submitUpgradeBtn').onclick = async () => {
             const uPass = document.getElementById('upgradeUdisePass').value.trim();
-            if (!uPass) return showToast("Please provide the Password.", "error");
+            const uPassConfirm = document.getElementById('upgradeUdisePassConfirm').value.trim();
+
+            if (!uPass) return showToast("Please enter the UDISE Password.", "error");
+            if (!uPassConfirm) return showToast("Please confirm your Password.", "error");
+            if (uPass !== uPassConfirm) return showToast("Passwords do not match! Please check and re-type.", "error");
 
             const btn = document.getElementById('submitUpgradeBtn');
             const origText = btn.innerHTML;
@@ -1023,9 +1036,6 @@
             }
         }
 
-        // ==========================================
-        // PWA INSTALL LOGIC
-        // ==========================================
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -1095,25 +1105,20 @@
         const firebaseStorage = firebase.storage();
         
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(reg => {
-                console.log('SW Registration Success:', reg);
-            }).catch(err => {
+            navigator.serviceWorker.register('sw.js').catch(err => {
                 console.error('SW Registration Failed:', err);
             });
-
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 document.getElementById('updateBanner').classList.remove('hidden');
             });
         }
 
-        // Restored openAddForm logic safely to the global scope
         window.openAddForm = function() {
             if(typeof applyCustomFields === 'function') applyCustomFields();
             if(typeof resetForm === 'function') resetForm(false); 
             document.getElementById('formTitle').innerHTML = 'Add New Student';
             document.getElementById('saveBtn').innerHTML = 'Save Student';
             document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
-            
             document.getElementById('addStudentModal').classList.remove('hidden');
         };
 
@@ -1162,12 +1167,10 @@
                     snapshot.docChanges().forEach(change => {
                         const data = change.doc.data();
                         const actualSource = getStudentSource(data);
-                        
                         if (actualSource === 'excel') foundExcel = true;
                         
                         const student = { ...data, id: Number(change.doc.id), synced: true, source: actualSource };
                         delete student.submittedAt;
-
                         if(student.finalised === undefined) student.finalised = true;
 
                         if (change.type === 'added' || change.type === 'modified') {
@@ -1214,10 +1217,21 @@
                             needsUpdate = true;
                         }
 
+                        // LISTEN FOR WRONG PASSWORD STATUS CHANGE FROM ADMIN
+                        if (adminData.importStatus && adminData.importStatus !== currentSchoolData.importStatus) {
+                            currentSchoolData.importStatus = adminData.importStatus;
+                            currentSchoolData.udisePass = adminData.udisePass || '';
+                            needsUpdate = true;
+                            if (adminData.importStatus === 'wrong_password') {
+                                showToast("UDISE Password was marked incorrect by Admin! Please re-enter.", "error");
+                            }
+                        }
+
                         if (needsUpdate) {
                             const tx = db.transaction(['schools'], 'readwrite');
                             tx.objectStore('schools').put(currentSchoolData);
                             updateSchoolHeader();
+                            enterSchool(currentSchoolData);
                         }
                     }
                 }, err => console.log("School sync error:", err));
@@ -1292,7 +1306,6 @@
             if(!video.videoWidth) return;
             
             const overlay = document.getElementById('cameraOverlay');
-            
             const vidW = video.videoWidth;
             const vidH = video.videoHeight;
             const rectW = video.clientWidth;
@@ -1410,7 +1423,6 @@
                         });
                         
                         if (!student || student.synced) continue; 
-                        
                         await syncToFirebase(student);
                         successCount++;
 
@@ -1440,8 +1452,7 @@
                         btn.innerHTML = "<i class='fas fa-check'></i> Synced";
                         btn.classList.replace('bg-blue-100', 'bg-green-100');
                         btn.classList.replace('text-blue-600', 'text-green-600');
-                    }
-                    else {
+                    } else {
                         btn.innerHTML = `<i class='fas fa-exclamation-triangle'></i> ${failCount} failed`;
                         btn.classList.replace('bg-blue-100', 'bg-amber-100');
                         btn.classList.replace('text-blue-600', 'text-amber-600');
@@ -1503,24 +1514,15 @@
                     document.getElementById('sidebarEditProfileBtn').classList.add('hidden');
                     document.getElementById('schoolNameSubHeader').classList.add('hidden');
 
-                    // --- NEW: MAGIC LINK AUTO-LOGIN LOGIC ---
                     const urlParams = new URLSearchParams(window.location.search);
                     const magicU = urlParams.get('u');
                     const magicP = urlParams.get('p');
                     if(magicU && magicP) {
-                        // 1. Auto-fill the hidden login form
                         document.getElementById('loginUdise').value = magicU;
                         document.getElementById('loginPass').value = magicP;
-                        
-                        // 2. Hide the password from the URL bar immediately for security
                         window.history.replaceState(null, '', window.location.pathname);
-                        
-                        // 3. Automatically click the login button after a short delay
-                        setTimeout(() => {
-                            window.loginSchool();
-                        }, 500);
+                        setTimeout(() => { window.loginSchool(); }, 500);
                     }
-                    // ----------------------------------------
                 }
             };
         }
@@ -1539,7 +1541,7 @@
                 udise: udise,
                 hmSignature: sData.hmSignature || (docs[0] ? docs[0].data.hmSignature : ''), 
                 createdAt: Date.now(),
-                importStatus: 'manual',
+                importStatus: sData.importStatus || 'manual',
                 udiseUser: sData.udiseUser || udise,
                 udisePass: sData.udisePass || '',
                 schoolType: sData.schoolType || 'govt',
@@ -1547,12 +1549,10 @@
             };
 
             const tx = db.transaction(['schools', 'students'], 'readwrite');
-            
             tx.objectStore('schools').delete(localId);
             tx.objectStore('schools').put(schoolObj);
 
             const studentStore = tx.objectStore('students');
-            
             docs.forEach(({ id, data }) => {
                 const student = { ...data, id: Number(id), synced: true, source: source };
                 delete student.submittedAt;
@@ -1573,7 +1573,6 @@
         function applyCustomFields() {
             const fields = currentSchoolData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
             const allWrappers = ['name', 'class', 'roll', 'dob', 'blood', 'phone', 'father', 'mother', 'address'];
-            
             allWrappers.forEach(f => {
                 const wrap = document.getElementById('wrap-' + f);
                 if (wrap) {
@@ -1585,7 +1584,6 @@
 
         window.cancelPendingImport = async function() {
             if(!currentSchoolData) return;
-            
             currentSchoolData.importStatus = 'manual';
             
             const tx = db.transaction(['schools'], 'readwrite');
@@ -1638,15 +1636,25 @@
 
             updateSchoolHeader();
 
+            const pendingCard = document.getElementById('pendingImportCard');
+            const dashControls = document.getElementById('standardDashboardControls');
+            const wrongPassBanner = document.getElementById('wrongPasswordBanner');
+            const upgradeBanner = document.getElementById('upgradeToAutoBanner');
+
             if (currentSchoolData.importStatus === 'pending') {
-                document.getElementById('standardDashboardControls').classList.add('hidden');
-                document.getElementById('pendingImportCard').classList.remove('hidden');
+                dashControls.classList.add('hidden');
+                pendingCard.classList.remove('hidden');
+                wrongPassBanner.classList.add('hidden');
             } else {
-                document.getElementById('standardDashboardControls').classList.remove('hidden');
-                document.getElementById('pendingImportCard').classList.add('hidden');
+                dashControls.classList.remove('hidden');
+                pendingCard.classList.add('hidden');
                 
-                const upgradeBanner = document.getElementById('upgradeToAutoBanner');
-                if (upgradeBanner) {
+                // Show or hide wrong password alert banner
+                if (currentSchoolData.importStatus === 'wrong_password') {
+                    wrongPassBanner.classList.remove('hidden');
+                    upgradeBanner.classList.add('hidden');
+                } else {
+                    wrongPassBanner.classList.add('hidden');
                     if (currentSchoolData.source === 'manual' && currentSchoolData.importStatus === 'manual') {
                         upgradeBanner.classList.remove('hidden');
                     } else {
@@ -1660,7 +1668,6 @@
             
             setupRealtimeListener();
             
-            // Trigger Install Prompt after a brief delay if not installed
             if (deferredPrompt && !sessionStorage.getItem('installPromptShown')) {
                 setTimeout(() => {
                     document.getElementById('installPromptModal').classList.remove('hidden');
@@ -1698,14 +1705,13 @@
                     renameBox.classList.add('hidden');
                 }
             }
-
             document.getElementById('editSchoolModal').classList.remove('hidden');
         }
 
         window.requestFieldRename = function() {
             const sName = currentSchoolData.realSchoolName || "Unknown School";
             const udise = currentSchoolData.udise || "No UDISE";
-            const msg = `Hi Admin, I am from *${sName}* (UDISE: *${udise}*).\n\nI would like to rename some of my custom ID card fields (for example, change "Roll No" to "Address"). Can you please help me update my labels?`;
+            const msg = `Hi Admin, I am from *${sName}* (UDISE: *${udise}*).\n\nI would like to rename some of my custom ID card fields. Can you please help me update my labels?`;
             window.open(`https://wa.me/917855800205?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
@@ -1792,7 +1798,6 @@
                 const targetSource = currentSchoolData.source || 'manual';
                 
                 let all = e.target.result;
-                
                 students = all.filter(s => {
                     if (!targetUdise || !s.udise) {
                         return s.schoolName === currentSchoolData.name || s.schoolName === currentSchoolData.realSchoolName;
@@ -1829,7 +1834,6 @@
         function populateClassFilter() {
             const classSelect = document.getElementById('filterClass');
             const currentVal = classSelect.value;
-            
             const classes = [...new Set(students.map(s => normalizeClass(s.class)))].filter(Boolean).sort();
             
             let optionsHtml = '<option value="ALL">All Classes</option>';
@@ -1868,7 +1872,6 @@
             list.innerHTML = '';
             
             document.getElementById('listCounter').textContent = `Showing: ${filteredStudents.length} / ${students.length}`;
-            
             if (filteredStudents.length === 0) {
                 msg.classList.remove('hidden');
                 return;
@@ -1902,9 +1905,7 @@
                 div.innerHTML = `
                     <div class="p-3 flex items-center gap-2">
                         <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0">#${serialNumber}</div>
-                        <div class="flex-shrink-0">
-                            ${photoHtml}
-                        </div>
+                        <div class="flex-shrink-0">${photoHtml}</div>
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
                                 <div class="font-bold text-gray-900 text-sm truncate pr-2">${escapeHtml(s.name)}</div>
@@ -1936,7 +1937,6 @@
 
         document.getElementById('saveBtn').onclick = async () => {
             const isVis = (id) => !document.getElementById('wrap-' + id).classList.contains('hidden');
-
             const idStr = document.getElementById('editId').value;
             const name = document.getElementById('sName').value.trim();
             const cls = document.getElementById('sClass').value;
@@ -1956,11 +1956,8 @@
             btn.disabled = true;
             
             const id = idStr ? Number(idStr) : Date.now();
-
             let existingData = {};
-            if(idStr) {
-                existingData = students.find(x => x.id === id) || {};
-            }
+            if(idStr) existingData = students.find(x => x.id === id) || {};
 
             let base64 = null;
             if(currentPhotoBlob) {
@@ -1980,10 +1977,7 @@
                 udise: currentSchoolData.udise || '',
                 hmPhone: currentSchoolData.phone || '',
                 name, class: cls, roll, dob, bloodGroup: blood,
-                mobile: phone,
-                father: father,
-                mother: mother,
-                address: address,
+                mobile: phone, father, mother, address,
                 photoBase64: base64,
                 photoName: existingData.photoName || `${Date.now()}.jpg`,
                 finalised: true, 
@@ -1998,18 +1992,14 @@
             tx.oncomplete = () => {
                 showToast(idStr ? "Student Updated!" : "Student Saved!");
                 resetForm(); 
-                
                 if (!idStr) {
                     document.getElementById('searchInput').value = '';
                     document.getElementById('filterClass').value = 'ALL';
                 }
-                
                 loadStudents();
-                
                 if (navigator.onLine) {
                     syncToFirebase(student).then(() => loadStudents()).catch(console.error);
                 }
-                
                 btn.innerHTML = origText;
                 btn.disabled = false;
             };
@@ -2026,7 +2016,6 @@
             if(!s) return;
             
             applyCustomFields();
-
             document.getElementById('editId').value = s.id;
             document.getElementById('sName').value = s.name || '';
             
@@ -2034,9 +2023,7 @@
             const classSelect = document.getElementById('sClass');
             let optionFound = false;
             for (let opt of classSelect.options) {
-                if (opt.value === mappedClass) {
-                    optionFound = true; break;
-                }
+                if (opt.value === mappedClass) { optionFound = true; break; }
             }
             classSelect.value = optionFound ? mappedClass : "";
             
@@ -2057,19 +2044,14 @@
             }
             
             document.getElementById('sBlood').value = s.bloodGroup || '';
-            
-            if (s.photoBase64) {
-                setPreviewImage(s.photoBase64);
-            } else {
-                window.removePhoto();
-            }
+            if (s.photoBase64) setPreviewImage(s.photoBase64);
+            else window.removePhoto();
             
             document.getElementById('formTitle').innerHTML = 'Edit Student <i class="fas fa-pen text-sm text-gray-400 ml-1"></i>';
             const saveBtn = document.getElementById('saveBtn');
             saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> Update Student';
             saveBtn.classList.replace('bg-green-600', 'bg-blue-600');
             saveBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
-            
             document.getElementById('addStudentModal').classList.remove('hidden');
         }
 
@@ -2105,7 +2087,6 @@
             
             const tx = db.transaction(['students'], 'readwrite');
             tx.objectStore('students').delete(id);
-
             tx.oncomplete = () => {
                 showToast("Student deleted permanently", "success");
                 loadStudents();
