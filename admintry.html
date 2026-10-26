@@ -154,12 +154,12 @@
     <button class="btn btn-secondary" onclick="showDashboard()" style="margin-bottom:20px; background: #fff; color: #333; border: 1px solid #ccc;">← Back to Dashboard</button>
     
     <div class="detail-header">
-        <div>
+        <div style="width: 100%;">
             <div id="viewUdiseHead" style="color:#0b53a0; margin:0; font-size: 1.8rem; font-family: monospace; letter-spacing: 1px; font-weight:bold;">UDISE: XXXXXX</div>
             <div id="viewSchoolNameMaster" style="color:#E85C0D; font-size:18px; font-weight:bold; margin-top:8px;"></div>
             
             <!-- SECURE CREDENTIALS AREA -->
-            <div id="viewCredentials" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:15px;"></div>
+            <div id="viewCredentials" style="display:flex; flex-direction:column; gap:10px; margin-top:15px; width: 100%; max-width: 500px;"></div>
 
             <div id="viewAddress" style="color:#555; font-size:15px; margin-top:12px; display: flex; align-items: center; gap: 5px;"></div>
             <div id="viewContact" style="color:#0277bd; font-weight:bold; margin-top:6px; display: flex; align-items: center; gap: 5px;"></div>
@@ -572,7 +572,6 @@ let activeTab = 'govt';
 
 window.assets = { template: null, font: null, aiModel: 'pending', mode: 'manual', language: 'odia' }; 
 
-// IMAGE CACHE FOR ZERO-LAG PREVIEWS
 const globalImageCache = {};
 async function loadCachedImage(url) {
     if (!url) return null;
@@ -819,7 +818,6 @@ async function quickSync() {
             if (createTime > 0) {
                 schoolsMap[udise].firstActivity = Math.min(schoolsMap[udise].firstActivity || Infinity, createTime);
             }
-            
             hasChanges = true;
         });
 
@@ -852,7 +850,6 @@ async function quickSync() {
             const snap = await db.collection('students').where(field, '==', value).get();
             
             let comp = 0, pend = 0; let vars = {}; let rawCounts = {};
-            
             if (schoolsMap[udise] && !schoolsMap[udise].firstActivity) schoolsMap[udise].firstActivity = Infinity;
             
             snap.forEach(doc => { 
@@ -898,7 +895,6 @@ function renderDashboard(){
     const grid = document.getElementById('schoolGrid');
     grid.innerHTML = '';
     
-    // Fetch filter values safely
     const searchTerm = (document.getElementById('dashSearch')?.value || '').toLowerCase();
     const sortMode = document.getElementById('dashSort')?.value || 'regNew';
     const printFilter = document.getElementById('dashPrintFilter')?.value || 'all';
@@ -908,34 +904,29 @@ function renderDashboard(){
         const type = s.schoolType || 'govt';
         if (type !== activeTab) return false;
 
-        // 1. UDISE & Name Search Filter
         const matchSearch = u.toLowerCase().includes(searchTerm) || 
                             (s.name && s.name.toLowerCase().includes(searchTerm));
         if (!matchSearch) return false;
 
-        // 2. Print Status Filter
         if (printFilter === 'pending' && s.pendingCount === 0) return false;
         if (printFilter === 'completed' && (s.pendingCount > 0 || (s.completedCount === 0 && s.pendingCount === 0))) return false;
 
         return true;
     });
 
-    // 3. Dynamic Sorting
     udises.sort((a, b) => {
         const sA = schoolsMap[a], sB = schoolsMap[b];
         const totalA = (sA.completedCount || 0) + (sA.pendingCount || 0);
         const totalB = (sB.completedCount || 0) + (sB.pendingCount || 0);
-        
-        // Ensure firstActivity exists for old cached data
         const firstA = sA.firstActivity || sA.latestActivity || 0;
         const firstB = sB.firstActivity || sB.latestActivity || 0;
 
         if (sortMode === 'studentsHigh') return totalB - totalA;
         if (sortMode === 'studentsLow') return totalA - totalB;
-        if (sortMode === 'regOld') return firstA - firstB; // Oldest registered first (smallest timestamp first)
-        if (sortMode === 'regNew') return firstB - firstA; // Newest registered first (largest timestamp first)
+        if (sortMode === 'regOld') return firstA - firstB; 
+        if (sortMode === 'regNew') return firstB - firstA; 
         
-        return (sB.latestActivity || 0) - (sA.latestActivity || 0); // Default: Recent activity
+        return (sB.latestActivity || 0) - (sA.latestActivity || 0); 
     });
     
     if(udises.length === 0){ 
@@ -949,7 +940,6 @@ function renderDashboard(){
         div.className = activeTab === 'private' ? 'school-card private-card' : 'school-card';
         let udiseTitle = s.missingUdise ? 'Legacy Profile' : `UDISE: ${escapeHtml(udise)}`;
         
-        // Complete Tick Check
         const isCompleted = (s.completedCount > 0 && (s.pendingCount || 0) === 0);
         const tickHtml = isCompleted ? `<div style="position:absolute; top:-10px; right:-10px; background:#28a745; color:white; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.15); font-size:16px; z-index:10; border: 3px solid white;"><i class="fas fa-check"></i></div>` : '';
 
@@ -992,6 +982,29 @@ function showDashboard(){
     renderDashboard();
 }
 
+// NEW: Global function to mark an Auto-Load password as wrong
+window.markWrongPassword = async function(udise) {
+    if(!(await showMsg("Mark this password as WRONG? This will notify the user's app to re-enter it.", true, true))) return;
+    try {
+        await db.collection('schools').doc(udise).update({
+            importStatus: 'wrong_password',
+            udisePass: '',
+            lastModified: Date.now()
+        });
+        
+        if (schoolsMap[udise]) {
+            schoolsMap[udise].importStatus = 'wrong_password';
+            schoolsMap[udise].udisePass = '';
+            localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
+        }
+        
+        showMsg("User app has been notified to re-enter the password.");
+        openSchoolDetail(udise); 
+    } catch(e) {
+        showMsg("Error: " + e.message);
+    }
+};
+
 function openSchoolDetail(udise){
     let s = schoolsMap[udise];
     if(!s) return;
@@ -1003,8 +1016,10 @@ function openSchoolDetail(udise){
     const credEl = document.getElementById('viewCredentials');
     let credHtml = '';
     if (s.appPassword) credHtml += `<div style="background:#e6f2ff; color:#004085; padding:8px 15px; border-radius:8px; border:1px solid #b8daff; font-size:14px;"><i class="fas fa-lock"></i> App Pass: <b>${escapeHtml(s.appPassword)}</b></div>`;
-    if (s.udisePass && s.schoolType !== 'private') credHtml += `<div style="background:#fff3cd; color:#856404; padding:8px 15px; border-radius:8px; border:1px solid #ffeeba; font-size:14px;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
-    if (s.udisePass && s.schoolType === 'private') credHtml += `<div style="background:#f3e8ff; color:#6b21a8; padding:8px 15px; border-radius:8px; border:1px solid #d8b4fe; font-size:14px;"><i class="fas fa-magic"></i> Auto Pass: <b>${escapeHtml(s.udisePass)}</b></div>`;
+    
+    // Updated: Inject the Wrong Password Button
+    if (s.udisePass && s.schoolType !== 'private') credHtml += `<div style="background:#fff3cd; color:#856404; padding:8px 15px; border-radius:8px; border:1px solid #ffeeba; font-size:14px; display:flex; align-items:center; gap:10px;"><i class="fas fa-university"></i> Govt Pass: <b>${escapeHtml(s.udisePass)}</b> <button onclick="markWrongPassword('${escapeJs(udise)}')" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px; margin-left: auto;">❌ Wrong Password</button></div>`;
+    if (s.udisePass && s.schoolType === 'private') credHtml += `<div style="background:#f3e8ff; color:#6b21a8; padding:8px 15px; border-radius:8px; border:1px solid #d8b4fe; font-size:14px; display:flex; align-items:center; gap:10px;"><i class="fas fa-magic"></i> Auto Pass: <b>${escapeHtml(s.udisePass)}</b> <button onclick="markWrongPassword('${escapeJs(udise)}')" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px; margin-left: auto;">❌ Wrong Password</button></div>`;
     
     credEl.innerHTML = credHtml;
     credEl.style.display = credHtml ? 'flex' : 'none';
@@ -1098,7 +1113,6 @@ function renderTable(){
     const sourceFilter = document.getElementById('sourceFilterSelect').value;
     const reviewFilter = document.getElementById('reviewFilterSelect').value;
     
-    // Grab the new sort filter (default to newToOld if not found)
     const sortFilter = document.getElementById('studentSortSelect')?.value || 'newToOld';
     
     let filteredStudents = currentSchoolStudents;
@@ -1114,7 +1128,6 @@ function renderTable(){
         filteredStudents = filteredStudents.filter(s => s._source === 'excel' && s.finalised !== false);
     }
 
-    // --- NEW SORTING LOGIC ---
     filteredStudents.sort((a, b) => {
         const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : Number(a.id) || 0;
         const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : Number(b.id) || 0;
@@ -1128,7 +1141,6 @@ function renderTable(){
         }
         return 0;
     });
-    // -------------------------
 
     tbody.innerHTML = '';
     document.getElementById('selectAll').checked = false;
@@ -1236,7 +1248,7 @@ async function bulkDeleteSelected() {
         }
         currentSchoolStudents = currentSchoolStudents.filter(s => !ids.includes(s.id.toString()));
         if(activeUdise && schoolsMap[activeUdise]) {
-            schoolsMap[activeUdise].latestActivity = Date.now(); // Bump to top on delete
+            schoolsMap[activeUdise].latestActivity = Date.now(); 
             await quickSync(); 
         }
         renderTable(); 
@@ -1290,19 +1302,17 @@ const ctx = canvas.getContext('2d');
 
 async function drawPrivateCard(s, sm) {
     canvas.width = CARD_W; canvas.height = CARD_H;
-    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, CARD_W, CARD_H); // Solid White Base
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, CARD_W, CARD_H); 
     
     const layout = sm.layoutSettings;
     const bgUrl = sm.privateTemplateUrl;
 
     if (bgUrl && layout) {
-        // --- CUSTOM ADMIN LAYOUT MAPPING ---
         try {
             const bgImg = await loadCachedImage(bgUrl);
             if(bgImg && bgImg.width > 0) ctx.drawImage(bgImg, 0, 0, CARD_W, CARD_H);
         } catch(e) { console.log("Failed to load custom BG", e); }
 
-        // AI Photo Crop & Draw using custom coordinates
         if (layout.photo && layout.photo.show !== false && s.photoBase64) {
             const px = parseInt(layout.photo.x) || 200, py = parseInt(layout.photo.y) || 190, 
                   pw = parseInt(layout.photo.w) || 238, ph = parseInt(layout.photo.h) || 300, border = 4;
@@ -1310,31 +1320,22 @@ async function drawPrivateCard(s, sm) {
             const radius = parseInt(layout.photo.radius) || 0;
             
             ctx.save();
-            
-            // 1. Draw Border (Rect or Circle)
             ctx.fillStyle = '#000';
             ctx.beginPath();
             if (shape === 'circle') {
                 ctx.arc(px + pw/2, py + ph/2, Math.min(pw, ph)/2 + border, 0, Math.PI*2);
             } else {
-                if (ctx.roundRect) {
-                    ctx.roundRect(px - border, py - border, pw + border*2, ph + border*2, radius);
-                } else {
-                    ctx.rect(px - border, py - border, pw + border*2, ph + border*2);
-                }
+                if (ctx.roundRect) ctx.roundRect(px - border, py - border, pw + border*2, ph + border*2, radius);
+                else ctx.rect(px - border, py - border, pw + border*2, ph + border*2);
             }
             ctx.fill();
             
-            // 2. Set Clipping Mask for the photo
             ctx.beginPath();
             if (shape === 'circle') {
                 ctx.arc(px + pw/2, py + ph/2, Math.min(pw, ph)/2, 0, Math.PI*2);
             } else {
-                if (ctx.roundRect) {
-                    ctx.roundRect(px, py, pw, ph, radius);
-                } else {
-                    ctx.rect(px, py, pw, ph);
-                }
+                if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, radius);
+                else ctx.rect(px, py, pw, ph);
             }
             ctx.clip();
 
@@ -1356,11 +1357,9 @@ async function drawPrivateCard(s, sm) {
             } else {
                  ctx.fillStyle = '#eee'; ctx.fillRect(px, py, pw, ph);
             }
-            
-            ctx.restore(); // Remove clipping mask
+            ctx.restore(); 
         }
 
-        // Custom Text Coordinates
         const fields = sm.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
         for (const field of fields) {
             if (layout[field] && layout[field].show !== false) {
@@ -1371,13 +1370,10 @@ async function drawPrivateCard(s, sm) {
                 
                 let val = s[field] || s[field === 'phone' ? 'mobile' : field] || '';
                 
-                // AUTOMATIC DATE FORMATTER FOR YYYY-MM-DD to DD/MM/YYYY
                 if (field === 'dob' && val) {
                     try { 
                         const parts = val.split(/[-/]/); 
-                        if(parts.length === 3 && parts[0].length === 4) { 
-                            val = `${parts[2]}/${parts[1]}/${parts[0]}`; 
-                        }
+                        if(parts.length === 3 && parts[0].length === 4) val = `${parts[2]}/${parts[1]}/${parts[0]}`; 
                     } catch(e){}
                 }
 
@@ -1394,7 +1390,6 @@ async function drawPrivateCard(s, sm) {
         }
         
     } else {
-        // --- FALLBACK STACKING LAYOUT (If admin hasn't mapped coordinates yet) ---
         ctx.fillStyle = '#6f42c1'; ctx.fillRect(0, 0, CARD_W, 160);
         ctx.fillStyle = 'white'; ctx.textAlign = 'center'; 
         let printName = sm && sm.name ? sm.name : (s.schoolName || 'Private School');
@@ -1434,14 +1429,10 @@ async function drawPrivateCard(s, sm) {
 
         for (const field of fields) {
             let val = s[field] || s[field === 'phone' ? 'mobile' : field] || '-';
-            
-            // AUTOMATIC DATE FORMATTER FOR YYYY-MM-DD to DD/MM/YYYY
             if (field === 'dob' && val !== '-') {
                 try { 
                     const parts = val.split(/[-/]/); 
-                    if(parts.length === 3 && parts[0].length === 4) { 
-                        val = `${parts[2]}/${parts[1]}/${parts[0]}`; 
-                    }
+                    if(parts.length === 3 && parts[0].length === 4) val = `${parts[2]}/${parts[1]}/${parts[0]}`; 
                 } catch(e){}
             }
 
@@ -1827,7 +1818,7 @@ window.executeBatchDelete = async function(udise, targetSource) {
             document.getElementById('editSchoolModal').style.display='none';
             await showMsg("All data deleted successfully!"); showDashboard(); 
         } else {
-            schoolsMap[udise].latestActivity = Date.now(); // Bump to top on delete
+            schoolsMap[udise].latestActivity = Date.now();
             localStorage.setItem('adminSchoolsMap', JSON.stringify(schoolsMap));
             
             document.getElementById('editSchoolModal').style.display='none';
@@ -1994,9 +1985,8 @@ window.openLayoutEditor = function() {
     window.currentLayoutSettings = s.layoutSettings ? JSON.parse(JSON.stringify(s.layoutSettings)) : {};
     window.currentPrivateTemplateUrl = s.privateTemplateUrl || null;
     
-    // Setup Visual Background Indicator
     const bgInfo = document.getElementById('le_current_bg_info');
-    document.getElementById('plBgInput').value = ''; // Clear file input
+    document.getElementById('plBgInput').value = ''; 
     if (window.currentPrivateTemplateUrl) {
         bgInfo.innerHTML = `✅ Background Active (<a href="${window.currentPrivateTemplateUrl}" target="_blank" style="color: #6b21a8; text-decoration: underline;">View Current</a>).<br>Upload a new file below to replace it.`;
     } else {
@@ -2007,12 +1997,10 @@ window.openLayoutEditor = function() {
     container.innerHTML = '';
     
     const fields = s.customFields && s.customFields.length > 0 ? s.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
-    
     let defaultY = 560;
     
     fields.forEach(f => {
         const defaultSize = f === 'name' ? 36 : 26;
-        // Default 'name' to center and middle X coordinate, rest to left
         const defaultAlign = f === 'name' ? 'center' : 'left';
         const defaultX = f === 'name' ? CARD_W / 2 : 40; 
         
@@ -2189,7 +2177,6 @@ function handleCanvasPointerDown(e) {
     const s = schoolsMap[activeUdise];
     if(!s) return;
     
-    // 1. Check Text Fields (Reverse order so top visually handles first)
     const fields = s.customFields && s.customFields.length > 0 ? s.customFields : ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
     for (let i = fields.length - 1; i >= 0; i--) {
         const f = fields[i];
@@ -2201,11 +2188,10 @@ function handleCanvasPointerDown(e) {
         const size = parseInt(document.getElementById(`le_${f}_size`).value) || 26;
         const align = document.getElementById(`le_${f}_align`).value;
         
-        // Approximate width & hitboxes
-        let boxW = size * 8; // generous width for easy grabbing
+        let boxW = size * 8; 
         let boxH = size * 1.5;
         let bx = x;
-        let by = y - size; // y is roughly the baseline
+        let by = y - size; 
         
         if (align === 'center') bx = x - boxW / 2;
         if (align === 'right') bx = x - boxW;
@@ -2221,7 +2207,6 @@ function handleCanvasPointerDown(e) {
         }
     }
     
-    // 2. Check Photo Place-holder
     const pxInput = document.getElementById('le_photo_x');
     if (pxInput) {
         const px = parseInt(pxInput.value) || 0;
@@ -2257,7 +2242,6 @@ function handleCanvasPointerMove(e) {
         document.getElementById(`le_${leDragTarget}_y`).value = Math.round(pos.y - leDragOffsetY);
     }
     
-    // Use requestAnimationFrame for smoother real-time dragging without lag
     requestAnimationFrame(() => updateLivePreview());
     e.preventDefault();
 }
@@ -2270,7 +2254,6 @@ function handleCanvasPointerUp(e) {
     }
 }
 
-// Attach Drag & Drop Events for both Mouse & Touch screens
 plCanvas.addEventListener('mousedown', handleCanvasPointerDown);
 plCanvas.addEventListener('mousemove', handleCanvasPointerMove);
 window.addEventListener('mouseup', handleCanvasPointerUp); 
