@@ -1,21 +1,10 @@
 <!DOCTYPE html>
-<html lang="en-IN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AB Apps (AN ID Cards) – Smart School ID Card App & Bulk Lanyards</title>
-    <meta name="description" content="India's #1 Smart ID Card Platform for Govt & Private Schools. Login or Register to Auto-Load UDISE student data, snap photos offline, and order bulk ID cards.">
-    <meta name="keywords" content="abapps.in, AN ID Cards, UDISE auto load ID card, school ID card app, bulk ID card holder, digital print lanyard India, PVC ID card">
-    <link rel="canonical" href="https://www.abapps.in/">
-    <meta name="theme-color" content="#0f172a">
-
-    <!-- Open Graph / WhatsApp Preview -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="AB Apps – Smart School ID Card Portal & Bulk Catalogue">
-    <meta property="og:description" content="1-Click UDISE Auto-Load, 100% Offline Student Photo App, and Bulk ID Cards & Lanyards from ₹15.">
-    <meta property="og:url" content="https://www.abapps.in/">
-    <meta property="og:image" content="https://www.abapps.in/idcard_cover.webp">
-
+    <title>Data Entry App</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -35,8 +24,7 @@
     <link rel="manifest" href="manifest.json">
 
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; }
-        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; }
         
         .toast-enter { transform: translateY(100%); opacity: 0; }
         .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -51,10 +39,10 @@
         #sidebar { transition: transform 0.3s ease; }
     </style>
 </head>
-<body class="text-gray-800">
+<body class="text-gray-800 pb-20">
 
     <!-- Offline Banner -->
-    <div id="offlineBanner" class="hidden fixed top-0 inset-x-0 z-[70] bg-red-500 text-white px-4 py-2 shadow-md flex justify-center items-center text-xs sm:text-sm font-bold transition-transform duration-300 transform -translate-y-full">
+    <div id="offlineBanner" class="hidden fixed top-0 inset-x-0 z-[70] bg-red-500 text-white px-4 py-2 shadow-md flex justify-center items-center text-sm font-bold transition-transform duration-300 transform -translate-y-full">
         <i class="fas fa-wifi-slash mr-2"></i> You are offline. Data will be saved locally.
     </div>
 
@@ -67,555 +55,271 @@
         <button onclick="window.location.reload()" class="bg-white text-blue-600 px-4 py-1.5 rounded-full text-sm font-bold shadow hover:bg-gray-100 transition">Refresh Now</button>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- MODERN UNIVERSAL HEADER                                                   -->
-    <!-- ========================================================================= -->
-    <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md border-b border-slate-800" id="mainHeader">
-        <div class="w-full max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+    <!-- App Navigation Header -->
+    <header class="bg-gradient-to-r from-blue-700 to-blue-500 text-white sticky top-0 z-50 shadow-md transition-all duration-300" id="mainHeader">
+        
+        <!-- Top Toolbar Row -->
+        <div class="w-full max-w-lg mx-auto px-3 py-2 flex items-center justify-between">
             
-            <!-- Left: Brand Logo & Optional Hamburger (When Logged In) -->
-            <div class="flex items-center gap-3">
-                <button id="headerHamburger" onclick="toggleSidebar()" class="hidden text-white hover:bg-white/10 w-10 h-10 rounded-xl flex items-center justify-center transition focus:outline-none" title="Menu">
-                    <i class="fas fa-bars text-lg"></i>
+            <!-- Left: Hamburger, Title & Live Indicator -->
+            <div class="flex items-center gap-1.5">
+                <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 p-2 rounded-lg transition focus:outline-none flex-shrink-0" title="Menu">
+                    <i class="fas fa-bars text-[18px]"></i>
                 </button>
-                <a href="/" onclick="handleLogoClick(event)" class="flex items-center gap-1.5 text-white no-underline hover:opacity-90 transition">
-                    <span class="font-black text-xl tracking-tight">AB<span class="text-amber-400">APPS</span>.IN</span>
-                </a>
-                <span id="liveIndicator" class="hidden bg-green-500/20 border border-green-400 text-green-100 text-[9px] px-2 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1" title="Live Sync Active">
+                <span class="font-bold text-[15px] tracking-wide ml-1 mr-1 truncate">ID Cards Pro</span>
+                <span id="liveIndicator" class="hidden bg-green-500/20 border border-green-400 text-green-100 text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wider flex items-center gap-1 flex-shrink-0" title="Live Sync Active">
                     <i class="fas fa-circle text-[6px] text-green-400 animate-pulse"></i>LIVE
                 </span>
             </div>
 
-            <!-- Right: Logged-Out Actions (Login/Register) -->
-            <div id="headerAuthActions" class="flex items-center gap-2">
-                <button onclick="openAuthView('login')" class="text-sm font-bold text-slate-300 hover:text-white px-3 py-2 transition hidden sm:block">Login</button>
-                <button onclick="openAuthView('register')" class="bg-amber-400 hover:bg-amber-500 text-slate-900 text-sm font-black px-4 py-2 rounded-full shadow-md transition flex items-center gap-1.5">
-                    <i class="fas fa-user-circle"></i> <span>Portal</span>
-                </button>
-            </div>
-
-            <!-- Right: Logged-In Actions (App Dashboard) -->
-            <div id="headerAppActions" class="hidden items-center gap-2 sm:gap-3">
-                <a href="#catalogueSection" onclick="openLandingView()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition">
-                    <i class="fas fa-tags text-amber-400"></i> <span class="hidden sm:inline">Catalogue</span>
-                </a>
-                <button id="headerInstallBtn" onclick="triggerInstall()" class="hidden bg-amber-400 hover:bg-amber-500 text-slate-900 px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 shadow-sm transition">
-                    <i class="fas fa-download"></i> <span class="hidden sm:inline">Install</span>
-                </button>
-                <button onclick="window.location.reload()" class="text-slate-300 hover:text-white hover:bg-white/10 w-9 h-9 rounded-full flex items-center justify-center transition" title="Refresh">
+            <!-- Right: Dynamic Tool Icons -->
+            <div class="flex items-center gap-1.5">
+                <button onclick="window.location.reload()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition" title="Refresh App">
                     <i class="fas fa-sync-alt text-sm"></i>
+                </button>
+                <button id="headerInstallBtn" onclick="triggerInstall()" class="hidden bg-white/20 hover:bg-white/30 border border-white/40 text-white px-2.5 py-1.5 rounded-md text-[11px] font-bold flex items-center gap-1.5 transition" title="Install App">
+                    <i class="fas fa-download"></i> INSTALL
                 </button>
             </div>
             
         </div>
         
-        <!-- Sub-Header Row: School Name & District (Visible only when logged in) -->
-        <div id="schoolNameSubHeader" class="hidden bg-slate-800 border-t border-slate-700 px-4 py-2 text-center flex flex-col items-center justify-center shadow-inner">
-            <h3 id="currentSchoolHeader" class="m-0 font-bold text-sm text-white truncate w-full flex items-center justify-center flex-wrap gap-1.5 leading-tight">School Name</h3>
-            <p id="currentSchoolSubHeader" class="text-slate-400 text-[10px] font-medium truncate w-full mt-0.5">District | UDISE: 12345</p>
+        <!-- Sub-Header Row: School Name & District (Hidden until logged in) -->
+        <div id="schoolNameSubHeader" class="hidden bg-blue-800/40 border-t border-blue-600/50 px-4 py-2.5 text-center flex flex-col items-center justify-center">
+            <h3 id="currentSchoolHeader" class="m-0 font-bold text-sm text-white truncate w-full flex items-center justify-center flex-wrap gap-2 leading-tight">School Name</h3>
+            <p id="currentSchoolSubHeader" class="text-blue-200 text-[10.5px] font-medium truncate w-full mt-0.5">District | UDISE: 12345</p>
         </div>
+        
     </header>
 
     <!-- Sidebar Menu -->
-    <div id="sidebarOverlay" class="fixed inset-0 z-[100] hidden opacity-0 transition-opacity duration-300" onclick="toggleSidebar()"></div>
-    <div id="sidebar" class="fixed top-0 left-0 h-full w-72 bg-white shadow-2xl z-[110] transform -translate-x-full transition-transform duration-300 flex flex-col">
-        <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
-            <div>
-                <h2 class="font-black text-lg leading-none"><i class="fas fa-id-badge mr-1.5 text-amber-400"></i> AB APPS</h2>
-                <span class="text-[10px] text-slate-400 uppercase tracking-widest">School Dashboard</span>
-            </div>
-            <button onclick="toggleSidebar()" class="text-slate-300 hover:text-white w-8 h-8 flex items-center justify-center"><i class="fas fa-times text-xl"></i></button>
+    <div id="sidebarOverlay" class="fixed inset-0 z-[100] hidden opacity-0" onclick="toggleSidebar()"></div>
+    <div id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-[110] transform -translate-x-full flex flex-col">
+        <div class="p-5 bg-blue-600 text-white flex justify-between items-center">
+            <h2 class="font-bold text-lg"><i class="fas fa-id-badge mr-2"></i> AN ID CARDS</h2>
+            <button onclick="toggleSidebar()" class="text-white hover:text-gray-200"><i class="fas fa-times text-xl"></i></button>
         </div>
-        <div class="flex-1 p-4 flex flex-col gap-1.5 overflow-y-auto">
+        <div class="flex-1 p-4 flex flex-col gap-2">
             
-            <button onclick="openAppView(); toggleSidebar();" class="flex items-center gap-3 w-full p-3.5 rounded-xl hover:bg-slate-50 transition text-left text-slate-800 font-bold text-sm">
-                <i class="fas fa-mobile-screen-button w-5 text-center text-blue-600 text-lg"></i> Student Data App
-            </button>
-
-            <button onclick="openLandingView(); toggleSidebar();" class="flex items-center gap-3 w-full p-3.5 rounded-xl hover:bg-amber-50 transition text-left text-slate-800 font-bold text-sm">
-                <i class="fas fa-tags w-5 text-center text-amber-500 text-lg"></i> ID Card Catalogue (₹15+)
-            </button>
-
-            <button id="sidebarEditProfileBtn" onclick="openAppView(); openEditSchoolModal(); toggleSidebar();" class="hidden flex items-center gap-3 w-full p-3.5 rounded-xl hover:bg-slate-50 transition text-left text-slate-700 font-semibold text-sm">
-                <i class="fas fa-school w-5 text-center text-slate-500"></i> Edit School Profile
+            <button id="sidebarEditProfileBtn" onclick="openEditSchoolModal(); toggleSidebar();" class="hidden flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
+                <i class="fas fa-school w-5 text-center text-blue-500"></i> Edit School Profile
             </button>
             
-            <div class="my-2 border-t border-slate-100"></div>
-
-            <a href="https://wa.me/917855800205?text=Hello%20AB%20Apps%20%2F%20AN%20ID%20Cards%2C%20I%20need%20support%20or%20want%20to%20place%20an%20order." target="_blank" class="flex items-center gap-3 w-full p-3.5 rounded-xl hover:bg-slate-50 transition text-left text-slate-700 font-semibold text-sm" onclick="toggleSidebar();">
+            <a href="catalogue.html" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
+                <i class="fas fa-book-open w-5 text-center text-blue-500"></i> View Catalog
+            </a>
+            
+            <a href="https://wa.me/917855800205?text=Hello,%20I%20need%20support%20or%20want%20to%20place%20an%20order%20for%20my%20ID%20cards." target="_blank" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium" onclick="toggleSidebar();">
                 <i class="fab fa-whatsapp w-5 text-center text-[#25D366] text-lg"></i> WhatsApp Support
             </a>
             
-            <button onclick="shareApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3.5 rounded-xl hover:bg-slate-50 transition text-left text-slate-700 font-semibold text-sm">
-                <i class="fas fa-share-nodes w-5 text-center text-slate-500"></i> Share Website Link
+            <button onclick="shareApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-gray-100 transition text-left text-gray-700 font-medium">
+                <i class="fas fa-share-nodes w-5 text-center text-gray-500"></i> Share App
             </button>
             
-            <div class="mt-auto border-t border-slate-100 pt-4">
-               <button id="sidebarLogoutBtn" onclick="hardResetApp(); toggleSidebar();" class="hidden flex items-center gap-3 w-full p-3.5 rounded-xl hover:bg-red-50 text-red-600 transition text-left font-bold text-sm">
-                    <i class="fas fa-sign-out-alt w-5 text-center"></i> Logout Account
+            <div class="mt-auto border-t border-gray-200 pt-4">
+               <button onclick="hardResetApp(); toggleSidebar();" class="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-red-50 text-red-600 transition text-left font-bold">
+                    <i class="fas fa-sign-out-alt w-5 text-center"></i> Logout
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- VIEW 1: LANDING & CATALOGUE (HERO IMAGE + STOREFRONT)                     -->
-    <!-- ========================================================================= -->
-    <div id="landingMainView">
+    <!-- Main Container -->
+    <div class="max-w-lg mx-auto p-4 pt-4">
         
-        <!-- Beautiful Modern Hero Section -->
-        <section class="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white py-12 sm:py-20 px-4 relative overflow-hidden">
-            <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 sm:gap-16 items-center">
-                <!-- Left: Sales Copy & CTA -->
-                <div class="relative z-10">
-                    <div class="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-amber-300 px-3 py-1 rounded-full text-xs font-black mb-5 tracking-widest uppercase shadow-sm">
-                        <i class="fas fa-bolt"></i> India's Smartest ID Platform
-                    </div>
-                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.1] mb-5">
-                        School ID Cards Made <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500">10x Easier.</span>
-                    </h1>
-                    <p class="text-slate-300 text-base sm:text-lg mb-8 leading-relaxed max-w-lg font-medium">
-                        Stop wasting weeks typing Excel sheets. Use our free web app to <b>Auto-Load students from UDISE</b>, snap photos offline, and order bulk ID cards &amp; printed lanyards from ₹15.
-                    </p>
-                    
-                    <div class="flex flex-wrap items-center gap-3 sm:gap-4">
-                        <button onclick="openAuthView('register')" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-black px-6 py-3.5 rounded-xl shadow-lg transition flex items-center gap-2">
-                            <i class="fas fa-user-plus"></i> Register School Free
-                        </button>
-                        <a href="#catalogueSection" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-6 py-3.5 rounded-xl transition flex items-center gap-2">
-                            <i class="fas fa-tags"></i> View Catalogue
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Right: Marketing Hero Image -->
-                <div class="relative z-10 mx-auto w-full max-w-md md:max-w-full">
-                    <div class="absolute inset-0 bg-blue-500 rounded-3xl blur-3xl opacity-20 -z-10 translate-y-4"></div>
-                    <img src="idcard_cover.webp" onerror="this.src='https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80'" alt="Custom Printed School ID Cards and Lanyards" class="rounded-3xl shadow-2xl border border-white/10 w-full object-cover aspect-[4/3] rotate-[-1deg] hover:rotate-0 transition duration-500">
-                    
-                    <!-- Floating Badge -->
-                    <div class="absolute -bottom-5 -left-2 sm:-left-6 bg-white text-slate-900 p-4 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 animate-bounce" style="animation-duration: 3s;">
-                        <div class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center text-2xl font-black">
-                            <i class="fas fa-check-double"></i>
-                        </div>
-                        <div>
-                            <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Quality Assured</div>
-                            <div class="text-sm font-black text-gray-900">PDF Proof Before Print!</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Trust Strip -->
-        <div class="bg-amber-400 text-slate-900 py-3.5 px-4 border-b border-amber-500">
-            <div class="max-w-6xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs sm:text-sm font-extrabold uppercase tracking-wide">
-                <div>🏷 Factory Price (₹15+)</div>
-                <div>⚡ 1-Click UDISE Load</div>
-                <div>📦 Min Order: 30 Pcs</div>
-                <div>🚚 5–7 Days Delivery</div>
-            </div>
-        </div>
-
-        <!-- HOW THE APP WORKS SECTION -->
-        <section id="whyEasySection" class="py-14 px-4 bg-white border-b border-gray-200">
-            <div class="max-w-6xl mx-auto">
-                <div class="text-center max-w-2xl mx-auto mb-10">
-                    <span class="text-blue-600 font-extrabold text-xs uppercase tracking-widest">No More Data Entry Headaches</span>
-                    <h2 class="text-3xl font-black text-slate-900 mt-2">Why 1,000+ Schools Love ABApps</h2>
-                    <p class="text-gray-500 text-sm mt-3 leading-relaxed">Traditional vendors ask you to fill complex Excel sheets and match hundreds of photo files. Our smart web app does the heavy lifting for you.</p>
-                </div>
-
-                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                    <div class="bg-blue-50/60 border border-blue-100 p-6 rounded-3xl hover:shadow-md transition">
-                        <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl mb-4 shadow-sm">
-                            <i class="fas fa-wand-magic-sparkles"></i>
-                        </div>
-                        <h3 class="font-black text-slate-900 text-base mb-2">1. UDISE Auto-Load</h3>
-                        <p class="text-xs text-gray-600 leading-relaxed">Register &amp; click "Auto-Load" inside the app. We automatically import your entire student list from UDISE within 24 hours.</p>
-                    </div>
-
-                    <div class="bg-purple-50/60 border border-purple-100 p-6 rounded-3xl hover:shadow-md transition">
-                        <div class="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl mb-4 shadow-sm">
-                            <i class="fas fa-user-pen"></i>
-                        </div>
-                        <h3 class="font-black text-slate-900 text-base mb-2">2. Easy Student Updates</h3>
-                        <p class="text-xs text-gray-600 leading-relaxed">Need to fix a spelling mistake or update a mobile number? Any teacher can edit student details in just one tap.</p>
-                    </div>
-
-                    <div class="bg-emerald-50/60 border border-emerald-100 p-6 rounded-3xl hover:shadow-md transition">
-                        <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl mb-4 shadow-sm">
-                            <i class="fas fa-wifi-slash"></i>
-                        </div>
-                        <h3 class="font-black text-slate-900 text-base mb-2">3. 100% Offline Camera</h3>
-                        <p class="text-xs text-gray-600 leading-relaxed">No internet in class? Install the app, take student photos offline with our built-in face alignment guide, and sync later.</p>
-                    </div>
-
-                    <div class="bg-amber-50/60 border border-amber-100 p-6 rounded-3xl hover:shadow-md transition">
-                        <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl mb-4 shadow-sm">
-                            <i class="fas fa-file-pdf"></i>
-                        </div>
-                        <h3 class="font-black text-slate-900 text-base mb-2">4. PDF Proof Before Print</h3>
-                        <p class="text-xs text-gray-600 leading-relaxed">Zero printing mistakes! We generate a complete watermarked Verification PDF of all ID cards for your approval before printing.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- FULL INTERACTIVE PRODUCT CATALOGUE -->
-        <section id="catalogueSection" class="py-14 px-4 bg-slate-50 max-w-7xl mx-auto">
-            <div class="text-center max-w-2xl mx-auto mb-10">
-                <h2 class="text-3xl font-black text-slate-900 mb-2">ID Card Holders &amp; Lanyards Catalogue</h2>
-                <p class="text-gray-500 text-sm">Tap any product below to open the live bulk discount calculator and place your order securely on WhatsApp.</p>
-            </div>
-
-            <!-- Dynamic 10-Product Grid -->
-            <div id="storeProductsContainer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5"></div>
-        </section>
-
-        <!-- AUTOMATIC BULK DISCOUNT TIERS -->
-        <section class="py-14 px-4 bg-white border-t border-b border-gray-200">
-            <div class="max-w-4xl mx-auto">
-                <h2 class="text-2xl sm:text-3xl font-black text-center text-slate-900 mb-2">Order More, Pay Less</h2>
-                <p class="text-center text-gray-500 text-sm mb-8">Bulk discounts are applied automatically in our price calculator. Combine multiple classes to unlock our 8% tier!</p>
-
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div class="border-2 border-gray-200 rounded-3xl p-5 text-center bg-gray-50">
-                        <div class="text-[11px] font-bold text-gray-500 uppercase tracking-widest">30–59 pcs</div>
-                        <div class="text-xl font-black text-blue-700 mt-2 mb-1">Base Rate</div>
-                        <div class="text-xs text-gray-400">Standard price</div>
-                    </div>
-                    <div class="border-2 border-blue-200 rounded-3xl p-5 text-center bg-blue-50/40">
-                        <div class="text-[11px] font-bold text-blue-500 uppercase tracking-widest">60–99 pcs</div>
-                        <div class="text-xl font-black text-blue-700 mt-2 mb-1">3% OFF</div>
-                        <div class="text-xs text-blue-500">Instant savings</div>
-                    </div>
-                    <div class="border-2 border-blue-400 rounded-3xl p-5 text-center bg-blue-50">
-                        <div class="text-[11px] font-bold text-blue-600 uppercase tracking-widest">100–249 pcs</div>
-                        <div class="text-xl font-black text-blue-700 mt-2 mb-1">5% OFF</div>
-                        <div class="text-xs text-blue-600 font-bold">Most Popular</div>
-                    </div>
-                    <div class="bg-amber-50 border-2 border-amber-400 rounded-3xl p-5 text-center shadow-md">
-                        <div class="text-[11px] font-bold text-amber-800 uppercase tracking-widest">250+ pcs</div>
-                        <div class="text-xl font-black text-amber-600 mt-2 mb-1">8% OFF</div>
-                        <div class="text-xs font-bold text-amber-800">Best Value</div>
-                    </div>
-                </div>
-
-                <div class="mt-8 bg-slate-900 border-l-4 border-amber-400 p-5 rounded-2xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <strong class="text-white text-base">Need fewer than 30 pieces?</strong>
-                        <p class="text-sm text-slate-400 mt-1">If other schools are printing the same standard lanyard design, we can include your small order in their batch!</p>
-                    </div>
-                    <a href="https://wa.me/917855800205?text=Hello%2C%20I%20need%20less%20than%2030%20pieces.%20Can%20I%20join%20a%20group%20batch%3F" target="_blank" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-black text-sm px-5 py-3 rounded-xl whitespace-nowrap transition shadow">
-                        Ask About Group Batch →
-                    </a>
-                </div>
-            </div>
-        </section>
-
-        <!-- FAQ SECTION -->
-        <section class="py-6 px-4 max-w-3xl mx-auto mb-6">
-            <h2 class="text-xl font-black text-center text-slate-900 mb-4">Frequently Asked Questions</h2>
-            <div class="space-y-2.5 text-xs sm:text-sm">
-                <details class="bg-white border border-gray-200 rounded-xl p-3.5">
-                    <summary class="font-bold text-gray-900 cursor-pointer">How do we give student data and photos?</summary>
-                    <p class="mt-2 text-gray-600">Register your school in the box at the top of <b>abapps.in</b>. Click <b>Auto-Load</b> to import your UDISE student list automatically, then use your phone camera to take photos!</p>
-                </details>
-                <details class="bg-white border border-gray-200 rounded-xl p-3.5">
-                    <summary class="font-bold text-gray-900 cursor-pointer">Why are printed lanyards charged in batches of 30?</summary>
-                    <p class="mt-2 text-gray-600">Digital print lanyards are sublimation-printed in rolls of 30 pieces. If your quantity is not a multiple of 30, our calculator shows you how adding a few extra cards gives you maximum value.</p>
-                </details>
-                <details class="bg-white border border-gray-200 rounded-xl p-3.5">
-                    <summary class="font-bold text-gray-900 cursor-pointer">How long does delivery take?</summary>
-                    <p class="mt-2 text-gray-600">Delivery takes 5–7 days across India after your lanyard design and student verification PDF are confirmed. Flat ₹150 delivery charge applies.</p>
-                </details>
-            </div>
-        </section>
-
-        <!-- FOOTER -->
-        <footer class="bg-slate-900 text-slate-400 py-8 px-4 text-xs pb-24">
-            <div class="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
-                <div>
-                    <div class="text-white font-black text-sm">AB APPS (AN ID CARDS)</div>
-                    <p class="mt-0.5">Smart Student ID App &amp; Bulk ID Card Manufacturer in India</p>
-                </div>
-                <div class="flex flex-wrap justify-center gap-4 text-blue-300 font-semibold">
-                    <a href="tel:+917855800205" class="hover:underline">📞 +91-78558 00205</a>
-                    <a href="mailto:andigital1996@gmail.com" class="hover:underline">✉ andigital1996@gmail.com</a>
-                    <a href="/login" class="text-amber-300 hover:underline">🔒 Direct Login Link</a>
-                </div>
-            </div>
-            <div class="text-center mt-6 pt-4 border-t border-slate-800 text-[11px] text-slate-500">
-                &copy; 2026 AB Apps (abapps.in) / AN ID Cards. All rights reserved.
-            </div>
-        </footer>
-    </div>
-
-    <!-- ========================================================================= -->
-    <!-- VIEW 2: DEDICATED AUTHENTICATION VIEW (LOGIN/REGISTER)                    -->
-    <!-- ========================================================================= -->
-    <div id="authMainView" class="hidden min-h-[85vh] flex items-center justify-center p-4">
-        
-        <div class="w-full max-w-md mx-auto">
-            
+        <!-- ================= SAAS AUTHENTICATION SECTION ================= -->
+        <div id="authSection" class="hidden animate-fade-in">
             <div class="text-center mb-6">
-                <a href="/" onclick="handleLogoClick(event)" class="inline-block bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-4 cursor-pointer hover:shadow-md transition">
-                    <span class="font-black text-2xl tracking-tight text-slate-900">AB<span class="text-amber-500">APPS</span>.IN</span>
-                </a>
-                <h1 class="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">School Portal</h1>
-                <p class="text-sm text-gray-500 mt-1">Manage ID card data &amp; auto-load from UDISE.</p>
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-500 text-2xl">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">Secure Portal</h2>
+                <p class="text-sm text-gray-500">For Govt & Private Schools</p>
+            </div>
+            
+            <!-- Tabs -->
+            <div class="flex bg-gray-200 p-1 rounded-xl mb-6">
+                <button id="tabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2.5 font-bold rounded-lg bg-white text-blue-600 shadow-sm transition">Login</button>
+                <button id="tabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2.5 font-bold rounded-lg text-gray-500 transition">Register</button>
             </div>
 
-            <div class="bg-white text-gray-800 rounded-3xl shadow-xl border border-gray-100 p-5 sm:p-6">
+            <!-- LOGIN FORM -->
+            <div id="loginForm" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-800 mb-4 text-lg">Welcome Back</h3>
+                <input type="text" id="loginUdise" placeholder="School Code / UDISE" maxlength="11" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                <input type="password" id="loginPass" placeholder="App Password" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 
-                <!-- Login / Register Switch Tabs -->
-                <div class="flex bg-slate-100 p-1.5 rounded-xl mb-6 border border-slate-200">
-                    <button id="tabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2.5 font-bold text-sm rounded-lg bg-white text-blue-600 shadow-sm transition">Login</button>
-                    <button id="tabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2.5 font-bold text-sm rounded-lg text-slate-500 hover:text-slate-900 transition">Register New</button>
+                <button id="loginBtn" onclick="loginSchool()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <i class="fas fa-sign-in-alt"></i> Login & Load Data
+                </button>
+                
+                <div class="text-center mt-4">
+                    <a href="#" onclick="forgotPassword()" class="text-blue-500 text-sm font-bold hover:underline">Forgot Password?</a>
+                </div>
+            </div>
+
+            <!-- REGISTER FORM -->
+            <div id="registerForm" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hidden">
+                <h3 class="font-bold text-gray-800 mb-4 text-lg">Register New School</h3>
+                
+                <label class="block text-sm font-bold text-gray-700 mb-1">School Type</label>
+                <select id="regType" onchange="handleSchoolType()" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <option value="govt">Government School</option>
+                    <option value="private">Private / Public School</option>
+                </select>
+
+                <label id="lblRegUdise" class="block text-sm font-bold text-gray-700 mb-1">11-Digit UDISE Code *</label>
+                <input type="text" id="newUdise" placeholder="Enter UDISE / ID *" maxlength="11" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                
+                <label class="block text-sm font-bold text-gray-700 mb-1">School Name *</label>
+                <input type="text" id="newSchoolName" placeholder="e.g. Delhi Public School *" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+
+                <div class="flex gap-3 mb-3">
+                    <input type="text" id="newBlock" placeholder="Block" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <input type="text" id="newDistrict" placeholder="District" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+                <div class="flex gap-3 mb-3">
+                    <input type="number" id="newPin" placeholder="Pin Code" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
+                    <input type="tel" id="newSchoolPhone" placeholder="Mobile No. (10 digits) *" maxlength="10" inputmode="numeric" class="w-1/2 p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 </div>
 
-                <!-- LOGIN FORM -->
-                <div id="loginForm">
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1 tracking-wide">School Code / UDISE</label>
-                    <input type="text" id="loginUdise" placeholder="Enter 11-Digit UDISE" maxlength="11" inputmode="numeric" class="w-full p-3.5 mb-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-base font-semibold">
+                <!-- Dynamic Fields for Private Schools -->
+                <div id="privateFieldsBox" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-100 mb-4 mt-2">
+                    <label class="block text-sm font-bold text-purple-900 mb-1">Select ID Card Fields (Max 7)</label>
+                    <p class="text-xs text-purple-600 mb-3">Choose what data you want to collect and print.</p>
                     
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1 tracking-wide">App Password</label>
-                    <input type="password" id="loginPass" placeholder="Enter Password" class="w-full p-3.5 mb-5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-base font-semibold">
-                    
-                    <button id="loginBtn" onclick="loginSchool()" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-black py-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-base">
-                        <i class="fas fa-sign-in-alt"></i> Login to Dashboard
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb" value="name" checked disabled> Name (Req)</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb" value="class" checked> Class</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb" value="roll" checked> Roll No.</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb" value="dob" checked> DOB</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb" value="blood" checked> Blood Group</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb" value="phone" checked> Mobile No.</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb" value="father"> Father's Name</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="pvt-cb" value="mother"> Mother's Name</label>
+                        <label class="flex items-center gap-2 col-span-2"><input type="checkbox" class="pvt-cb" value="address"> Address</label>
+                    </div>
+                </div>
+
+                <div class="mb-5 pt-4 border-t border-gray-100">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">HM Signature <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+                    <input type="file" id="newHmSign" accept="image/*" class="w-full p-2 border border-gray-300 rounded-xl bg-gray-50 text-sm focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-5">
+                    <label class="block text-sm font-bold text-gray-700 mb-1"><i class="fas fa-key text-blue-500 mr-1"></i> Create App Password *</label>
+                    <input type="password" id="regPass" placeholder="Create a secure password" class="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 transition">
+                    <p class="text-[11px] text-gray-500 mt-2 leading-tight">You will use this to log in securely tomorrow. Keep it safe!</p>
+                </div>
+
+                <button id="addSchoolBtn" onclick="registerSchool()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition">Register School</button>
+            </div>
+        </div>
+
+        <!-- ================= ENTRY SECTION ================= -->
+        <div id="entrySection" class="hidden">
+
+            <!-- Data Extraction in Progress Notice -->
+            <div id="pendingImportCard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center mb-6 relative overflow-hidden">
+                <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 text-2xl animate-pulse">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Data Extraction in Progress</h3>
+                <p class="text-sm text-gray-600 mb-6">Your students will be automatically loaded here within 24 hours. You can view, edit, or add photos then.</p>
+                
+                <div class="flex justify-center mt-2">
+                    <button onclick="cancelPendingImport()" class="text-xs text-gray-500 hover:text-gray-800 underline font-medium">
+                        Cancel auto enter
                     </button>
-                    
-                    <div class="flex items-center justify-between mt-5 pt-4 border-t border-slate-100 text-sm">
-                        <a href="#" onclick="forgotPassword()" class="text-blue-600 font-bold hover:underline">Forgot Password?</a>
-                        <button onclick="switchAuthTab('register')" class="text-slate-500 font-semibold hover:text-blue-600">Register</button>
-                    </div>
                 </div>
+            </div>
 
-                <!-- REGISTER FORM -->
-                <div id="registerForm" class="hidden">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">School Category</label>
-                    <select id="regType" onchange="handleSchoolType()" class="w-full p-3 mb-3 border border-slate-300 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium">
-                        <option value="govt">Government School</option>
-                        <option value="private">Private / Public School</option>
-                    </select>
-
-                    <label id="lblRegUdise" class="block text-xs font-bold text-slate-700 mb-1">11-Digit UDISE Code *</label>
-                    <input type="text" id="newUdise" placeholder="Enter UDISE / ID *" maxlength="11" class="w-full p-3 mb-3 border border-slate-300 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
-                    
-                    <label class="block text-xs font-bold text-slate-700 mb-1">School Name *</label>
-                    <input type="text" id="newSchoolName" placeholder="e.g. Govt High School *" class="w-full p-3 mb-3 border border-slate-300 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
-
-                    <div class="flex gap-2.5 mb-3">
-                        <input type="text" id="newBlock" placeholder="Block" class="w-1/2 p-3 border border-slate-300 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
-                        <input type="text" id="newDistrict" placeholder="District" class="w-1/2 p-3 border border-slate-300 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
-                    </div>
-                    <div class="flex gap-2.5 mb-3">
-                        <input type="number" id="newPin" placeholder="Pin Code" class="w-1/2 p-3 border border-slate-300 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
-                        <input type="tel" id="newSchoolPhone" placeholder="Mobile (10 digits)*" maxlength="10" inputmode="numeric" class="w-1/2 p-3 border border-slate-300 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
-                    </div>
-
-                    <!-- Dynamic Fields for Private Schools -->
-                    <div id="privateFieldsBox" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-200 mb-4">
-                        <label class="block text-xs font-bold text-purple-900 mb-0.5">Select ID Card Fields (Max 7)</label>
-                        <p class="text-[11px] text-purple-600 mb-3">Choose what data you want to collect and print.</p>
-                        
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <label class="flex items-center gap-1.5"><input type="checkbox" class="pvt-cb" value="name" checked disabled> Name (Req)</label>
-                            <label class="flex items-center gap-1.5"><input type="checkbox" class="pvt-cb" value="class" checked> Class</label>
-                            <label class="flex items-center gap-1.5"><input type="checkbox" class="pvt-cb" value="roll" checked> Roll No.</label>
-                            <label class="flex items-center gap-1.5"><input type="checkbox" class="pvt-cb" value="dob" checked> DOB</label>
-                            <label class="flex items-center gap-1.5"><input type="checkbox" class="pvt-cb" value="blood" checked> Blood Group</label>
-                            <label class="flex items-center gap-1.5"><input type="checkbox" class="pvt-cb" value="phone" checked> Mobile No.</label>
-                            <label class="flex items-center gap-1.5"><input type="checkbox" class="pvt-cb" value="father"> Father's Name</label>
-                            <label class="flex items-center gap-1.5"><input type="checkbox" class="pvt-cb" value="mother"> Mother's Name</label>
-                            <label class="flex items-center gap-1.5 col-span-2"><input type="checkbox" class="pvt-cb" value="address"> Address</label>
+            <div id="standardDashboardControls">
+                
+                <!-- NEW: Wrong Password Alert Banner -->
+                <div id="wrongPasswordBanner" class="hidden bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm mb-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-red-900 text-sm">UDISE Password Was Incorrect</h4>
+                            <p class="text-xs text-red-700 mt-1 leading-snug">The admin could not fetch your student records because the password was wrong. Please check and re-attempt below.</p>
+                            <button onclick="requestAutoLoad()" class="mt-3 bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm inline-flex items-center gap-1.5">
+                                <i class="fas fa-redo-alt text-[10px]"></i> Re-Enter UDISE Password
+                            </button>
                         </div>
                     </div>
+                </div>
 
-                    <div class="mb-4 pt-3 border-t border-slate-200">
-                        <label class="block text-xs font-bold text-slate-700 mb-1">HM Signature <span class="text-slate-400 font-normal">(Optional)</span></label>
-                        <input type="file" id="newHmSign" accept="image/*" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50 text-xs focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer">
+                <!-- Regular Auto-Load Promotion Banner -->
+                <div id="upgradeToAutoBanner" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-4 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-blue-900 text-sm"><i class="fas fa-magic text-blue-500 mr-1"></i> Want your students list here automatically?</h4>
+                        <p class="text-[11px] text-blue-700 mt-0.5 leading-tight">We'll fetch them from UDISE within 24 hours.</p>
                     </div>
-
-                    <div class="bg-blue-50/80 p-4 rounded-xl border border-blue-200 mb-5">
-                        <label class="block text-xs font-bold text-slate-800 mb-1.5"><i class="fas fa-key text-blue-600 mr-1"></i> Create App Password *</label>
-                        <input type="password" id="regPass" placeholder="Create a secure password" class="w-full p-3 border border-blue-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
-                        <p class="text-[10px] text-slate-500 mt-1.5 leading-snug">Share this password with teachers so they can login and take student photos.</p>
-                    </div>
-
-                    <button id="addSchoolBtn" onclick="registerSchool()" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 px-4 rounded-xl shadow-md transition text-sm">
-                        Register &amp; Open Dashboard
+                    <button onclick="requestAutoLoad()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition whitespace-nowrap ml-3">
+                        Auto-Load
                     </button>
                 </div>
 
-            </div>
+                <!-- Stats Dashboard -->
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
+                        <div class="text-xs text-gray-500 font-bold mb-1">TOTAL</div>
+                        <div class="text-xl font-black text-gray-800" id="statTotal">0</div>
+                    </div>
+                    <div class="bg-green-50/50 p-3 rounded-xl shadow-sm border border-green-100 text-center">
+                        <div class="text-xs text-green-600 font-bold mb-1">COMPLETED</div>
+                        <div class="text-xl font-black text-green-700" id="statCompleted">0</div>
+                    </div>
+                    <div class="bg-amber-50/50 p-3 rounded-xl shadow-sm border border-amber-100 text-center">
+                        <div class="text-xs text-amber-600 font-bold mb-1">PENDING</div>
+                        <div class="text-xl font-black text-amber-700" id="statPending">0</div>
+                    </div>
+                </div>
 
-            <!-- Back to Home Link -->
-            <div class="mt-6 text-center">
-                <a href="/" onclick="handleLogoClick(event)" class="text-sm font-bold text-slate-500 hover:text-slate-900 transition flex items-center justify-center gap-1.5">
-                    <i class="fas fa-arrow-left"></i> Back to Homepage
-                </a>
-            </div>
+                <!-- Search and Filter Bar -->
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-4 flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" id="searchInput" placeholder="Search name or roll..." class="block w-full pl-10 p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
+                    </div>
+                    <div class="w-full sm:w-1/3">
+                        <select id="filterClass" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
+                            <option value="ALL">All Classes</option>
+                        </select>
+                    </div>
+                </div>
 
-        </div>
-    </div>
-
-
-    <!-- ========================================================================= -->
-    <!-- VIEW 3: STUDENT DATA ENTRY APP DASHBOARD                                  -->
-    <!-- ========================================================================= -->
-    <div id="appMainView" class="hidden max-w-lg mx-auto p-4 pt-5 pb-20">
-
-        <!-- Data Extraction in Progress Notice -->
-        <div id="pendingImportCard" class="hidden bg-white p-6 rounded-3xl shadow-sm border border-slate-200 text-center mb-6 relative overflow-hidden">
-            <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 text-2xl animate-pulse">
-                <i class="fas fa-hourglass-half"></i>
-            </div>
-            <h3 class="text-xl font-bold text-slate-900 mb-2">Data Extraction in Progress</h3>
-            <p class="text-sm text-slate-600 mb-6 leading-relaxed">Your students will be automatically loaded here within 24 hours. You can view, edit, or add photos then.</p>
-            
-            <div class="flex justify-center mt-2">
-                <button onclick="cancelPendingImport()" class="text-xs text-slate-500 hover:text-slate-800 underline font-semibold transition">
-                    Cancel auto enter
+                <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 font-bold py-3 rounded-xl mb-4 transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fas fa-user-plus"></i> <span>Add Student</span>
                 </button>
-            </div>
-        </div>
 
-        <div id="standardDashboardControls">
-            
-            <!-- Wrong Password Alert Banner -->
-            <div id="wrongPasswordBanner" class="hidden bg-red-50 border border-red-200 p-4 rounded-2xl shadow-sm mb-5">
-                <div class="flex items-start gap-3">
-                    <div class="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <i class="fas fa-exclamation-triangle"></i>
+                <div class="flex justify-between items-end mb-3 px-1">
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-xl m-0">Student List</h3>
+                        <p class="text-xs text-gray-500 m-0" id="listCounter">Loading...</p>
                     </div>
-                    <div class="flex-1">
-                        <h4 class="font-bold text-red-900 text-sm">UDISE Password Was Incorrect</h4>
-                        <p class="text-xs text-red-700 mt-1 leading-relaxed">The admin could not fetch your student records because the password was wrong. Please check and re-attempt below.</p>
-                        <button onclick="requestAutoLoad()" class="mt-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm inline-flex items-center gap-1.5">
-                            <i class="fas fa-redo-alt text-[10px]"></i> Re-Enter UDISE Password
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Regular Auto-Load Promotion Banner -->
-            <div id="upgradeToAutoBanner" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-2xl shadow-sm mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                    <h4 class="font-bold text-blue-900 text-sm"><i class="fas fa-wand-magic-sparkles text-blue-600 mr-1.5"></i> Auto-Load Students</h4>
-                    <p class="text-[11px] text-blue-700 mt-1 leading-snug">Skip manual typing. We will fetch your entire student list directly from UDISE.</p>
-                </div>
-                <button onclick="requestAutoLoad()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap self-start sm:self-auto">
-                    Request Auto-Load
-                </button>
-            </div>
-
-            <!-- Stats Dashboard -->
-            <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
-                <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 text-center">
-                    <div class="text-[10px] sm:text-xs text-slate-500 font-bold mb-1 uppercase tracking-wider">TOTAL</div>
-                    <div class="text-xl sm:text-2xl font-black text-slate-800" id="statTotal">0</div>
-                </div>
-                <div class="bg-green-50/50 p-3 rounded-2xl shadow-sm border border-green-200 text-center">
-                    <div class="text-[10px] sm:text-xs text-green-600 font-bold mb-1 uppercase tracking-wider">DONE</div>
-                    <div class="text-xl sm:text-2xl font-black text-green-700" id="statCompleted">0</div>
-                </div>
-                <div class="bg-amber-50/50 p-3 rounded-2xl shadow-sm border border-amber-200 text-center">
-                    <div class="text-[10px] sm:text-xs text-amber-600 font-bold mb-1 uppercase tracking-wider">PENDING</div>
-                    <div class="text-xl sm:text-2xl font-black text-amber-700" id="statPending">0</div>
-                </div>
-            </div>
-
-            <!-- Search and Filter Bar -->
-            <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 mb-5 flex flex-col sm:flex-row gap-3">
-                <div class="relative flex-1">
-                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-slate-400"></i>
-                    </div>
-                    <input type="text" id="searchInput" placeholder="Search name or roll no..." class="block w-full pl-10 p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium">
-                </div>
-                <div class="w-full sm:w-1/3">
-                    <select id="filterClass" class="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-semibold text-slate-700">
-                        <option value="ALL">All Classes</option>
-                    </select>
-                </div>
-            </div>
-
-            <button onclick="openAddForm()" id="inlineAddBtn" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold py-3.5 rounded-2xl mb-5 transition flex items-center justify-center gap-2 shadow-sm text-sm">
-                <i class="fas fa-user-plus"></i> <span>Add New Student Manually</span>
-            </button>
-
-            <div class="flex justify-between items-end mb-3 px-1 border-b border-slate-200 pb-2">
-                <div>
-                    <h3 class="font-black text-slate-900 text-lg m-0">Student List</h3>
-                    <p class="text-xs text-slate-500 m-0 font-medium" id="listCounter">Loading...</p>
-                </div>
-                <button id="manualSyncBtn" onclick="syncAllPending()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-                    <i class="fas fa-sync-alt"></i> Sync Data
-                </button>
-            </div>
-            
-            <div id="studentList" class="flex flex-col gap-3"></div>
-            
-            <div id="noResultsMsg" class="hidden text-center py-10 text-slate-500">
-                <i class="fas fa-search text-3xl mb-3 opacity-30"></i>
-                <p class="font-medium text-sm">No students found matching your search.</p>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- ================= MODALS (CATALOGUE CALCULATOR + APP MODALS) ================= -->
-
-    <!-- Catalogue Product Order & Price Calculator Modal -->
-    <div id="storeOrderModal" class="hidden fixed inset-0 bg-black/70 z-[250] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[95vh] overflow-y-auto shadow-2xl">
-            <div class="p-4 sm:p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/90 backdrop-blur-md z-10">
-                <strong class="text-slate-900 font-black text-base sm:text-lg tracking-tight">Bulk Price Calculator</strong>
-                <button type="button" onclick="closeStoreModal()" class="text-slate-400 hover:text-slate-800 w-8 h-8 flex items-center justify-center text-2xl leading-none bg-slate-100 hover:bg-slate-200 rounded-full transition">&times;</button>
-            </div>
-            <div class="p-4 sm:p-6 grid sm:grid-cols-12 gap-5 sm:gap-6">
-                <div class="sm:col-span-5">
-                    <div class="aspect-[3/4] max-h-64 sm:max-h-none mx-auto rounded-2xl overflow-hidden bg-slate-50 border border-slate-200 shadow-sm p-2">
-                        <img id="mImg" src="" alt="" class="w-full h-full object-contain mix-blend-multiply">
-                    </div>
-                </div>
-                <div class="sm:col-span-7 flex flex-col">
-                    <h2 id="mTitle" class="text-lg sm:text-xl font-black text-slate-900 leading-snug mb-1"></h2>
-                    <div id="mPrice" class="text-2xl font-black text-blue-700 mb-3"></div>
-                    <ul id="mFeat" class="text-xs text-slate-600 space-y-1.5 mb-5 font-medium"></ul>
-
-                    <label for="mQty" class="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Quantity (Min. 30 Pcs)</label>
-                    <div class="flex items-center mb-3">
-                        <button type="button" id="minusQtyBtn" class="w-12 h-12 border border-slate-300 rounded-l-2xl bg-slate-50 font-bold text-xl hover:bg-slate-100 transition">−</button>
-                        <input type="number" id="mQty" value="30" min="30" inputmode="numeric" class="w-24 h-12 text-center border-t border-b border-slate-300 font-black text-lg text-slate-800 focus:outline-none bg-white">
-                        <button type="button" id="plusQtyBtn" class="w-12 h-12 border border-slate-300 rounded-r-2xl bg-slate-50 font-bold text-xl hover:bg-slate-100 transition">+</button>
-                    </div>
-                    <div id="quickQtyBtns" class="flex gap-2 flex-wrap mb-2"></div>
-                    <p id="qErr" class="hidden text-xs text-red-600 font-bold mb-3">Minimum order quantity is 30 pieces.</p>
-                    
-                    <div id="tipBox" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 mb-4 leading-relaxed font-medium"></div>
-
-                    <div class="bg-slate-50 rounded-2xl p-4 text-xs sm:text-sm space-y-1.5 mb-4 border border-slate-100">
-                        <div class="flex justify-between text-slate-600 font-medium"><span>Items Subtotal</span><span id="sSub" class="font-bold text-slate-900">₹0</span></div>
-                        <div id="sSaveRow" class="hidden justify-between text-green-700 font-bold"><span id="sSaveLbl">Bulk Discount</span><span id="sSave"></span></div>
-                        <div class="flex justify-between text-slate-600 font-medium"><span>Delivery Charge</span><span class="font-semibold text-slate-900">₹150</span></div>
-                        <div class="flex justify-between border-t border-dashed border-slate-300 pt-2.5 mt-2 text-base sm:text-lg font-black text-blue-700"><span>Total Payable</span><span id="sTot">₹0</span></div>
-                    </div>
-
-                    <input type="text" id="mName" placeholder="Your Name / School Name" class="w-full p-3 border border-slate-300 rounded-xl text-sm font-medium mb-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <input type="text" id="mCity" placeholder="City / Pincode" class="w-full p-3 border border-slate-300 rounded-xl text-sm font-medium mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
-
-                    <button type="button" id="sendStoreOrderBtn" class="w-full bg-[#25D366] hover:bg-[#1aa851] text-white font-black py-3.5 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm sm:text-base active:scale-[0.98]">
-                        <i class="fab fa-whatsapp text-xl"></i> Order via WhatsApp
+                    <button id="manualSyncBtn" onclick="syncAllPending()" class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2">
+                        <i class="fas fa-sync-alt"></i> Sync
                     </button>
-                    <p class="text-[10px] text-slate-400 font-medium text-center mt-3">No payment required now. We confirm your design via WhatsApp.</p>
+                </div>
+                
+                <div id="studentList" class="flex flex-col gap-3"></div>
+                
+                <div id="noResultsMsg" class="hidden text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-3xl mb-3 opacity-50"></i>
+                    <p>No students found matching your search.</p>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- ================= MODALS ================= -->
 
     <!-- App Install Prompt Modal -->
     <div id="installPromptModal" class="hidden fixed inset-0 bg-black/70 z-[300] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
@@ -638,9 +342,9 @@
     </div>
 
     <div id="udiseSelectorModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
-            <h3 class="text-xl font-black text-blue-900 mb-2">Select Data Source</h3>
-            <p class="text-sm text-gray-600 font-medium mb-5">This UDISE contains entries from different sources. Which batch would you like to manage?</p>
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <h3 class="text-xl font-bold text-blue-800 mb-2">Select Data Source</h3>
+            <p class="text-sm text-gray-600 mb-5">This UDISE contains entries from different sources. Which batch would you like to manage?</p>
             
             <div id="udiseSelectorList" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1 pb-4"></div>
             
@@ -650,47 +354,49 @@
 
     <!-- UPGRADED AUTO LOAD MODAL WITH NON-EDITABLE UDISE AND DOUBLE-ENTRY PASSWORD -->
     <div id="upgradeAutoModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
-            <h3 class="text-xl font-black text-slate-900 mb-1">Request UDISE Auto-Load</h3>
-            <p class="text-xs text-slate-500 font-medium mb-5">Please confirm your official UDISE password twice below to avoid typos. We will extract and load your students within 24 hours.</p>
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <h3 class="text-xl font-bold text-blue-800 mb-1">Request Auto-Load</h3>
+            <p class="text-xs text-gray-600 mb-4">Please confirm your official UDISE password twice below to avoid typos. We will extract and load your students within 24 hours.</p>
             
             <!-- 1. Non-editable UDISE Code Field -->
-            <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-widest">1. UDISE Code (Verified)</label>
-            <input type="text" id="upgradeUdiseCode" class="w-full p-3.5 mb-3 border border-slate-200 rounded-xl bg-slate-100 text-slate-700 font-bold cursor-not-allowed select-none outline-none" disabled readonly>
+            <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">1. UDISE Code (Verified)</label>
+            <input type="text" id="upgradeUdiseCode" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-100 text-gray-700 font-bold cursor-not-allowed select-none" disabled readonly>
             
             <!-- 2. Primary Password Entry -->
-            <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-widest">2. Official UDISE Password *</label>
-            <input type="password" id="upgradeUdisePass" placeholder="Enter UDISE Password" class="w-full p-3.5 mb-3 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition outline-none text-sm font-semibold">
+            <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">2. Official UDISE Password *</label>
+            <input type="password" id="upgradeUdisePass" placeholder="Enter UDISE Password" class="w-full p-3 mb-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
             
             <!-- 3. Confirm Password Entry (Double Entry) -->
-            <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-widest">3. Confirm UDISE Password *</label>
-            <input type="password" id="upgradeUdisePassConfirm" placeholder="Re-enter Password to Confirm" class="w-full p-3.5 mb-6 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition outline-none text-sm font-semibold">
+            <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">3. Confirm UDISE Password *</label>
+            <input type="password" id="upgradeUdisePassConfirm" placeholder="Re-enter Password to Confirm" class="w-full p-3 mb-5 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition text-sm">
             
             <div class="flex gap-3">
-                <button onclick="document.getElementById('upgradeAutoModal').classList.add('hidden')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition text-sm">Cancel</button>
-                <button id="submitUpgradeBtn" class="flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white font-black py-3.5 rounded-xl transition text-sm shadow-md active:scale-[0.98]">Submit Request</button>
+                <button onclick="document.getElementById('upgradeAutoModal').classList.add('hidden')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition text-sm">Cancel</button>
+                <button id="submitUpgradeBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition text-sm shadow">Submit Request</button>
             </div>
         </div>
     </div>
 
     <!-- Add/Edit Student Modal -->
     <div id="addStudentModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-3xl w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl p-5 sm:p-6 relative" id="addStudentFormContainer">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl p-5 relative" id="addStudentFormContainer">
             
-            <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
-                <h4 id="formTitle" class="font-black text-xl text-slate-900">Add Student</h4>
-                <button onclick="resetForm()" class="text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition" title="Close"><i class="fas fa-times text-lg"></i></button>
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                <h4 id="formTitle" class="font-bold text-lg text-gray-800">Add Student</h4>
+                <div class="flex gap-2">
+                    <button onclick="resetForm()" class="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center transition" title="Close"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             
             <input type="hidden" id="editId">
             
             <div id="wrap-name" class="mb-3">
-                <input type="text" id="sName" placeholder="Full Name" class="w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-sm">
+                <input type="text" id="sName" placeholder="Full Name" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
             </div>
             
             <div class="flex gap-3 mb-3">
                 <div id="wrap-class" class="w-1/2">
-                    <select id="sClass" class="w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-sm text-slate-700">
+                    <select id="sClass" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                         <option value="">Class</option>
                         <option value="Shishuvatika">Shishuvatika</option>
                         <option value="1">Class 1</option>
@@ -706,24 +412,24 @@
                     </select>
                 </div>
                 <div id="wrap-roll" class="w-1/2">
-                    <input type="text" id="sRoll" placeholder="Roll No" class="w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-sm">
+                    <input type="text" id="sRoll" placeholder="Roll No" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                 </div>
             </div>
             
-            <div id="wrap-father" class="mb-3 hidden"><input type="text" id="sFather" placeholder="Father's Name" class="w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium"></div>
-            <div id="wrap-mother" class="mb-3 hidden"><input type="text" id="sMother" placeholder="Mother's Name" class="w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium"></div>
-            <div id="wrap-address" class="mb-3 hidden"><input type="text" id="sAddress" placeholder="Home Address" class="w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium"></div>
+            <div id="wrap-father" class="mb-3 hidden"><input type="text" id="sFather" placeholder="Father's Name" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
+            <div id="wrap-mother" class="mb-3 hidden"><input type="text" id="sMother" placeholder="Mother's Name" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
+            <div id="wrap-address" class="mb-3 hidden"><input type="text" id="sAddress" placeholder="Home Address" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"></div>
             
             <div id="wrap-phone" class="mb-3">
-                <input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-sm">
+                <input type="tel" id="sPhone" placeholder="Mobile Number" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
             </div>
 
-            <div class="flex gap-3 mb-5">
+            <div class="flex gap-3 mb-4">
                <div id="wrap-dob" class="w-1/2">
-                   <input type="text" id="sDob" placeholder="Date of Birth" onpointerdown="(this.type='date')" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" class="w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-sm text-slate-700">
+                   <input type="text" id="sDob" placeholder="Date of Birth" onpointerdown="(this.type='date')" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                </div>
                 <div id="wrap-blood" class="w-1/2">
-                    <select id="sBlood" class="w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-sm text-slate-700">
+                    <select id="sBlood" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 transition">
                         <option value="">Blood Group</option>
                         <option value="A+">A+</option><option value="A-">A-</option>
                         <option value="B+">B+</option><option value="B-">B-</option>
@@ -734,73 +440,73 @@
             </div>
 
             <!-- Photo Area -->
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center mb-6 relative shadow-sm">
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center mb-5 relative">
                 <div class="flex gap-3 justify-center mb-3">
-                    <button id="openCam" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition shadow-sm text-sm"><i class="fas fa-camera mr-1.5"></i> Camera</button>
+                    <button id="openCam" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-camera mr-2"></i> Camera</button>
                     <input type="file" id="fileInput" accept="image/*" class="hidden">
-                    <button onclick="document.getElementById('fileInput').click()" class="flex-1 bg-white border border-blue-500 text-blue-600 hover:bg-blue-50 font-bold py-3 rounded-xl transition shadow-sm text-sm"><i class="fas fa-image mr-1.5"></i> Gallery</button>
+                    <button onclick="document.getElementById('fileInput').click()" class="flex-1 bg-white border border-blue-500 text-blue-600 hover:bg-blue-50 font-bold py-2.5 rounded-lg transition shadow-sm"><i class="fas fa-image mr-2"></i> Gallery</button>
                 </div>
                 
-                <div class="relative inline-block mt-1">
+                <div class="relative inline-block">
                     <img id="preview" src="" class="w-24 h-32 object-cover mx-auto rounded-xl shadow-md border-2 border-white hidden">
-                    <button id="removePhotoBtn" onclick="removePhoto()" class="hidden absolute -top-2.5 -right-2.5 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-lg hover:bg-red-600 border-2 border-white transition transform hover:scale-110">
+                    <button id="removePhotoBtn" onclick="removePhoto()" class="hidden absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-red-600">
                         <i class="fas fa-times text-xs"></i>
                     </button>
                 </div>
             </div>
 
             <div class="flex flex-col gap-2">
-                <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-black py-4 rounded-xl shadow-md transition text-base">Save Student</button>
+                <button id="saveBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg">Save Student</button>
             </div>
         </div>
     </div>
 
     <!-- Edit School Modal -->
-    <div id="editSchoolModal" class="hidden fixed inset-0 bg-black/60 z-[150] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl p-6">
-            <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
-                <h3 class="text-xl font-black text-slate-900">Edit School Info</h3>
-                <button onclick="document.getElementById('editSchoolModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition"><i class="fas fa-times"></i></button>
+    <div id="editSchoolModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xl font-bold text-gray-900">Edit School Info</h3>
+                <button onclick="document.getElementById('editSchoolModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fas fa-times"></i></button>
             </div>
             
-            <label class="block text-xs font-bold text-slate-700 mb-1">School Name</label>
-            <input type="text" id="editSchoolNameInput" class="w-full p-3 mb-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
+            <label class="block text-sm font-bold text-gray-700 mb-1">School Name</label>
+            <input type="text" id="editSchoolNameInput" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
 
-            <label class="block text-xs font-bold text-slate-700 mb-1">Contact Number</label>
-            <input type="tel" id="editSchoolPhoneInput" class="w-full p-3 mb-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
+            <label class="block text-sm font-bold text-gray-700 mb-1">Contact Number</label>
+            <input type="tel" id="editSchoolPhoneInput" class="w-full p-3 mb-4 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
             
             <div class="flex gap-3 mb-4">
                 <div class="w-1/2">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Block</label>
-                    <input type="text" id="editSchoolBlock" class="w-full p-3 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Block</label>
+                    <input type="text" id="editSchoolBlock" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div class="w-1/2">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">District</label>
-                    <input type="text" id="editSchoolDistrict" class="w-full p-3 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">District</label>
+                    <input type="text" id="editSchoolDistrict" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
             </div>
 
             <div class="flex gap-3 mb-6">
                 <div class="w-1/2">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Pin Code</label>
-                    <input type="number" id="editSchoolPin" class="w-full p-3 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Pin Code</label>
+                    <input type="number" id="editSchoolPin" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div class="w-1/2">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">UDISE *</label>
-                    <input type="text" id="editSchoolUdise" maxlength="11" inputmode="numeric" class="w-full p-3 border border-slate-300 rounded-xl bg-slate-100 text-slate-500 font-bold cursor-not-allowed outline-none text-sm" disabled>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">UDISE *</label>
+                    <input type="text" id="editSchoolUdise" maxlength="11" inputmode="numeric" class="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" disabled>
                 </div>
             </div>
             
-            <div id="privateRenameSection" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-200 mb-6">
+            <div id="privateRenameSection" class="hidden bg-purple-50 p-4 rounded-xl border border-purple-100 mb-6">
                 <h4 class="font-bold text-purple-900 text-sm mb-1"><i class="fas fa-tags mr-1"></i> Rename Fields</h4>
                 <p class="text-xs text-purple-700 mb-3">Want to change a field name? Contact Admin to set up custom labels.</p>
-                <button onclick="requestFieldRename()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl text-sm shadow transition flex items-center justify-center gap-2">
+                <button onclick="requestFieldRename()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg text-sm shadow transition flex items-center justify-center gap-2">
                     <i class="fab fa-whatsapp"></i> Message Admin to Rename
                 </button>
             </div>
             
             <div class="flex flex-col gap-3">
-                <button id="saveSchoolEditBtn" class="w-full bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-black py-4 rounded-xl shadow-md transition">Save Changes</button>
+                <button id="saveSchoolEditBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow transition">Save Changes</button>
             </div>
         </div>
     </div>
@@ -828,69 +534,41 @@
 
     <!-- Cropper Modal -->
     <div id="cropperModal" class="hidden fixed inset-0 bg-black/90 z-[200] flex flex-col items-center justify-center p-4">
-        <div class="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-            <div class="p-4 border-b flex justify-between items-center bg-slate-50">
-                <h3 class="font-black text-slate-800">Crop Photo</h3>
-                <button onclick="closeCropper()" class="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full transition"><i class="fas fa-times text-lg"></i></button>
+        <div class="w-full max-w-md bg-white rounded-xl overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-3 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-gray-800">Crop Photo</h3>
+                <button onclick="closeCropper()" class="text-gray-500 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
             </div>
             <div id="cropperContainer" class="w-full bg-black flex items-center justify-center overflow-hidden" style="max-height: 60vh;">
                 <img id="imageToCrop" src="" class="max-w-full">
             </div>
-            <div class="p-4 bg-slate-50 flex gap-3">
-                <button onclick="closeCropper()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 py-3 rounded-xl font-bold transition">Cancel</button>
-                <button id="cropSaveBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition shadow-sm">Save Crop</button>
+            <div class="p-4 bg-gray-50 flex gap-3">
+                <button onclick="closeCropper()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-bold">Cancel</button>
+                <button id="cropSaveBtn" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-bold">Save Crop</button>
             </div>
         </div>
     </div>
 
     <!-- Custom Confirm Modal -->
-    <div id="customConfirmModal" class="hidden fixed inset-0 bg-black/60 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl scale-95 transform transition-transform duration-200" id="confirmBox">
-            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
+    <div id="customConfirmModal" class="hidden fixed inset-0 bg-black/60 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl scale-95 transform transition-transform duration-200" id="confirmBox">
+            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <h3 class="text-xl font-black text-slate-900 mb-2" id="confirmTitle">Are you sure?</h3>
-            <p id="confirmMsg" class="text-slate-500 mb-6 text-sm font-medium leading-relaxed"></p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2" id="confirmTitle">Are you sure?</h3>
+            <p id="confirmMsg" class="text-gray-600 mb-6 text-sm"></p>
             <div class="flex gap-3">
-                <button id="confirmCancelBtn" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition">Cancel</button>
-                <button id="confirmOkBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-xl font-bold transition shadow-sm">Yes, Continue</button>
+                <button id="confirmCancelBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-xl font-bold transition">Cancel</button>
+                <button id="confirmOkBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition">Yes, Continue</button>
             </div>
         </div>
     </div>
-
-    <!-- Floating WhatsApp Support Button -->
-    <a href="https://wa.me/917855800205?text=Hello%20AB%20Apps%20%2F%20AN%20ID%20Cards%2C%20I%20need%20help%20with%20ID%20cards." target="_blank" rel="noopener" class="fixed right-3 bottom-3 z-40 bg-[#25D366] hover:bg-[#1aa851] text-white font-bold px-3.5 py-2.5 rounded-full shadow-xl flex items-center gap-1.5 text-xs sm:text-sm transition transform active:scale-95">
-        <i class="fab fa-whatsapp text-base"></i> <span>WhatsApp</span>
-    </a>
 
     <!-- Fixed Toast Container -->
     <div id="toast-container" class="fixed bottom-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
 
     <script>
         const WA_NUMBER = "917855800205"; // Admin WhatsApp Number
-
-        // ==========================================
-        // DUAL-VIEW ROUTER & NAVIGATION ENGINE
-        // ==========================================
-        
-        function isLoginOnlyRoute() {
-            const path = window.location.pathname.toLowerCase();
-            const search = window.location.search.toLowerCase();
-            const hash = window.location.hash.toLowerCase();
-            return path.includes('/login') || search.includes('login') || hash === '#login';
-        }
-
-        function handleLogoClick(e) {
-            // If we are logged out and click the logo, reset the view to landing
-            if (!currentSchool) {
-                e.preventDefault();
-                // If url has /login, remove it to show landing
-                if (isLoginOnlyRoute()) {
-                    window.history.replaceState(null, '', '/');
-                }
-                openLandingView();
-            }
-        }
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -908,251 +586,21 @@
             }
         }
 
-        function openLandingView() {
-            document.getElementById('landingMainView').classList.remove('hidden');
-            document.getElementById('authMainView').classList.add('hidden');
-            document.getElementById('appMainView').classList.add('hidden');
-            
-            // Adjust Header for Logged Out or Logged In
-            if (!currentSchool) {
-                document.getElementById('headerHamburger').classList.add('hidden');
-                document.getElementById('headerAuthActions').classList.remove('hidden');
-                document.getElementById('headerAppActions').classList.add('hidden');
-                document.getElementById('schoolNameSubHeader').classList.add('hidden');
-            } else {
-                document.getElementById('headerHamburger').classList.remove('hidden');
-                document.getElementById('headerAuthActions').classList.add('hidden');
-                document.getElementById('headerAppActions').classList.remove('hidden');
-                document.getElementById('schoolNameSubHeader').classList.remove('hidden');
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function openAuthView(tab = 'login') {
-            document.getElementById('landingMainView').classList.add('hidden');
-            document.getElementById('authMainView').classList.remove('hidden');
-            document.getElementById('appMainView').classList.add('hidden');
-            
-            document.getElementById('headerHamburger').classList.add('hidden');
-            document.getElementById('headerAuthActions').classList.add('hidden'); // Hide header login buttons
-            document.getElementById('headerAppActions').classList.add('hidden');
-            document.getElementById('schoolNameSubHeader').classList.add('hidden');
-
-            switchAuthTab(tab);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function openAppView() {
-            document.getElementById('landingMainView').classList.add('hidden');
-            document.getElementById('authMainView').classList.add('hidden');
-            document.getElementById('appMainView').classList.remove('hidden');
-            
-            document.getElementById('headerHamburger').classList.remove('hidden');
-            document.getElementById('headerAuthActions').classList.add('hidden');
-            document.getElementById('headerAppActions').classList.remove('hidden');
-            document.getElementById('schoolNameSubHeader').classList.remove('hidden');
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
         function switchAuthTab(tab) {
-            const btnLogin = document.getElementById('tabLogin');
-            const btnReg = document.getElementById('tabRegister');
-            const formLogin = document.getElementById('loginForm');
-            const formReg = document.getElementById('registerForm');
-
-            btnLogin.className = 'flex-1 py-2.5 font-bold text-sm rounded-lg text-slate-500 hover:text-slate-900 transition';
-            btnReg.className = 'flex-1 py-2.5 font-bold text-sm rounded-lg text-slate-500 hover:text-slate-900 transition';
-            formLogin.classList.add('hidden');
-            formReg.classList.add('hidden');
+            document.getElementById('tabLogin').className = 'flex-1 py-2.5 font-bold rounded-lg text-gray-500 transition';
+            document.getElementById('tabRegister').className = 'flex-1 py-2.5 font-bold rounded-lg text-gray-500 transition';
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
             
             if(tab === 'login') {
-                btnLogin.className = 'flex-1 py-2.5 font-bold text-sm rounded-lg bg-white text-blue-600 shadow-sm transition';
-                formLogin.classList.remove('hidden');
+                document.getElementById('tabLogin').className = 'flex-1 py-2.5 font-bold rounded-lg bg-white text-blue-600 shadow-sm transition';
+                document.getElementById('loginForm').classList.remove('hidden');
             } else {
-                btnReg.className = 'flex-1 py-2.5 font-bold text-sm rounded-lg bg-white text-blue-600 shadow-sm transition';
-                formReg.classList.remove('hidden');
+                document.getElementById('tabRegister').className = 'flex-1 py-2.5 font-bold rounded-lg bg-white text-blue-600 shadow-sm transition';
+                document.getElementById('registerForm').classList.remove('hidden');
             }
         }
 
-        // ==========================================
-        // CATALOGUE & BULK PRICE CALCULATOR ENGINE
-        // ==========================================
-        const STORE_MOQ = 30, STORE_DELIVERY = 150;
-        const STORE_TIERS = [ {min:30,off:0}, {min:60,off:3}, {min:100,off:5}, {min:250,off:8} ];
-        const PRODUCTS = {
-            1:{n:"Single Side Sticky (Stiki) Holder with Dori",p:15,lan:0,img:"idcard_1.webp",f:["Standard thread dori included","Single-sided ID visibility","Cost-effective sticky material","Perfect for schools & daily events"]},
-            2:{n:"Dual Side Sticky (Stiki) Holder with Dori",p:20,lan:0,img:"idcard_2.webp",f:["Standard thread dori included","Dual-sided ID visibility","Durable material","Lightweight & comfortable"]},
-            3:{n:"Single Side Sticky Holder + 16mm Digital Print Lanyard",p:25,lan:12,img:"idcard_3.webp",f:["16mm custom printed lanyard","High-res digital sublimation","Single-sided ID visibility","Washable & fade-resistant"]},
-            4:{n:"Dual Side Sticky Holder + 16mm Digital Print Lanyard",p:30,lan:12,img:"idcard_4.webp",f:["16mm custom printed lanyard","High-res digital sublimation","Dual-sided ID visibility","Washable & fade-resistant"]},
-            5:{n:"Exe Card Holder + 16mm Digital Lanyard Print",p:35,lan:12,img:"idcard_5.webp",f:["Corporate Exe card holder","16mm custom digital lanyard","Rigid protection for ID","Professional sleek look"]},
-            6:{n:"Heavy Plastic Holder + PVC Card & 16mm Lanyard",p:40,lan:12,img:"idcard_6.webp",f:["Heavy-duty plastic holder","Printed PVC ID card included","16mm digital printed lanyard","Maximum school durability"]},
-            7:{n:"Acrylic Holder + PVC Card & 16mm Digital Lanyard",p:45,lan:12,img:"idcard_7.webp",f:["Crystal-clear acrylic finish","Printed PVC card included","16mm digital printed lanyard","Scratch-resistant casing"]},
-            8:{n:"Metallic Holder + PVC Card & 16mm Digital Lanyard",p:80,lan:12,img:"idcard_8.webp",f:["Luxury metallic holder","Printed PVC card included","16mm digital printed lanyard","Executive premium look"]},
-            9:{n:"16mm Digital Print Lanyard with Metal Hook",p:25,lan:12,img:"idcard_9.webp",f:["16mm custom school print","Smooth satin-like finish","Metal dog hook","Edge-to-edge sublimation"]},
-            10:{n:"20mm Digital Print Lanyard with Metal Hook",p:30,lan:14,img:"idcard_10.webp",f:["Extra-wide 20mm custom print","Ideal for bold text & school logos","Metal dog hook","Edge-to-edge sublimation"]}
-        };
-
-        let activeStoreProduct = null, currentStoreCalc = null;
-
-        function renderStoreProducts() {
-            const container = document.getElementById('storeProductsContainer');
-            if (!container) return;
-            container.innerHTML = Object.keys(PRODUCTS).map(id => {
-                const item = PRODUCTS[id];
-                return `
-                <article class="bg-white border border-gray-200 rounded-3xl p-3 sm:p-4 flex flex-col hover:shadow-xl hover:-translate-y-1 transition duration-300">
-                    <div class="aspect-[3/4] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 mb-3 p-1">
-                        <img loading="lazy" src="${item.img}" alt="${escapeHtml(item.n)}" class="w-full h-full object-cover mix-blend-multiply" onerror="this.src='https://placehold.co/300x400/f8fafc/1e293b?text=ID+Card'">
-                    </div>
-                    <h3 class="text-xs sm:text-sm font-bold text-slate-800 leading-snug flex-1 mb-2">${escapeHtml(item.n)}</h3>
-                    <div class="text-lg sm:text-xl font-black text-blue-700">₹${item.p} <small class="text-[10px] sm:text-xs text-gray-500 font-medium">/ pc</small></div>
-                    <button onclick="openStoreModal(${id})" class="mt-3 w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-sm">
-                        Calculate Price
-                    </button>
-                </article>`;
-            }).join('');
-        }
-
-        function getStoreTier(q) {
-            let t = STORE_TIERS[0];
-            STORE_TIERS.forEach(x => { if (q >= x.min) t = x; });
-            return t;
-        }
-        function getNextStoreTier(q) {
-            for (let i = 0; i < STORE_TIERS.length; i++) {
-                if (STORE_TIERS[i].min > q) return STORE_TIERS[i];
-            }
-            return null;
-        }
-
-        function computeStorePrice(item, qty) {
-            let base;
-            if (item.lan > 0) {
-                const batches = Math.ceil(qty / 30), paid = batches * 30;
-                base = paid * item.lan + qty * (item.p - item.lan);
-            } else {
-                base = qty * item.p;
-            }
-            const t = getStoreTier(qty), disc = Math.round(base * t.off / 100);
-            return {
-                base, disc, off: t.off, sub: base - disc,
-                total: base - disc + STORE_DELIVERY,
-                paid: item.lan > 0 ? Math.ceil(qty / 30) * 30 : qty
-            };
-        }
-
-        function updateStoreCalculator() {
-            if (!activeStoreProduct) return;
-            const q = parseInt(document.getElementById('mQty').value, 10);
-            const qErr = document.getElementById('qErr');
-            const sSaveRow = document.getElementById('sSaveRow');
-            const tipBox = document.getElementById('tipBox');
-
-            if (isNaN(q) || q < STORE_MOQ) {
-                qErr.classList.remove('hidden');
-                document.getElementById('sSub').textContent = "₹0";
-                document.getElementById('sTot').textContent = "₹0";
-                sSaveRow.classList.add('hidden');
-                tipBox.classList.add('hidden');
-                currentStoreCalc = null;
-                return;
-            }
-            qErr.classList.add('hidden');
-            const c = computeStorePrice(activeStoreProduct, q);
-            currentStoreCalc = c;
-
-            document.getElementById('sSub').textContent = "₹" + c.base.toLocaleString("en-IN");
-            if (c.disc > 0) {
-                sSaveRow.classList.remove('hidden');
-                sSaveRow.classList.add('flex');
-                document.getElementById('sSaveLbl').textContent = `Bulk Discount (${c.off}% off)`;
-                document.getElementById('sSave').textContent = "−₹" + c.disc.toLocaleString("en-IN");
-            } else {
-                sSaveRow.classList.add('hidden');
-            }
-            document.getElementById('sTot').textContent = "₹" + c.total.toLocaleString("en-IN");
-
-            const tips = [];
-            if (activeStoreProduct.lan > 0 && q % 30 !== 0) {
-                const add = c.paid - q, cost = add * (activeStoreProduct.p - activeStoreProduct.lan);
-                tips.push(`💡 <b>Save Money:</b> Lanyards print in batches of 30, so you already pay for <b>${c.paid}</b> lanyards. Add <b>${add}</b> more for only <b>₹${cost.toLocaleString("en-IN")}</b> extra!`);
-            }
-            const nt = getNextStoreTier(q);
-            if (nt) {
-                tips.push(`🎯 Order <b>${nt.min - q}</b> more to get <b>${nt.off}% OFF</b> your whole order!`);
-            }
-            if (tips.length) {
-                tipBox.innerHTML = tips.join("<br>");
-                tipBox.classList.remove('hidden');
-            } else {
-                tipBox.classList.add('hidden');
-            }
-        }
-
-        window.openStoreModal = function(id) {
-            activeStoreProduct = PRODUCTS[id];
-            document.getElementById('mImg').src = activeStoreProduct.img;
-            document.getElementById('mTitle').textContent = activeStoreProduct.n;
-            document.getElementById('mPrice').innerHTML = `₹${activeStoreProduct.p} <small class="text-[11px] text-slate-500 font-medium">/ piece (base rate)</small>`;
-            document.getElementById('mFeat').innerHTML = activeStoreProduct.f.map(x => `<li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500"></i> ${x}</li>`).join("");
-            
-            const defaultQty = (students && students.length >= STORE_MOQ) ? students.length : STORE_MOQ;
-            document.getElementById('mQty').value = defaultQty;
-            
-            if (currentSchoolData && currentSchoolData.realSchoolName) {
-                document.getElementById('mName').value = currentSchoolData.realSchoolName;
-            }
-
-            document.getElementById('quickQtyBtns').innerHTML = [30, 60, 100, 250].map(n => 
-                `<button type="button" onclick="document.getElementById('mQty').value=${n};updateStoreCalculator();" class="border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 font-bold text-xs px-3.5 py-1.5 rounded-full transition">${n} pcs</button>`
-            ).join("");
-
-            document.getElementById('storeOrderModal').classList.remove('hidden');
-            updateStoreCalculator();
-        };
-
-        window.closeStoreModal = function() {
-            document.getElementById('storeOrderModal').classList.add('hidden');
-        };
-
-        document.getElementById('mQty').addEventListener('input', updateStoreCalculator);
-        document.getElementById('plusQtyBtn').addEventListener('click', () => {
-            const v = parseInt(document.getElementById('mQty').value, 10) || STORE_MOQ;
-            document.getElementById('mQty').value = v + 1;
-            updateStoreCalculator();
-        });
-        document.getElementById('minusQtyBtn').addEventListener('click', () => {
-            const v = parseInt(document.getElementById('mQty').value, 10) || STORE_MOQ;
-            document.getElementById('mQty').value = Math.max(STORE_MOQ, v - 1);
-            updateStoreCalculator();
-        });
-
-        document.getElementById('sendStoreOrderBtn').addEventListener('click', () => {
-            const q = parseInt(document.getElementById('mQty').value, 10);
-            if (isNaN(q) || q < STORE_MOQ || !currentStoreCalc) {
-                document.getElementById('qErr').classList.remove('hidden');
-                return;
-            }
-            const name = document.getElementById('mName').value.trim();
-            const city = document.getElementById('mCity').value.trim();
-            const msg = `Hello AB Apps (AN ID Cards)! I want to place an order:\n\n` +
-                `*Product:* ${activeStoreProduct.n}\n` +
-                `*Quantity:* ${q} pcs\n` +
-                `*Estimated Total:* ₹${currentStoreCalc.total.toLocaleString("en-IN")} (incl. delivery)\n` +
-                (name ? `*Name/School:* ${name}\n` : "") +
-                (city ? `*City/Pincode:* ${city}\n` : "") +
-                `\nPlease share the design preview & payment steps.`;
-            window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
-            closeStoreModal();
-        });
-
-        renderStoreProducts();
-
-        // ==========================================
-        // STUDENT APP LOGIC (FIREBASE + INDEXEDDB)
-        // ==========================================
-        
         function handleSchoolType() {
             const type = document.getElementById('regType').value;
             if(type === 'private') {
@@ -1176,7 +624,7 @@
 
         window.forgotPassword = function() {
             const udise = document.getElementById('loginUdise').value.trim();
-            let msg = "Hi Admin, I forgot my App Password for AB Apps (ID Cards Pro). Can you please help me reset or recover it?";
+            let msg = "Hi Admin, I forgot my App Password for ID Cards Pro. Can you please help me reset or recover it?";
             if (udise) {
                 msg = `Hi Admin, I forgot my App Password for UDISE: *${udise}*. Can you please help me recover it?`;
             }
@@ -1198,7 +646,7 @@
                 const schoolDoc = await firestore.collection('schools').doc(udise).get();
                 if (!schoolDoc.exists) {
                     showToast("School not found! Please register.", "error");
-                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Dashboard';
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Load Data';
                     btn.disabled = false;
                     return;
                 }
@@ -1208,14 +656,14 @@
                     await showConfirm("Security Update: Your account needs a security update. Please contact the Admin to get an App Password.", "Account Locked", "Contact Admin").then(res => {
                         if(res) forgotPassword();
                     });
-                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Dashboard';
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Load Data';
                     btn.disabled = false;
                     return;
                 }
                 
                 if (sData.appPassword !== pass) {
                     showToast("Incorrect Password!", "error");
-                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Dashboard';
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Load Data';
                     btn.disabled = false;
                     return;
                 }
@@ -1241,6 +689,7 @@
                         g.customFields = sData.customFields || ['name', 'class', 'roll', 'dob', 'blood', 'phone'];
                         performRestore(g.docs, g.name, udise, g.source, sData);
                     } else {
+                        document.getElementById('authSection').classList.add('hidden');
                         const list = document.getElementById('udiseSelectorList');
                         list.innerHTML = '';
                         keys.forEach(key => {
@@ -1287,7 +736,7 @@
             } catch (err) {
                 showToast("Server error. Check connection.", "error");
             } finally {
-                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login to Dashboard';
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Load Data';
                 btn.disabled = false;
             }
         };
@@ -1315,7 +764,7 @@
                 if (existingDoc.exists) {
                     showToast("SECURITY ALERT: This ID is already registered! Please Login.", "error");
                     switchAuthTab('login');
-                    btn.innerHTML = 'Register & Open Dashboard'; btn.disabled = false;
+                    btn.innerHTML = 'Register School'; btn.disabled = false;
                     return;
                 }
 
@@ -1373,7 +822,7 @@
             } catch(e) { 
                 showToast("Registration error.", "error"); 
             } finally { 
-                btn.innerHTML = 'Register & Open Dashboard'; btn.disabled = false; 
+                btn.innerHTML = 'Register School'; btn.disabled = false; 
             }
         };
 
@@ -1404,13 +853,12 @@
                     
                     const tx = db.transaction(['schools'], 'readwrite');
                     tx.objectStore('schools').put(currentSchoolData);
-                    
-                    // FIXED INFINITE LOOP BY PUSHING TO FIREBASE HERE
-                    if(navigator.onLine) {
-                        firestore.collection('schools').doc(currentSchoolData.udise).update({
+
+                    if (navigator.onLine) {
+                        await firestore.collection('schools').doc(currentSchoolData.udise).set({
                             importStatus: 'manual',
                             lastModified: Date.now()
-                        }).catch(e => console.error(e));
+                        }, { merge: true }).catch(err => console.error(err));
                     }
                     
                     showToast("Switched to Auto-Loaded students!", "success");
@@ -1418,6 +866,7 @@
                     return;
                 }
 
+                // Populate disabled UDISE and reset password fields
                 document.getElementById('upgradeUdiseCode').value = currentSchoolData.udise || '';
                 document.getElementById('upgradeUdisePass').value = '';
                 document.getElementById('upgradeUdisePassConfirm').value = '';
@@ -1531,10 +980,10 @@
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             
-            let bgClass = type === 'error' ? 'bg-red-600' : (type === 'info' ? 'bg-blue-600' : 'bg-slate-900');
+            let bgClass = type === 'error' ? 'bg-red-600' : (type === 'info' ? 'bg-blue-600' : 'bg-gray-900');
             let icon = type === 'error' ? '<i class="fas fa-circle-exclamation text-white"></i>' : (type === 'info' ? '<i class="fas fa-info-circle text-white"></i>' : '<i class="fas fa-check-circle text-green-400"></i>');
 
-            toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-2xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
+            toast.className = `flex items-center gap-3 ${bgClass} text-white px-5 py-3 rounded-xl shadow-xl max-w-sm w-full pointer-events-auto toast-enter`;
             toast.innerHTML = `${icon} <span class="text-sm font-medium leading-snug">${msg}</span>`;
             
             container.appendChild(toast);
@@ -1581,13 +1030,15 @@
             if (navigator.share) {
                 try {
                     await navigator.share({
-                        title: 'AB Apps - Smart School ID Cards & Data App',
-                        text: 'Collect student ID card data offline & order bulk school ID cards from ₹15 at abapps.in!',
-                        url: 'https://www.abapps.in/'
+                        title: 'AN ID CARDS - Data Entry',
+                        text: 'Install this app to collect student ID card data completely offline!',
+                        url: window.location.href
                     });
-                } catch (err) {}
+                } catch (err) {
+                    console.log('User cancelled share or error:', err);
+                }
             } else {
-                navigator.clipboard.writeText('https://www.abapps.in/');
+                navigator.clipboard.writeText(window.location.href);
                 showToast("Link copied to clipboard!", "success");
             }
         }
@@ -1596,9 +1047,7 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            if(currentSchool) {
-                document.getElementById('headerInstallBtn').classList.remove('hidden');
-            }
+            document.getElementById('headerInstallBtn').classList.remove('hidden');
         });
 
         window.triggerInstall = async function() {
@@ -1663,7 +1112,7 @@
         const firebaseStorage = firebase.storage();
         
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => {
+            navigator.serviceWorker.register('sw.js').catch(err => {
                 console.error('SW Registration Failed:', err);
             });
             navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -1676,7 +1125,7 @@
             if(typeof resetForm === 'function') resetForm(false); 
             document.getElementById('formTitle').innerHTML = 'Add New Student';
             document.getElementById('saveBtn').innerHTML = 'Save Student';
-            document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-xl shadow-md transition text-base';
+            document.getElementById('saveBtn').className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-lg';
             document.getElementById('addStudentModal').classList.remove('hidden');
         };
 
@@ -1749,12 +1198,12 @@
                             const sTx = db.transaction(['schools'], 'readwrite');
                             sTx.objectStore('schools').put(currentSchoolData);
                             
-                            // FIXED INFINITE LOOP BY PUSHING TO FIREBASE HERE
-                            if(navigator.onLine) {
-                                firestore.collection('schools').doc(currentSchoolData.udise).update({
+                            // FIX: Update Firebase so unsubscribeSchool doesn't revert importStatus back to 'pending'
+                            if (navigator.onLine) {
+                                firestore.collection('schools').doc(currentSchoolData.udise).set({
                                     importStatus: 'manual',
                                     lastModified: Date.now()
-                                }).catch(err => console.error(err));
+                                }, { merge: true }).catch(err => console.error(err));
                             }
                             
                             showToast("Excel data automatically loaded!", "success");
@@ -1783,12 +1232,16 @@
                             needsUpdate = true;
                         }
 
+                        // LISTEN FOR WRONG PASSWORD STATUS CHANGE FROM ADMIN
+                        // Guard against reverting to 'pending' if Excel batch is already loaded locally
                         if (adminData.importStatus && adminData.importStatus !== currentSchoolData.importStatus) {
-                            currentSchoolData.importStatus = adminData.importStatus;
-                            currentSchoolData.udisePass = adminData.udisePass || '';
-                            needsUpdate = true;
-                            if (adminData.importStatus === 'wrong_password') {
-                                showToast("UDISE Password was marked incorrect by Admin! Please re-enter.", "error");
+                            if (!(adminData.importStatus === 'pending' && currentSchoolData.source === 'excel')) {
+                                currentSchoolData.importStatus = adminData.importStatus;
+                                currentSchoolData.udisePass = adminData.udisePass || '';
+                                needsUpdate = true;
+                                if (adminData.importStatus === 'wrong_password') {
+                                    showToast("UDISE Password was marked incorrect by Admin! Please re-enter.", "error");
+                                }
                             }
                         }
 
@@ -1965,11 +1418,11 @@
                 if (btn) {
                     btn.innerHTML = "<i class='fas fa-check'></i> All Synced";
                     btn.classList.replace('bg-blue-100', 'bg-green-100');
-                    btn.classList.replace('text-blue-700', 'text-green-700');
+                    btn.classList.replace('text-blue-600', 'text-green-600');
                     setTimeout(() => {
-                        btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync Data";
+                        btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync";
                         btn.classList.replace('bg-green-100', 'bg-blue-100');
-                        btn.classList.replace('text-green-700', 'text-blue-700');
+                        btn.classList.replace('text-green-600', 'text-blue-600');
                     }, 2000);
                 }
                 isSyncing = false;
@@ -2016,15 +1469,15 @@
                     if (failCount === 0) {
                         btn.innerHTML = "<i class='fas fa-check'></i> Synced";
                         btn.classList.replace('bg-blue-100', 'bg-green-100');
-                        btn.classList.replace('text-blue-700', 'text-green-700');
+                        btn.classList.replace('text-blue-600', 'text-green-600');
                     } else {
                         btn.innerHTML = `<i class='fas fa-exclamation-triangle'></i> ${failCount} failed`;
                         btn.classList.replace('bg-blue-100', 'bg-amber-100');
-                        btn.classList.replace('text-blue-700', 'text-amber-700');
+                        btn.classList.replace('text-blue-600', 'text-amber-600');
                     }
                     setTimeout(() => {
-                        btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync Data";
-                        btn.className = "bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm";
+                        btn.innerHTML = "<i class='fas fa-sync-alt'></i> Sync";
+                        btn.className = "bg-blue-100 text-blue-600 hover:bg-blue-200 px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2";
                     }, 3000);
                 }
             } finally {
@@ -2074,18 +1527,15 @@
                 if(schools.length > 0) {
                     enterSchool(schools[0]);
                 } else {
-                    // Logged out check route logic
-                    if (isLoginOnlyRoute()) {
-                        openAuthView('login');
-                    } else {
-                        openLandingView();
-                    }
+                    document.getElementById('authSection').classList.remove('hidden');
+                    document.getElementById('entrySection').classList.add('hidden');
+                    document.getElementById('sidebarEditProfileBtn').classList.add('hidden');
+                    document.getElementById('schoolNameSubHeader').classList.add('hidden');
 
                     const urlParams = new URLSearchParams(window.location.search);
                     const magicU = urlParams.get('u');
                     const magicP = urlParams.get('p');
                     if(magicU && magicP) {
-                        openAuthView('login');
                         document.getElementById('loginUdise').value = magicU;
                         document.getElementById('loginPass').value = magicP;
                         window.history.replaceState(null, '', window.location.pathname);
@@ -2097,6 +1547,7 @@
 
         function performRestore(docs, schoolName, udise, source, sData) {
             const localId = `[${source === 'excel' ? 'Excel' : 'Manual'}] ${schoolName}_${udise}`;
+            const resolvedStatus = source === 'excel' ? 'manual' : (sData.importStatus || 'manual');
             
             const schoolObj = {
                 name: localId, 
@@ -2109,7 +1560,7 @@
                 udise: udise,
                 hmSignature: sData.hmSignature || (docs[0] ? docs[0].data.hmSignature : ''), 
                 createdAt: Date.now(),
-                importStatus: sData.importStatus || 'manual',
+                importStatus: resolvedStatus,
                 udiseUser: sData.udiseUser || udise,
                 udisePass: sData.udisePass || '',
                 schoolType: sData.schoolType || 'govt',
@@ -2129,6 +1580,12 @@
             });
 
             tx.oncomplete = () => {
+                if (source === 'excel' && sData.importStatus === 'pending' && navigator.onLine) {
+                    firestore.collection('schools').doc(udise).set({
+                        importStatus: 'manual',
+                        lastModified: Date.now()
+                    }, { merge: true }).catch(err => console.error(err));
+                }
                 document.getElementById('loginUdise').value = '';
                 document.getElementById('loginPass').value = '';
                 setTimeout(() => enterSchool(schoolObj), 800);
@@ -2197,7 +1654,11 @@
             if (!currentSchoolData.source) currentSchoolData.source = 'manual';
             if (!currentSchoolData.importStatus) currentSchoolData.importStatus = 'manual';
 
-            openAppView();
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('entrySection').classList.remove('hidden');
+            document.getElementById('sidebarEditProfileBtn').classList.remove('hidden');
+            document.getElementById('schoolNameSubHeader').classList.remove('hidden');
+
             updateSchoolHeader();
 
             const pendingCard = document.getElementById('pendingImportCard');
@@ -2213,6 +1674,7 @@
                 dashControls.classList.remove('hidden');
                 pendingCard.classList.add('hidden');
                 
+                // Show or hide wrong password alert banner
                 if (currentSchoolData.importStatus === 'wrong_password') {
                     wrongPassBanner.classList.remove('hidden');
                     upgradeBanner.classList.add('hidden');
@@ -2275,7 +1737,7 @@
             const sName = currentSchoolData.realSchoolName || "Unknown School";
             const udise = currentSchoolData.udise || "No UDISE";
             const msg = `Hi Admin, I am from *${sName}* (UDISE: *${udise}*).\n\nI would like to rename some of my custom ID card fields. Can you please help me update my labels?`;
-            window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+            window.open(`https://wa.me/917855800205?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         document.getElementById('saveSchoolEditBtn').onclick = async () => {
@@ -2446,19 +1908,19 @@
 
             visibleStudents.forEach((s, index) => {
                 const div = document.createElement('div');
-                div.className = 'bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden';
+                div.className = 'bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden';
                 
                 let photoHtml = s.photoBase64 
-                    ? `<img src="${s.photoBase64}" class="w-14 h-14 rounded-xl object-cover shadow-sm flex-shrink-0 border border-slate-200">` 
-                    : `<div class="w-14 h-14 rounded-xl bg-red-50 flex flex-col items-center justify-center text-red-400 border border-red-100 flex-shrink-0"><i class="fas fa-user-slash mb-1"></i><span class="text-[8px] font-bold">NO PHOTO</span></div>`;
+                    ? `<img src="${s.photoBase64}" class="w-14 h-14 rounded-lg object-cover shadow-sm flex-shrink-0 border border-gray-200">` 
+                    : `<div class="w-14 h-14 rounded-lg bg-red-50 flex flex-col items-center justify-center text-red-400 border border-red-100 flex-shrink-0"><i class="fas fa-user-slash mb-1"></i><span class="text-[8px] font-bold">NO PHOTO</span></div>`;
 
                 let statusHtml = '';
                 if (!s.finalised) {
-                    statusHtml = `<span class="text-amber-600 font-bold text-[10px] bg-amber-50 px-1.5 py-0.5 rounded-lg border border-amber-200"><i class="fas fa-exclamation-circle"></i> Pending Review</span>`;
+                    statusHtml = `<span class="text-amber-600 font-bold text-[10px] bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fas fa-exclamation-circle"></i> Pending Review</span>`;
                 } else if (!s.synced) {
-                    statusHtml = `<span class="text-blue-500 font-bold text-[10px] bg-blue-50 px-1.5 py-0.5 rounded-lg border border-blue-200"><i class="fas fa-cloud-upload-alt"></i> Syncing...</span>`;
+                    statusHtml = `<span class="text-blue-500 font-bold text-[10px] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200"><i class="fas fa-cloud-upload-alt"></i> Syncing...</span>`;
                 } else {
-                    statusHtml = `<span class="text-green-600 font-bold text-[10px] bg-green-50 px-1.5 py-0.5 rounded-lg border border-green-200"><i class="fas fa-check-circle"></i> Completed</span>`;
+                    statusHtml = `<span class="text-green-600 font-bold text-[10px] bg-green-50 px-1.5 py-0.5 rounded border border-green-200"><i class="fas fa-check-circle"></i> Completed</span>`;
                 }
                 
                 if(s.syncError) statusHtml += `<div class="text-red-500 font-bold text-[10px] mt-1 line-clamp-1 truncate w-full" title="${s.syncError}"><i class="fas fa-exclamation-triangle"></i> ${s.syncError}</div>`;
@@ -2467,18 +1929,18 @@
 
                 div.innerHTML = `
                     <div class="p-3 flex items-center gap-2">
-                        <div class="text-blue-500 font-black text-xs w-6 text-center flex-shrink-0">#${serialNumber}</div>
+                        <div class="text-blue-500 font-black text-sm w-5 text-center flex-shrink-0">#${serialNumber}</div>
                         <div class="flex-shrink-0">${photoHtml}</div>
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
-                                <div class="font-black text-slate-900 text-sm truncate pr-2">${escapeHtml(s.name)}</div>
+                                <div class="font-bold text-gray-900 text-sm truncate pr-2">${escapeHtml(s.name)}</div>
                             </div>
-                            <div class="text-xs text-slate-500 font-medium mt-0.5">Class: <span class="text-slate-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-slate-300">|</span> Roll: <span class="text-slate-800">${escapeHtml(s.roll)}</span></div>
+                            <div class="text-xs text-gray-600 font-medium mt-1">Class: <span class="text-gray-800">${normalizeClass(s.class)}</span> <span class="mx-1 text-gray-300">|</span> Roll: <span class="text-gray-800">${escapeHtml(s.roll)}</span></div>
                             <div class="mt-1">${statusHtml}</div>
                         </div>
-                        <div class="flex-shrink-0 pl-1 flex items-center gap-2 border-l border-slate-100 ml-1 pl-2">
-                            <button onclick="editStudent('${s.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-10 h-10 rounded-full transition shadow-sm flex items-center justify-center text-sm" title="Edit Student"><i class="fas fa-pen"></i></button>
-                            <button onclick="deleteStudentForever('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-10 h-10 rounded-full transition shadow-sm flex items-center justify-center text-sm" title="Permanently Delete"><i class="fas fa-trash"></i></button>
+                        <div class="flex-shrink-0 pl-1 flex items-center gap-3 border-l border-gray-100 ml-1 pl-3">
+                            <button onclick="editStudent('${s.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Edit Student"><i class="fas fa-pen"></i></button>
+                            <button onclick="deleteStudentForever('${s.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 w-11 h-11 rounded-full transition shadow-sm flex items-center justify-center text-base" title="Permanently Delete"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
@@ -2488,7 +1950,7 @@
             if (filteredStudents.length > visibleCount) {
                 const btnWrapper = document.createElement('div');
                 btnWrapper.className = "text-center mt-2 pb-4";
-                btnWrapper.innerHTML = `<button onclick="window.loadMore()" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold py-2.5 px-6 rounded-full text-sm shadow-sm transition flex items-center mx-auto">Load More <i class="fas fa-chevron-down ml-2"></i></button>`;
+                btnWrapper.innerHTML = `<button onclick="window.loadMore()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2.5 px-6 rounded-full text-sm shadow-sm transition flex items-center mx-auto">Load More <i class="fas fa-chevron-down ml-2"></i></button>`;
                 list.appendChild(btnWrapper);
             }
         }
@@ -2610,7 +2072,7 @@
             if (s.photoBase64) setPreviewImage(s.photoBase64);
             else window.removePhoto();
             
-            document.getElementById('formTitle').innerHTML = 'Edit Student <i class="fas fa-pen text-sm text-slate-400 ml-1"></i>';
+            document.getElementById('formTitle').innerHTML = 'Edit Student <i class="fas fa-pen text-sm text-gray-400 ml-1"></i>';
             const saveBtn = document.getElementById('saveBtn');
             saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> Update Student';
             saveBtn.classList.replace('bg-green-600', 'bg-blue-600');
